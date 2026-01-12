@@ -50,6 +50,7 @@ model Perfil {
   usuario Usuario @relation(fields: [usuarioId], references: [id])
 }
 
+
 model Foto {
   id        String   @id @default(cuid())
   usuarioId String
