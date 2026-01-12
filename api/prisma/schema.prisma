@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  senhaHash    String
+  ativo        Boolean  @default(true)
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  perfil            Perfil?
+  fotos             Foto[]
+  // Curtidas
+  curtidasEnviadas  Curtida[] @relation("CurtidasEnviadas")
+  curtidasRecebidas Curtida[] @relation("CurtidasRecebidas")
+
+  // Matches
+  matchesA  Match[]    @relation("MatchesA")
+  matchesB  Match[]    @relation("MatchesB")
+  mensagems Mensagem[]
+}
+
+model Perfil {
+  id           String   @id @default(cuid())
+  usuarioId    String   @unique
+  nome         String
+  bio          String?  @db.Text
+  cidade       String?
+  estado       String?
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+}
+
+model Foto {
+  id        String   @id @default(cuid())
+  usuarioId String
+  url       String
+  principal Boolean  @default(false)
+  criadoEm  DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([usuarioId])
+}
+
+model Curtida {
+  id            String   @id @default(cuid())
+  deUsuarioId   String
+  paraUsuarioId String
+  criadoEm      DateTime @default(now())
+
+  deUsuario   Usuario @relation("CurtidasEnviadas", fields: [deUsuarioId], references: [id])
+  paraUsuario Usuario @relation("CurtidasRecebidas", fields: [paraUsuarioId], references: [id])
+
+  @@unique([deUsuarioId, paraUsuarioId])
+  @@index([paraUsuarioId])
+}
+
+model Match {
+  id         String   @id @default(cuid())
+  usuarioAId String
+  usuarioBId String
+  criadoEm   DateTime @default(now())
+
+  usuarioA Usuario   @relation("MatchesA", fields: [usuarioAId], references: [id])
+  usuarioB Usuario   @relation("MatchesB", fields: [usuarioBId], references: [id])
+  conversa Conversa?
+
+  @@unique([usuarioAId, usuarioBId])
+  @@index([usuarioAId])
+  @@index([usuarioBId])
+}
+
+model Conversa {
+  id           String   @id @default(cuid())
+  matchId      String   @unique
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  match     Match      @relation(fields: [matchId], references: [id])
+  mensagens Mensagem[]
+}
+
+model Mensagem {
+  id         String   @id @default(cuid())
+  conversaId String
+  autorId    String
+  texto      String   @db.Text
+  criadoEm   DateTime @default(now())
+
+  conversa Conversa @relation(fields: [conversaId], references: [id])
+  autor    Usuario  @relation(fields: [autorId], references: [id])
+
+  @@index([conversaId])
+  @@index([autorId])
+}
