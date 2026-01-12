@@ -22,9 +22,19 @@ model Usuario {
   curtidasRecebidas Curtida[] @relation("CurtidasRecebidas")
 
   // Matches
-  matchesA  Match[]    @relation("MatchesA")
-  matchesB  Match[]    @relation("MatchesB")
-  mensagems Mensagem[]
+  matchesA       Match[]    @relation("MatchesA")
+  matchesB       Match[]    @relation("MatchesB")
+  mensagems      Mensagem[]
+  // Skips
+  skipsEnviados  Skip[]     @relation("SkipsEnviados")
+  skipsRecebidos Skip[]     @relation("SkipsRecebidos")
+
+  // Bloqueios
+  bloqueiosEnviados  Bloqueio[] @relation("BloqueiosEnviados")
+  bloqueiosRecebidos Bloqueio[] @relation("BloqueiosRecebidos")
+  // Denúncias
+  denunciasFeitas    Denuncia[] @relation("DenunciasFeitas")
+  denunciasRecebidas Denuncia[] @relation("DenunciasRecebidas")
 }
 
 model Perfil {
@@ -102,4 +112,45 @@ model Mensagem {
 
   @@index([conversaId])
   @@index([autorId])
+}
+
+model Skip {
+  id            String   @id @default(cuid())
+  deUsuarioId   String
+  paraUsuarioId String
+  criadoEm      DateTime @default(now())
+
+  deUsuario   Usuario @relation("SkipsEnviados", fields: [deUsuarioId], references: [id])
+  paraUsuario Usuario @relation("SkipsRecebidos", fields: [paraUsuarioId], references: [id])
+
+  @@unique([deUsuarioId, paraUsuarioId])
+  @@index([paraUsuarioId])
+}
+
+model Bloqueio {
+  id            String   @id @default(cuid())
+  deUsuarioId   String
+  paraUsuarioId String
+  criadoEm      DateTime @default(now())
+
+  deUsuario   Usuario @relation("BloqueiosEnviados", fields: [deUsuarioId], references: [id])
+  paraUsuario Usuario @relation("BloqueiosRecebidos", fields: [paraUsuarioId], references: [id])
+
+  @@unique([deUsuarioId, paraUsuarioId])
+  @@index([paraUsuarioId])
+}
+
+model Denuncia {
+  id            String   @id @default(cuid())
+  denuncianteId String
+  denunciadoId  String
+  motivo        String
+  descricao     String?  @db.Text
+  criadoEm      DateTime @default(now())
+
+  denunciante Usuario @relation("DenunciasFeitas", fields: [denuncianteId], references: [id])
+  denunciado  Usuario @relation("DenunciasRecebidas", fields: [denunciadoId], references: [id])
+
+  @@index([denunciadoId])
+  @@index([denuncianteId])
 }

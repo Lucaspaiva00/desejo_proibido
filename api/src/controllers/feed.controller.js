@@ -7,41 +7,60 @@ export async function feed(req, res) {
   const limit = Number(req.query.limit || 10);
   const skip = (page - 1) * limit;
 
-  // IDs que eu já curti
+  // já curti
   const curtidos = await prisma.curtida.findMany({
     where: { deUsuarioId: meuId },
     select: { paraUsuarioId: true }
   });
-
   const idsCurtidos = curtidos.map(c => c.paraUsuarioId);
 
-  // IDs que já são match comigo
-  const matches = await prisma.match.findMany({
-    where: {
-      OR: [{ usuarioAId: meuId }, { usuarioBId: meuId }]
-    }
+  // já pulei
+  const pulados = await prisma.skip.findMany({
+    where: { deUsuarioId: meuId },
+    select: { paraUsuarioId: true }
+  });
+  const idsPulados = pulados.map(s => s.paraUsuarioId);
+
+  // bloqueios (quem eu bloqueei e quem me bloqueou)
+  const bloqueiosEnviados = await prisma.bloqueio.findMany({
+    where: { deUsuarioId: meuId },
+    select: { paraUsuarioId: true }
+  });
+  const bloqueiosRecebidos = await prisma.bloqueio.findMany({
+    where: { paraUsuarioId: meuId },
+    select: { deUsuarioId: true }
   });
 
-  const idsMatch = matches.map(m =>
-    m.usuarioAId === meuId ? m.usuarioBId : m.usuarioAId
-  );
+  const idsBloqueados = bloqueiosEnviados.map(b => b.paraUsuarioId);
+  const idsQueMeBloquearam = bloqueiosRecebidos.map(b => b.deUsuarioId);
 
-  const excluirIds = [meuId, ...idsCurtidos, ...idsMatch];
+  // já é match
+  const matches = await prisma.match.findMany({
+    where: { OR: [{ usuarioAId: meuId }, { usuarioBId: meuId }] }
+  });
+  const idsMatch = matches.map(m => (m.usuarioAId === meuId ? m.usuarioBId : m.usuarioAId));
+
+  const excluirIds = [
+    meuId,
+    ...idsCurtidos,
+    ...idsPulados,
+    ...idsMatch,
+    ...idsBloqueados,
+    ...idsQueMeBloquearam
+  ];
 
   const usuarios = await prisma.usuario.findMany({
     where: {
       id: { notIn: excluirIds },
-      perfil: { isNot: null }
+      perfil: { isNot: null },
+      fotos: { some: { principal: true } } // ✅ exige foto principal
     },
     skip,
     take: limit,
     orderBy: { criadoEm: "desc" },
     include: {
       perfil: true,
-      fotos: {
-        where: { principal: true },
-        take: 1
-      }
+      fotos: { where: { principal: true }, take: 1 }
     }
   });
 
@@ -51,10 +70,5 @@ export async function feed(req, res) {
     fotoPrincipal: u.fotos?.[0]?.url || null
   }));
 
-  return res.json({
-    page,
-    limit,
-    total: payload.length,
-    data: payload
-  });
+  return res.json({ page, limit, total: payload.length, data: payload });
 }

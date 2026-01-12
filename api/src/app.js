@@ -13,6 +13,10 @@ import matchRoutes from "./routes/match.routes.js";
 import feedRoutes from "./routes/feed.routes.js";
 import conversaRoutes from "./routes/conversa.routes.js";
 import mensagemRoutes from "./routes/mensagem.routes.js";
+import skipRoutes from "./routes/skip.routes.js";
+import bloqueioRoutes from "./routes/bloqueio.routes.js";
+import denunciaRoutes from "./routes/denuncia.routes.js";
+
 
 
 export const app = express();
@@ -28,6 +32,11 @@ app.use("/matches", matchRoutes);
 app.use("/feed", feedRoutes);
 app.use("/conversas", conversaRoutes);
 app.use("/mensagens", mensagemRoutes);
+app.use("/skips", skipRoutes);
+app.use("/bloqueios", bloqueioRoutes);
+app.use("/denuncias", denunciaRoutes);
+
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
