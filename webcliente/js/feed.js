@@ -142,4 +142,31 @@ document.getElementById("btnDenunciar").onclick = async () => {
     }
 };
 
+async function curtir(paraUsuarioId) {
+    try {
+        await apiFetch(`/curtidas/${paraUsuarioId}`, { method: "POST" });
+        // continua fluxo normal
+    } catch (e) {
+        if (e.status === 429) {
+            mostrarLimiteCurtidas();
+            return;
+        }
+
+        alert(e.message || "Erro ao curtir");
+    }
+}
+
+function mostrarLimiteCurtidas() {
+    document
+        .getElementById("limiteCurtidasOverlay")
+        .classList.remove("hidden");
+}
+
+function fecharLimiteCurtidas() {
+    document
+        .getElementById("limiteCurtidasOverlay")
+        .classList.add("hidden");
+}
+
+
 carregar();

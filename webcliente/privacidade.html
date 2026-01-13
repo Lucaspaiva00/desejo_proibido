@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Desejo Proibido - Política de Privacidade</title>
+    <link rel="stylesheet" href="css/app.css" />
+</head>
+
+<body>
+    <main class="wrap">
+        <section class="panel" style="padding:18px;">
+            <h1>Política de Privacidade</h1>
+            <p class="muted" id="meta"></p>
+            <div id="conteudo" class="card"></div>
+        </section>
+    </main>
+
+    <script type="module">
+        import { apiFetch } from "./js/api.js";
+
+        const meta = document.getElementById("meta");
+        const conteudo = document.getElementById("conteudo");
+
+        try {
+            const termos = await apiFetch("/termos/ativos");
+            const t = termos.find(x => x.tipo === "POLITICA_PRIVACIDADE");
+            if (!t) throw new Error("Política não encontrada.");
+
+            meta.textContent = `Versão: ${t.versao}`;
+            conteudo.textContent = t.conteudo;
+        } catch (e) {
+            meta.textContent = "";
+            conteudo.textContent = e.message || "Erro ao carregar política.";
+        }
+    </script>
+</body>
+
+</html>

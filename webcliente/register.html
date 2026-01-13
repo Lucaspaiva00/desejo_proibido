@@ -1,69 +1,70 @@
 <!doctype html>
 <html lang="pt-br">
-
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Desejo Proibido - Cadastro</title>
-    <link rel="stylesheet" href="css/app.css" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Desejo Proibido - Cadastro</title>
+  <link rel="stylesheet" href="css/app.css" />
 </head>
 
 <body class="auth-body">
-    <main class="auth-wrap">
-        <section class="auth-card">
-            <header class="auth-header">
-                <div class="brand">
-                    <div class="brand-badge">DP</div>
-                    <div class="brand-text">
-                        <div class="brand-title">Criar conta</div>
-                        <div class="brand-sub">Leva menos de 1 minuto</div>
-                    </div>
-                </div>
-            </header>
+  <main class="auth-wrap">
+    <section class="auth-card">
+      <header class="auth-header">
+        <div class="brand">
+          <div class="brand-badge">DP</div>
+          <div class="brand-text">
+            <div class="brand-title">Criar conta</div>
+            <div class="brand-sub">Leva menos de 1 minuto</div>
+          </div>
+        </div>
+      </header>
 
-            <form id="formRegister" class="auth-form" autocomplete="on" novalidate>
-                <label class="field">
-                    <span class="field-label">E-mail</span>
-                    <input id="email" type="email" placeholder="seuemail@dominio.com" autocomplete="email" />
-                </label>
+      <form id="formRegister" class="auth-form" autocomplete="on" novalidate>
+        <label class="field">
+          <span class="field-label">E-mail</span>
+          <input id="email" type="email" placeholder="seuemail@dominio.com" autocomplete="email" />
+        </label>
 
-                <label class="field">
-                    <span class="field-label">Senha</span>
-                    <div class="field-inline">
-                        <input id="senha" type="password" placeholder="mínimo 6 caracteres"
-                            autocomplete="new-password" />
-                        <button type="button" class="icon-btn" id="toggleSenha" aria-label="Mostrar/ocultar senha"
-                            title="Mostrar/ocultar senha">
-                            👁
-                        </button>
-                    </div>
-                    <div class="hint">Use pelo menos 6 caracteres.</div>
-                </label>
+        <label class="field">
+          <span class="field-label">Senha</span>
+          <div class="field-inline">
+            <input id="senha" type="password" placeholder="mínimo 6 caracteres" autocomplete="new-password" />
+            <button type="button" class="icon-btn" id="toggleSenha" aria-label="Mostrar/ocultar senha" title="Mostrar/ocultar senha">👁</button>
+          </div>
+          <div class="hint">Use pelo menos 6 caracteres.</div>
+        </label>
 
-                <label class="field">
-                    <span class="field-label">Confirmar senha</span>
-                    <input id="senha2" type="password" placeholder="repita a senha" autocomplete="new-password" />
-                </label>
+        <label class="field">
+          <span class="field-label">Confirmar senha</span>
+          <input id="senha2" type="password" placeholder="repita a senha" autocomplete="new-password" />
+        </label>
 
-                <button id="btnCadastro" class="btn-primary" type="submit">
-                    Cadastrar
-                </button>
+        <label class="check">
+          <input id="aceiteTermos" type="checkbox" />
+          <span>
+            Eu li e aceito os
+            <a class="link" href="termos.html" target="_blank" rel="noopener">Termos</a>
+            e a
+            <a class="link" href="privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a>.
+          </span>
+        </label>
 
-                <p class="auth-links">
-                    Já tem conta?
-                    <a class="link" href="index.html">Voltar para login</a>
-                </p>
+        <button id="btnCadastro" class="btn-primary" type="submit">Cadastrar</button>
 
-                <div id="msg" class="alert" aria-live="polite"></div>
-            </form>
-        </section>
+        <p class="auth-links">
+          Já tem conta? <a class="link" href="index.html">Voltar para login</a>
+        </p>
 
-        <footer class="auth-footer">
-            <span class="muted">© Desejo Proibido</span>
-        </footer>
-    </main>
+        <div id="msg" class="alert" aria-live="polite"></div>
+      </form>
+    </section>
 
-    <script type="module" src="js/register.js"></script>
+    <footer class="auth-footer">
+      <span class="muted">© Desejo Proibido</span>
+    </footer>
+  </main>
+
+  <script type="module" src="js/register.js"></script>
 </body>
-
 </html>

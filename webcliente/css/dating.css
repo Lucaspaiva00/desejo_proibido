@@ -680,3 +680,85 @@ textarea {
         height: auto;
     }
 }
+
+/* ===== LIMITE DE CURTIDAS (OVERLAY) ===== */
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.overlay.hidden {
+    display: none;
+}
+
+.modal-limit {
+    max-width: 420px;
+    width: 90%;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .02));
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: 20px;
+    padding: 28px 22px;
+    text-align: center;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, .8);
+    animation: popIn .25s ease;
+}
+
+.modal-icon {
+    font-size: 42px;
+    margin-bottom: 10px;
+}
+
+.modal-limit h2 {
+    margin: 0 0 10px;
+    font-size: 22px;
+    font-weight: 900;
+    color: #fff;
+}
+
+.modal-limit p {
+    margin: 0 0 22px;
+    font-size: 15px;
+    color: rgba(255, 255, 255, .85);
+    line-height: 1.5;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.modal-actions button {
+    flex: 1;
+    padding: 12px;
+    border-radius: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    border: none;
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, .12);
+    color: #fff;
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, .2);
+}
+
+@keyframes popIn {
+    from {
+        transform: scale(.9);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}

@@ -348,3 +348,24 @@ input:focus {
         border-radius: 12px;
     }
 }
+
+.check {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, .10);
+    background: rgba(10, 10, 14, .45);
+    color: rgba(255, 255, 255, .85);
+    font-size: 13px;
+}
+
+.check input {
+    width: auto;
+    margin-top: 3px;
+}
+
+.check a {
+    text-decoration: underline;
+}

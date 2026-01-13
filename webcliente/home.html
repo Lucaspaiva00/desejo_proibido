@@ -84,6 +84,27 @@
             </div>
         </div>
     </div>
+    <!-- MODAL LIMITE DE CURTIDAS -->
+    <div id="limiteCurtidasOverlay" class="overlay hidden">
+        <div class="modal-limit">
+            <div class="modal-icon">💔</div>
+            <h2>Limite diário atingido</h2>
+            <p>
+                Você chegou ao limite de <b>10 curtidas por dia</b>.
+                <br />
+                Volte amanhã ou torne-se <b>Premium</b> para curtir sem limites.
+            </p>
+
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="fecharLimiteCurtidas()">
+                    Entendi
+                </button>
+                <button class="btn-primary">
+                    Virar Premium
+                </button>
+            </div>
+        </div>
+    </div>
 
     <script>
         // Drawer Mobile (hambúrguer) - padrão Tinder

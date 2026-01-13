@@ -17,6 +17,7 @@ import skipRoutes from "./routes/skip.routes.js";
 import bloqueioRoutes from "./routes/bloqueio.routes.js";
 import denunciaRoutes from "./routes/denuncia.routes.js";
 import usuarioRoutes from "./routes/usuario.routes.js";
+import termosRoutes from "./routes/termos.routes.js";
 
 
 export const app = express();
@@ -36,6 +37,7 @@ app.use("/skips", skipRoutes);
 app.use("/bloqueios", bloqueioRoutes);
 app.use("/denuncias", denunciaRoutes);
 app.use("/usuarios", usuarioRoutes)
+app.use("/termos", termosRoutes);
 
 
 const __filename = fileURLToPath(import.meta.url);
