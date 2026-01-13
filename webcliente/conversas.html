@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat – Desejo Proibido</title>
+
+  <link rel="stylesheet" href="css/dating.css" />
+  <link rel="stylesheet" href="css/conversas.css" />
+</head>
+
+<body>
+   <!-- TOPNAV: Desktop normal + Mobile com menu sanduíche -->
+    <nav class="topnav" role="navigation" aria-label="Navegação principal">
+        <div class="brand">
+            <div class="brand-badge">DP</div>
+            <span class="brand-name">Desejo Proibido</span>
+        </div>
+
+        <!-- Desktop links -->
+        <div class="navlinks navlinks-desktop" aria-label="Links do menu">
+            <a href="home.html">Feed</a>
+            <a href="perfil.html">Perfil</a>
+            <a href="fotos.html">Fotos</a>
+            <a href="matches.html">Matches</a>
+            <a href="conversas.html" class="active">Chat</a>
+        </div>
+
+        <div class="spacer"></div>
+
+        <!-- Botão sair (sempre visível) -->
+        <button id="btnSair" class="btn btn-ghost">Sair</button>
+
+        <!-- Botão hambúrguer (mobile) -->
+        <button class="nav-toggle" id="navToggle" aria-label="Abrir menu" aria-expanded="false"
+            aria-controls="navDrawer">
+            <span></span><span></span><span></span>
+        </button>
+    </nav>
+
+    <!-- Overlay + Drawer Mobile -->
+    <div class="nav-overlay" id="navOverlay" aria-hidden="true"></div>
+
+    <aside class="nav-drawer" id="navDrawer" aria-hidden="true">
+        <div class="nav-drawer-head">
+            <div class="brand">
+                <div class="brand-badge">DP</div>
+                <span class="brand-name">Desejo Proibido</span>
+            </div>
+
+            <button class="iconbtn" id="navClose" aria-label="Fechar menu">
+                <span class="xicon"></span>
+            </button>
+        </div>
+
+        <div class="nav-drawer-links">
+            <a href="home.html">Feed</a>
+            <a href="perfil.html">Perfil</a>
+            <a href="fotos.html">Fotos</a>
+            <a href="matches.html">Matches</a>
+            <a href="conversas.html" class="active">Chat</a>
+        </div>
+
+        <div class="nav-drawer-foot">
+            <button id="btnSairMobile" class="btn btn-ghost w100">Sair</button>
+        </div>
+    </aside>
+
+  <div class="wrap">
+    <div class="headRow">
+      <div>
+        <h2 class="h-title">Chat</h2>
+        <div id="msg" class="msgline muted"></div>
+      </div>
+    </div>
+
+    <div class="chat-layout">
+      <!-- LEFT -->
+      <aside class="panel left">
+        <div class="panel-header">
+          <input id="q" class="search" placeholder="Buscar conversa..." />
+        </div>
+        <div id="lista" class="list"></div>
+      </aside>
+
+      <!-- RIGHT -->
+      <section class="panel right chat">
+        <div class="chat-top">
+          <div class="chat-user">
+            <div class="avatarWrap">
+              <img id="chatAvatar" class="avatar" alt="avatar" />
+              <div class="avatarFallback" id="chatAvatarFallback">DP</div>
+            </div>
+
+            <div class="userText">
+              <div id="chatNome" class="title">Selecione uma conversa</div>
+              <div id="chatSub" class="sub muted"></div>
+            </div>
+          </div>
+
+          <div class="muted" id="chatStatus"></div>
+        </div>
+
+        <div id="msgs" class="msgs">
+          <div class="empty">Escolha uma conversa à esquerda para ver as mensagens.</div>
+        </div>
+
+        <div class="composer">
+          <textarea id="texto" placeholder="Digite uma mensagem..." disabled></textarea>
+          <button id="btnEnviar" class="btn btn-primary" disabled>Enviar</button>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script type="module" src="js/conversas.js"></script>
+  <script>
+    // Drawer Mobile (hambúrguer) - padrão Tinder
+    const navToggle = document.getElementById("navToggle");
+    const navDrawer = document.getElementById("navDrawer");
+    const navOverlay = document.getElementById("navOverlay");
+    const navClose = document.getElementById("navClose");
+
+    function openNav() {
+      navDrawer.classList.add("open");
+      navOverlay.classList.add("show");
+      navToggle.classList.add("open");
+      navToggle.setAttribute("aria-expanded", "true");
+      navDrawer.setAttribute("aria-hidden", "false");
+      navOverlay.setAttribute("aria-hidden", "false");
+      document.body.classList.add("no-scroll");
+    }
+
+    function closeNav() {
+      navDrawer.classList.remove("open");
+      navOverlay.classList.remove("show");
+      navToggle.classList.remove("open");
+      navToggle.setAttribute("aria-expanded", "false");
+      navDrawer.setAttribute("aria-hidden", "true");
+      navOverlay.setAttribute("aria-hidden", "true");
+      document.body.classList.remove("no-scroll");
+    }
+
+    navToggle?.addEventListener("click", () => {
+      if (navDrawer.classList.contains("open")) closeNav();
+      else openNav();
+    });
+
+    navOverlay?.addEventListener("click", closeNav);
+    navClose?.addEventListener("click", closeNav);
+
+    // Fecha com ESC
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeNav();
+    });
+
+    // Sair: desktop + drawer
+    const btnSair = document.getElementById("btnSair");
+    const btnSairMobile = document.getElementById("btnSairMobile");
+    if (btnSair && btnSairMobile) {
+      btnSairMobile.addEventListener("click", () => btnSair.click());
+    }
+  </script>
+</body>
+
+</html>

@@ -3,22 +3,58 @@
 
 <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Desejo Proibido - Login</title>
-    <link rel="stylesheet" href="css/app.css">
+    <link rel="stylesheet" href="css/app.css" />
 </head>
 
-<body>
-    <div class="box">
-        <h1>Login</h1>
+<body class="auth-body">
+    <main class="auth-wrap">
+        <section class="auth-card">
+            <header class="auth-header">
+                <div class="brand">
+                    <div class="brand-badge">DP</div>
+                    <div class="brand-text">
+                        <div class="brand-title">Desejo Proibido</div>
+                        <div class="brand-sub">Acesse sua conta</div>
+                    </div>
+                </div>
+            </header>
 
-        <input id="email" placeholder="email" />
-        <input id="senha" placeholder="senha" type="password" />
+            <form id="formLogin" class="auth-form" autocomplete="on" novalidate>
+                <label class="field">
+                    <span class="field-label">E-mail</span>
+                    <input id="email" type="email" placeholder="seuemail@dominio.com" autocomplete="email" />
+                </label>
 
-        <button id="btnLogin">Entrar</button>
-        <a href="register.html">Criar conta</a>
+                <label class="field">
+                    <span class="field-label">Senha</span>
+                    <div class="field-inline">
+                        <input id="senha" type="password" placeholder="••••••••" autocomplete="current-password" />
+                        <button type="button" class="icon-btn" id="toggleSenha" aria-label="Mostrar/ocultar senha"
+                            title="Mostrar/ocultar senha">
+                            👁
+                        </button>
+                    </div>
+                </label>
 
-        <pre id="msg"></pre>
-    </div>
+                <button id="btnLogin" class="btn-primary" type="submit">
+                    Entrar
+                </button>
+
+                <p class="auth-links">
+                    Não tem conta?
+                    <a class="link" href="register.html">Criar conta</a>
+                </p>
+
+                <div id="msg" class="alert" aria-live="polite"></div>
+            </form>
+        </section>
+
+        <footer class="auth-footer">
+            <span class="muted">© Desejo Proibido</span>
+        </footer>
+    </main>
 
     <script type="module" src="js/auth.js"></script>
 </body>

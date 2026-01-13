@@ -1,0 +1,682 @@
+/* =========================================================
+   dating.css — VERSÃO FINAL (MENU HAMBÚRGUER + FEED TINDER)
+   - Desktop: menu normal
+   - Mobile: drawer (hambúrguer) estilo Tinder
+========================================================= */
+
+:root {
+    --bg1: #07060a;
+    --bg2: #0d0610;
+
+    --card: rgba(255, 255, 255, .06);
+    --card2: rgba(255, 255, 255, .09);
+    --border: rgba(255, 255, 255, .12);
+
+    --text: #f7f6f9;
+    --muted: rgba(255, 255, 255, .72);
+
+    /* marca */
+    --pink: #c0163a;
+    /* vinho */
+    --purple: #3a0f2d;
+    /* roxo vinho */
+    --gold: #f5b301;
+    /* dourado */
+
+    --danger: #ff3b3b;
+    --warn: #f5b301;
+    --ok: #2fe57c;
+
+    --shadow: 0 18px 60px rgba(0, 0, 0, .55);
+    --shadow2: 0 10px 30px rgba(0, 0, 0, .35);
+
+    --radius: 18px;
+    --radius2: 14px;
+
+    --tap: 44px;
+}
+
+/* =========================
+   RESET / BASE
+========================= */
+* {
+    box-sizing: border-box;
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    margin: 0;
+    color: var(--text);
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    min-height: 100vh;
+
+    background:
+        radial-gradient(900px 600px at 15% 10%, rgba(192, 22, 58, .18), transparent 60%),
+        radial-gradient(900px 600px at 85% 20%, rgba(245, 179, 1, .12), transparent 55%),
+        radial-gradient(700px 600px at 70% 90%, rgba(58, 15, 45, .18), transparent 55%),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+img {
+    max-width: 100%;
+    display: block;
+}
+
+button {
+    font-family: inherit;
+}
+
+/* evita zoom iOS */
+input,
+textarea,
+select,
+button {
+    font-size: 16px;
+}
+
+.no-scroll {
+    overflow: hidden;
+}
+
+.w100 {
+    width: 100%;
+}
+
+/* =========================
+   TOPNAV (DESKTOP PADRÃO)
+========================= */
+.topnav {
+    position: sticky;
+    top: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: rgba(10, 10, 16, .74);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 950;
+    letter-spacing: .2px;
+    user-select: none;
+    min-width: 210px;
+    /* segura layout no desktop */
+}
+
+.brand-name {
+    white-space: nowrap;
+}
+
+.brand-badge {
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, rgba(255, 45, 109, .35), rgba(124, 58, 237, .35));
+    border: 1px solid rgba(255, 255, 255, .12);
+    box-shadow: var(--shadow2);
+}
+
+.navlinks {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.navlinks a {
+    padding: 9px 11px;
+    border-radius: 12px;
+    font-weight: 850;
+    opacity: .9;
+    border: 1px solid transparent;
+    transition: .12s ease;
+}
+
+.navlinks a:hover {
+    background: rgba(255, 255, 255, .06);
+    opacity: 1;
+}
+
+.navlinks a.active {
+    background: linear-gradient(135deg, rgba(255, 45, 109, .18), rgba(124, 58, 237, .18));
+    border: 1px solid rgba(255, 45, 109, .22);
+    opacity: 1;
+}
+
+.spacer {
+    flex: 1;
+}
+
+/* =========================
+   BOTÕES
+========================= */
+.btn {
+    min-height: var(--tap);
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, .06);
+    color: var(--text);
+    font-weight: 900;
+    cursor: pointer;
+    transition: .12s ease;
+}
+
+.btn:hover {
+    background: rgba(255, 255, 255, .10);
+}
+
+.btn:active {
+    transform: translateY(1px);
+}
+
+.btn-primary {
+    border: 0;
+    background: linear-gradient(135deg, var(--pink), var(--purple));
+}
+
+.btn-primary:hover {
+    filter: brightness(1.05);
+}
+
+.btn-danger {
+    border: 0;
+    background: linear-gradient(135deg, #ff3b3b, #ff2d6d);
+}
+
+.btn-warn {
+    border: 0;
+    background: linear-gradient(135deg, #ffb100, #ff6a00);
+}
+
+.btn-ghost {
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid var(--border);
+}
+
+/* =========================
+   LAYOUT / TITULOS / PAINEL
+========================= */
+.wrap {
+    width: min(1100px, calc(100% - 24px));
+    margin: 0 auto;
+    padding: 18px 12px;
+}
+
+.h-title {
+    font-size: 22px;
+    margin: 0 0 14px;
+    letter-spacing: .2px;
+}
+
+.panel {
+    width: 100%;
+    max-width: 100%;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .03));
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+
+.muted {
+    color: var(--muted);
+}
+
+.msgline {
+    min-height: 18px;
+    margin: 10px 0;
+}
+
+/* =========================
+   FORMS
+========================= */
+.input,
+textarea {
+    width: 100%;
+    padding: 12px 12px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, .06);
+    color: var(--text);
+    outline: none;
+    transition: .12s ease;
+}
+
+.input:focus,
+textarea:focus {
+    border-color: rgba(255, 45, 109, .35);
+    box-shadow: 0 0 0 2px rgba(255, 45, 109, .10);
+}
+
+textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+/* =========================================================
+   MOBILE MENU (DRAWER)
+   - no desktop: escondido
+========================================================= */
+.nav-toggle {
+    display: none;
+    /* só mobile */
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, .06);
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 10px;
+}
+
+.nav-toggle span {
+    display: block;
+    width: 18px;
+    height: 2px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, .88);
+    transition: .16s ease;
+}
+
+.nav-toggle.open span:nth-child(1) {
+    transform: translateY(6px) rotate(45deg);
+}
+
+.nav-toggle.open span:nth-child(2) {
+    opacity: 0;
+}
+
+.nav-toggle.open span:nth-child(3) {
+    transform: translateY(-6px) rotate(-45deg);
+}
+
+/* overlay */
+.nav-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .55);
+    backdrop-filter: blur(2px);
+    z-index: 80;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .16s ease;
+}
+
+.nav-overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* drawer */
+.nav-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100vh;
+    width: min(86vw, 340px);
+    background: rgba(10, 10, 16, .92);
+    border-left: 1px solid rgba(255, 255, 255, .10);
+    box-shadow: -20px 0 60px rgba(0, 0, 0, .55);
+    z-index: 90;
+
+    transform: translateX(102%);
+    transition: transform .18s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.nav-drawer.open {
+    transform: translateX(0);
+}
+
+.nav-drawer-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 14px 14px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+
+.iconbtn {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, .06);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: .12s ease;
+}
+
+.iconbtn:hover {
+    background: rgba(255, 255, 255, .10);
+}
+
+.iconbtn:active {
+    transform: translateY(1px);
+}
+
+.xicon {
+    width: 18px;
+    height: 18px;
+    position: relative;
+}
+
+.xicon::before,
+.xicon::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 18px;
+    height: 2px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, .9);
+}
+
+.xicon::before {
+    transform: rotate(45deg);
+}
+
+.xicon::after {
+    transform: rotate(-45deg);
+}
+
+.nav-drawer-links {
+    display: grid;
+    gap: 10px;
+    padding: 14px;
+}
+
+.nav-drawer-links a {
+    padding: 12px 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, .10);
+    background: rgba(255, 255, 255, .06);
+    font-weight: 900;
+    text-align: center;
+    transition: .12s ease;
+}
+
+.nav-drawer-links a:hover {
+    background: rgba(255, 255, 255, .10);
+}
+
+.nav-drawer-links a.active {
+    background: linear-gradient(135deg, rgba(255, 45, 109, .18), rgba(124, 58, 237, .18));
+    border-color: rgba(255, 45, 109, .25);
+}
+
+.nav-drawer-foot {
+    margin-top: auto;
+    padding: 14px;
+    border-top: 1px solid rgba(255, 255, 255, .08);
+}
+
+/* Breakpoint: mobile vira drawer e some menu desktop */
+@media (max-width: 720px) {
+    .navlinks-desktop {
+        display: none;
+    }
+
+    .nav-toggle {
+        display: inline-flex;
+    }
+
+    /* mantém header “limpo” no mobile */
+    .brand {
+        min-width: 0;
+    }
+}
+
+/* =========================================================
+   FEED — TINDER UI
+========================================================= */
+.feed-top {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.feed-stage {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 10px;
+}
+
+/* Card */
+.tcard {
+    width: min(520px, 100%);
+    padding: 0;
+    overflow: hidden;
+    border-radius: 26px;
+    position: relative;
+}
+
+/* Conteúdo interno */
+.tcard-inner {
+    position: relative;
+    width: 100%;
+    height: 540px;
+    background: rgba(255, 255, 255, .05);
+}
+
+/* Mobile: card ocupa “quase a tela” */
+@media (max-width: 520px) {
+    .tcard-inner {
+        height: calc(100vh - 180px);
+        min-height: 520px;
+    }
+}
+
+/* Foto */
+.tphoto {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transform: scale(1.02);
+}
+
+/* Overlay gradiente */
+.toverlay {
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(to top,
+            rgba(0, 0, 0, .84) 0%,
+            rgba(0, 0, 0, .50) 32%,
+            rgba(0, 0, 0, .12) 58%,
+            rgba(0, 0, 0, 0) 72%);
+}
+
+/* Texto sobre a imagem */
+.tcontent {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    bottom: 78px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.tnameRow {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.tname {
+    font-size: 24px;
+    font-weight: 950;
+    letter-spacing: .2px;
+    text-shadow: 0 12px 30px rgba(0, 0, 0, .7);
+}
+
+.tbio {
+    font-size: 14px;
+    line-height: 1.35;
+    color: rgba(255, 255, 255, .88);
+    max-height: 56px;
+    overflow: hidden;
+    text-shadow: 0 10px 25px rgba(0, 0, 0, .65);
+}
+
+.tchipRow {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.tchip {
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, .12);
+    background: rgba(255, 255, 255, .06);
+    color: rgba(255, 255, 255, .85);
+    backdrop-filter: blur(8px);
+}
+
+/* Fallback sem foto */
+.tfallback {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 10px;
+    padding: 20px;
+    text-align: center;
+    background:
+        radial-gradient(1200px 600px at 30% 15%, rgba(192, 22, 58, .22), transparent 55%),
+        radial-gradient(900px 520px at 80% 20%, rgba(245, 179, 1, .14), transparent 55%),
+        rgba(255, 255, 255, .03);
+}
+
+.tbadgeBig {
+    width: 72px;
+    height: 72px;
+    border-radius: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 950;
+    border: 1px solid rgba(255, 255, 255, .14);
+    background: rgba(255, 255, 255, .08);
+}
+
+/* Botões flutuantes */
+.tactions {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 14px;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    padding: 0 14px;
+}
+
+.tbtn {
+    width: 54px;
+    height: 54px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, .14);
+    background: rgba(20, 20, 30, .55);
+    color: #fff;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 14px 35px rgba(0, 0, 0, .45);
+    transition: transform .12s ease, filter .12s ease, background .12s ease;
+}
+
+.tbtn:active {
+    transform: translateY(1px) scale(.98);
+}
+
+.tbtn:hover {
+    filter: brightness(1.06);
+}
+
+.tbtn-ghost {
+    background: rgba(255, 255, 255, .10);
+}
+
+.tbtn-danger {
+    background: linear-gradient(135deg, rgba(255, 59, 59, .95), rgba(255, 45, 109, .85));
+    border: 0;
+}
+
+.tbtn-warn {
+    background: linear-gradient(135deg, rgba(255, 177, 0, .95), rgba(255, 106, 0, .92));
+    border: 0;
+}
+
+.tbtn-like {
+    background: linear-gradient(135deg, rgba(192, 22, 58, .95), rgba(58, 15, 45, .92));
+    border: 0;
+}
+
+@media (max-width: 520px) {
+    .tbtn {
+        width: 52px;
+        height: 52px;
+        font-size: 19px;
+    }
+
+    .tcontent {
+        left: 14px;
+        right: 14px;
+    }
+}
+
+/* =========================
+   CHAT base (não quebra suas telas)
+========================= */
+.chat-layout {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 14px;
+    height: calc(100vh - 170px);
+}
+
+@media (max-width: 980px) {
+    .chat-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+    }
+}

@@ -1,0 +1,225 @@
+.headRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.profilePanel {
+    width: 1040px;
+    padding: 16px;
+}
+
+.profileGrid {
+    display: grid;
+    grid-template-columns: 1.4fr .6fr;
+    gap: 14px;
+    align-items: start;
+    margin-bottom: 14px;
+}
+
+.photoHero {
+    position: relative;
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, .10);
+    background: rgba(255, 255, 255, .04);
+    min-height: 420px;
+}
+
+.heroImg {
+    width: 100%;
+    height: 420px;
+    object-fit: cover;
+    display: block;
+}
+
+.heroFallback {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 10px;
+    background: radial-gradient(1200px 500px at 30% 10%, rgba(255, 0, 95, .18), transparent 50%),
+        radial-gradient(800px 400px at 80% 20%, rgba(255, 180, 0, .10), transparent 50%),
+        rgba(255, 255, 255, .03);
+}
+
+.fbBadge {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    background: rgba(255, 255, 255, .08);
+    border: 1px solid rgba(255, 255, 255, .12);
+}
+
+.fbText {
+    font-weight: 700;
+}
+
+.fbSub {
+    font-size: 12px;
+    opacity: .75;
+}
+
+.heroOverlay {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 14px 14px 12px;
+    background: linear-gradient(to top, rgba(0, 0, 0, .78), rgba(0, 0, 0, .10));
+}
+
+.nameLine {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.heroName {
+    font-size: 20px;
+    font-weight: 800;
+}
+
+.dot {
+    opacity: .7;
+}
+
+.heroLoc {
+    font-size: 13px;
+}
+
+.heroBio {
+    margin-top: 8px;
+    font-size: 13px;
+    opacity: .92;
+    white-space: pre-wrap;
+    line-height: 1.35;
+    max-height: 56px;
+    overflow: hidden;
+}
+
+.sideCard {
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, .10);
+    background: rgba(255, 255, 255, .03);
+    padding: 14px;
+}
+
+.sideTitle {
+    font-weight: 800;
+    margin-bottom: 10px;
+}
+
+.w100 {
+    width: 100%;
+    height: 44px;
+    margin-bottom: 10px;
+}
+
+.tipBox {
+    margin-top: 8px;
+    border-radius: 14px;
+    padding: 10px;
+    border: 1px solid rgba(255, 255, 255, .10);
+    background: rgba(255, 255, 255, .03);
+}
+
+.tipTitle {
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.tipText {
+    font-size: 12px;
+}
+
+.sectionTitle {
+    font-weight: 800;
+    margin: 10px 0 10px;
+}
+
+.galeria {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+}
+
+.gFoto {
+    width: 100%;
+    height: 130px;
+    object-fit: cover;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, .10);
+    background: rgba(255, 255, 255, .06);
+    cursor: pointer;
+    transition: transform .12s ease, border-color .12s ease;
+}
+
+.gFoto:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, .22);
+}
+
+.gFoto.sel {
+    border-color: rgba(255, 0, 95, .55);
+    box-shadow: 0 0 0 2px rgba(255, 0, 95, .18);
+}
+
+@media(max-width: 1100px) {
+    .profilePanel {
+        width: 95vw;
+    }
+
+    .profileGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .heroImg {
+        height: 380px;
+    }
+
+    .photoHero {
+        min-height: 380px;
+    }
+
+    .galeria {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media(max-width: 520px) {
+    .galeria {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .heroImg {
+        height: 320px;
+    }
+
+    .photoHero {
+        min-height: 320px;
+    }
+}
+
+@media (max-width: 520px) {
+    .panel {
+        width: 100% !important;
+    }
+
+    textarea.input {
+        min-height: 120px;
+    }
+
+    .btn {
+        min-height: 44px;
+    }
+}

@@ -7,34 +7,86 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  USER
+  ADMIN
+}
+
+enum TermoTipo {
+  TERMOS_USO
+  POLITICA_PRIVACIDADE
+}
+
+enum AceiteOrigem {
+  WEB
+  MOBILE
+}
+
+enum DenunciaStatus {
+  ABERTA
+  EM_ANALISE
+  RESOLVIDA
+  IGNORADA
+}
+
 model Usuario {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  senhaHash    String
-  ativo        Boolean  @default(true)
+  id        String  @id @default(cuid())
+  email     String  @unique
+  senhaHash String
+  ativo     Boolean @default(true)
+
+  // ✅ Controle de permissões (Admin/moderação)
+  role Role @default(USER)
+
+  // ✅ Freemium / Premium (pra Doing do Trello)
+  plano     String  @default("FREE") // FREE | PREMIUM (string simples pra não travar)
+  isPremium Boolean @default(false)
+
+  // ✅ Modo invisível (Premium)
+  modoInvisivel Boolean @default(false)
+
+  // ✅ Boost de perfil (destaque temporário)
+  boostAte DateTime?
+
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
-  perfil            Perfil?
-  fotos             Foto[]
+  perfil Perfil?
+  fotos  Foto[]
+
   // Curtidas
   curtidasEnviadas  Curtida[] @relation("CurtidasEnviadas")
   curtidasRecebidas Curtida[] @relation("CurtidasRecebidas")
 
   // Matches
-  matchesA       Match[]    @relation("MatchesA")
-  matchesB       Match[]    @relation("MatchesB")
-  mensagems      Mensagem[]
+  matchesA  Match[]    @relation("MatchesA")
+  matchesB  Match[]    @relation("MatchesB")
+  mensagems Mensagem[]
+
   // Skips
-  skipsEnviados  Skip[]     @relation("SkipsEnviados")
-  skipsRecebidos Skip[]     @relation("SkipsRecebidos")
+  skipsEnviados  Skip[] @relation("SkipsEnviados")
+  skipsRecebidos Skip[] @relation("SkipsRecebidos")
 
   // Bloqueios
   bloqueiosEnviados  Bloqueio[] @relation("BloqueiosEnviados")
   bloqueiosRecebidos Bloqueio[] @relation("BloqueiosRecebidos")
+
   // Denúncias
   denunciasFeitas    Denuncia[] @relation("DenunciasFeitas")
   denunciasRecebidas Denuncia[] @relation("DenunciasRecebidas")
+
+  // ✅ Aceites legais
+  aceitesTermos AceiteTermos[]
+
+  // ✅ Admin actions / banimento global
+  acoesAdminFeitas AcaoAdmin[] @relation("AcoesAdminFeitas")
+  acoesAdminAlvo   AcaoAdmin[] @relation("AcoesAdminAlvo")
+  banGlobal        BanGlobal?
+
+  @@index([ativo])
+  @@index([role])
+  @@index([isPremium])
+  @@index([boostAte])
 }
 
 model Perfil {
@@ -48,8 +100,10 @@ model Perfil {
   atualizadoEm DateTime @updatedAt
 
   usuario Usuario @relation(fields: [usuarioId], references: [id])
-}
 
+  @@index([cidade])
+  @@index([estado])
+}
 
 model Foto {
   id        String   @id @default(cuid())
@@ -61,6 +115,7 @@ model Foto {
   usuario Usuario @relation(fields: [usuarioId], references: [id])
 
   @@index([usuarioId])
+  @@index([principal])
 }
 
 model Curtida {
@@ -74,6 +129,7 @@ model Curtida {
 
   @@unique([deUsuarioId, paraUsuarioId])
   @@index([paraUsuarioId])
+  @@index([deUsuarioId, criadoEm]) // ✅ ajuda no limite diário (freemium)
 }
 
 model Match {
@@ -113,6 +169,7 @@ model Mensagem {
 
   @@index([conversaId])
   @@index([autorId])
+  @@index([conversaId, criadoEm]) // ✅ ordenar chat rápido
 }
 
 model Skip {
@@ -126,6 +183,7 @@ model Skip {
 
   @@unique([deUsuarioId, paraUsuarioId])
   @@index([paraUsuarioId])
+  @@index([deUsuarioId, criadoEm]) // ✅ também serve pra limite diário se você quiser
 }
 
 model Bloqueio {
@@ -139,19 +197,95 @@ model Bloqueio {
 
   @@unique([deUsuarioId, paraUsuarioId])
   @@index([paraUsuarioId])
+  @@index([deUsuarioId])
 }
 
 model Denuncia {
-  id            String   @id @default(cuid())
+  id            String         @id @default(cuid())
   denuncianteId String
   denunciadoId  String
   motivo        String
-  descricao     String?  @db.Text
-  criadoEm      DateTime @default(now())
+  descricao     String?        @db.Text
+  status        DenunciaStatus @default(ABERTA)
+  criadoEm      DateTime       @default(now())
+  atualizadoEm  DateTime       @updatedAt
 
   denunciante Usuario @relation("DenunciasFeitas", fields: [denuncianteId], references: [id])
   denunciado  Usuario @relation("DenunciasRecebidas", fields: [denunciadoId], references: [id])
 
   @@index([denunciadoId])
   @@index([denuncianteId])
+  @@index([status])
+  @@index([criadoEm])
+}
+
+//
+// ✅ Termos/Privacidade com versionamento + aceite obrigatório
+//
+model Termo {
+  id       String    @id @default(cuid())
+  tipo     TermoTipo
+  versao   String
+  conteudo String    @db.LongText
+  ativo    Boolean   @default(true)
+  criadoEm DateTime  @default(now())
+
+  aceites AceiteTermos[]
+
+  @@unique([tipo, versao])
+  @@index([tipo, ativo])
+}
+
+model AceiteTermos {
+  id        String       @id @default(cuid())
+  usuarioId String
+  termoId   String
+  origem    AceiteOrigem @default(WEB)
+  ip        String?
+  userAgent String?
+  aceitoEm  DateTime     @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  termo   Termo   @relation(fields: [termoId], references: [id])
+
+  @@unique([usuarioId, termoId])
+  @@index([usuarioId, aceitoEm])
+  @@index([termoId])
+}
+
+//
+// ✅ Auditoria/Admin (para moderação/bloqueio global etc.)
+//
+model AcaoAdmin {
+  id       String   @id @default(cuid())
+  adminId  String
+  alvoId   String?
+  tipo     String // "BAN_GLOBAL" | "DESBANIR" | "SUSPENDER" | "REMOVER_BOOST" | etc
+  motivo   String?  @db.Text
+  detalhes String?  @db.Text
+  criadoEm DateTime @default(now())
+
+  admin Usuario  @relation("AcoesAdminFeitas", fields: [adminId], references: [id])
+  alvo  Usuario? @relation("AcoesAdminAlvo", fields: [alvoId], references: [id])
+
+  @@index([adminId, criadoEm])
+  @@index([alvoId, criadoEm])
+  @@index([tipo])
+}
+
+//
+// ✅ Bloqueio global (banir usuário do sistema inteiro)
+//
+model BanGlobal {
+  id        String    @id @default(cuid())
+  usuarioId String    @unique
+  motivo    String?   @db.Text
+  ate       DateTime?
+  ativo     Boolean   @default(true)
+  criadoEm  DateTime  @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([ativo])
+  @@index([ate])
 }

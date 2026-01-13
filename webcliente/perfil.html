@@ -3,35 +3,149 @@
 
 <head>
     <meta charset="utf-8" />
-    <title>Perfil</title>
-    <link rel="stylesheet" href="css/app.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Meu Perfil – Desejo Proibido</title>
+
+    <!-- ajuste o caminho se sua pasta for webcliente/ -->
+    <link rel="stylesheet" href="css/dating.css" />
 </head>
 
 <body>
-    <nav class="nav">
-        <a href="home.html">Feed</a>
-        <a href="perfil.html">Perfil</a>
-        <a href="fotos.html">Fotos</a>
-        <a href="matches.html">Matches</a>
-        <a href="conversas.html">Chat</a>
-        <button id="btnSair">Sair</button>
+    <!-- TOPNAV: Desktop normal + Mobile com menu sanduíche -->
+    <nav class="topnav" role="navigation" aria-label="Navegação principal">
+        <div class="brand">
+            <div class="brand-badge">DP</div>
+            <span class="brand-name">Desejo Proibido</span>
+        </div>
+
+        <!-- Desktop links -->
+        <div class="navlinks navlinks-desktop" aria-label="Links do menu">
+            <a href="home.html">Feed</a>
+            <a href="perfil.html" class="active">Perfil</a>
+            <a href="fotos.html">Fotos</a>
+            <a href="matches.html">Matches</a>
+            <a href="conversas.html">Chat</a>
+        </div>
+
+        <div class="spacer"></div>
+
+        <!-- Botão sair (sempre visível) -->
+        <button id="btnSair" class="btn btn-ghost">Sair</button>
+
+        <!-- Botão hambúrguer (mobile) -->
+        <button class="nav-toggle" id="navToggle" aria-label="Abrir menu" aria-expanded="false"
+            aria-controls="navDrawer">
+            <span></span><span></span><span></span>
+        </button>
     </nav>
 
-    <div class="box">
-        <h2>Meu Perfil</h2>
+    <!-- Overlay + Drawer Mobile -->
+    <div class="nav-overlay" id="navOverlay" aria-hidden="true"></div>
 
-        <input id="nome" placeholder="nome" />
-        <input id="cidade" placeholder="cidade" />
-        <input id="estado" placeholder="estado (ex: SP)" maxlength="2" />
-        <textarea id="bio" placeholder="bio" rows="4"
-            style="width:100%;padding:10px;border-radius:8px;border:0;margin:6px 0;"></textarea>
+    <aside class="nav-drawer" id="navDrawer" aria-hidden="true">
+        <div class="nav-drawer-head">
+            <div class="brand">
+                <div class="brand-badge">DP</div>
+                <span class="brand-name">Desejo Proibido</span>
+            </div>
 
-        <button id="btnSalvar">Salvar</button>
+            <button class="iconbtn" id="navClose" aria-label="Fechar menu">
+                <span class="xicon"></span>
+            </button>
+        </div>
 
-        <pre id="msg"></pre>
+        <div class="nav-drawer-links">
+            <a href="home.html" >Feed</a>
+            <a href="perfil.html" class="active">Perfil</a>
+            <a href="fotos.html">Fotos</a>
+            <a href="matches.html">Matches</a>
+            <a href="conversas.html">Chat</a>
+        </div>
+
+        <div class="nav-drawer-foot">
+            <button id="btnSairMobile" class="btn btn-ghost w100">Sair</button>
+        </div>
+    </aside>
+
+    <div class="wrap">
+        <h2 class="h-title">Meu Perfil</h2>
+
+        <div class="center">
+            <div class="panel" style="width:520px; padding:16px;">
+                <div class="muted" style="margin-bottom:10px;">
+                    Preencha seu perfil para aparecer no feed.
+                </div>
+
+                <div style="display:grid; gap:10px;">
+                    <input id="nome" class="input" placeholder="Seu nome" />
+                    <input id="cidade" class="input" placeholder="Cidade" />
+                    <input id="estado" class="input" placeholder="UF (ex: SP)" maxlength="2" />
+                    <textarea id="bio" class="input" placeholder="Bio (opcional)"></textarea>
+                </div>
+
+                <div style="display:flex; gap:10px; margin-top:12px;">
+                    <button id="btnSalvar" class="btn btn-primary" style="flex:1;">Salvar</button>
+                    <button id="btnIrFotos" class="btn btn-ghost">Fotos</button>
+                </div>
+
+                <div id="msg" class="msgline muted"></div>
+            </div>
+        </div>
     </div>
 
     <script type="module" src="js/perfil.js"></script>
+    <script type="module">
+        // botão rápido (opcional)
+        const b = document.getElementById("btnIrFotos");
+        if (b) b.onclick = () => (location.href = "fotos.html");
+    </script>
+    <script>
+        // Drawer Mobile (hambúrguer) - padrão Tinder
+        const navToggle = document.getElementById("navToggle");
+        const navDrawer = document.getElementById("navDrawer");
+        const navOverlay = document.getElementById("navOverlay");
+        const navClose = document.getElementById("navClose");
+
+        function openNav() {
+            navDrawer.classList.add("open");
+            navOverlay.classList.add("show");
+            navToggle.classList.add("open");
+            navToggle.setAttribute("aria-expanded", "true");
+            navDrawer.setAttribute("aria-hidden", "false");
+            navOverlay.setAttribute("aria-hidden", "false");
+            document.body.classList.add("no-scroll");
+        }
+
+        function closeNav() {
+            navDrawer.classList.remove("open");
+            navOverlay.classList.remove("show");
+            navToggle.classList.remove("open");
+            navToggle.setAttribute("aria-expanded", "false");
+            navDrawer.setAttribute("aria-hidden", "true");
+            navOverlay.setAttribute("aria-hidden", "true");
+            document.body.classList.remove("no-scroll");
+        }
+
+        navToggle?.addEventListener("click", () => {
+            if (navDrawer.classList.contains("open")) closeNav();
+            else openNav();
+        });
+
+        navOverlay?.addEventListener("click", closeNav);
+        navClose?.addEventListener("click", closeNav);
+
+        // Fecha com ESC
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") closeNav();
+        });
+
+        // Sair: desktop + drawer
+        const btnSair = document.getElementById("btnSair");
+        const btnSairMobile = document.getElementById("btnSairMobile");
+        if (btnSair && btnSairMobile) {
+            btnSairMobile.addEventListener("click", () => btnSair.click());
+        }
+    </script>
 </body>
 
 </html>

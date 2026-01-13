@@ -1,22 +1,44 @@
 import { apiFetch, setToken } from "./api.js";
 
+const form = document.getElementById("formRegister");
 const msg = document.getElementById("msg");
 const btn = document.getElementById("btnCadastro");
+const toggleSenha = document.getElementById("toggleSenha");
 
-btn.addEventListener("click", async () => {
+function setAlert(text, type = "error") {
+    msg.className = "alert " + (type === "ok" ? "alert-ok" : "alert-error");
+    msg.textContent = text || "";
+    msg.style.display = text ? "block" : "none";
+}
+
+function setLoading(loading) {
+    btn.disabled = loading;
+    btn.textContent = loading ? "Cadastrando..." : "Cadastrar";
+}
+
+toggleSenha?.addEventListener("click", () => {
+    const input = document.getElementById("senha");
+    if (!input) return;
+    input.type = input.type === "password" ? "text" : "password";
+});
+
+form?.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+
     try {
-        msg.textContent = "";
+        setAlert("");
 
         const email = document.getElementById("email").value.trim();
         const senha = document.getElementById("senha").value.trim();
         const senha2 = document.getElementById("senha2").value.trim();
 
-        if (!email || !senha) throw new Error("Preencha email e senha");
-        if (senha.length < 6) throw new Error("A senha deve ter pelo menos 6 caracteres");
-        if (senha !== senha2) throw new Error("As senhas não conferem");
+        if (!email) throw new Error("Informe um e-mail válido.");
+        if (!senha) throw new Error("Crie uma senha.");
+        if (senha.length < 6) throw new Error("A senha deve ter pelo menos 6 caracteres.");
+        if (senha !== senha2) throw new Error("As senhas não conferem.");
 
-        // ✅ ajuste aqui conforme seu backend:
-        // se for /auth/registrar, deixa assim.
+        setLoading(true);
+
         const r = await apiFetch("/auth/registrar", {
             method: "POST",
             body: { email, senha }
@@ -30,11 +52,11 @@ btn.addEventListener("click", async () => {
             return;
         }
 
-        // Se NÃO retorna token, manda pro login:
-        msg.textContent = "✅ Conta criada! Faça login.";
+        setAlert("✅ Conta criada! Faça login.", "ok");
         setTimeout(() => (location.href = "index.html"), 700);
-
     } catch (e) {
-        msg.textContent = e.message;
+        setAlert(e.message || "Não foi possível cadastrar.");
+    } finally {
+        setLoading(false);
     }
 });

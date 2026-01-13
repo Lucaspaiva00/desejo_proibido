@@ -16,7 +16,7 @@ import mensagemRoutes from "./routes/mensagem.routes.js";
 import skipRoutes from "./routes/skip.routes.js";
 import bloqueioRoutes from "./routes/bloqueio.routes.js";
 import denunciaRoutes from "./routes/denuncia.routes.js";
-
+import usuarioRoutes from "./routes/usuario.routes.js";
 
 
 export const app = express();
@@ -35,7 +35,7 @@ app.use("/mensagens", mensagemRoutes);
 app.use("/skips", skipRoutes);
 app.use("/bloqueios", bloqueioRoutes);
 app.use("/denuncias", denunciaRoutes);
-
+app.use("/usuarios", usuarioRoutes)
 
 
 const __filename = fileURLToPath(import.meta.url);

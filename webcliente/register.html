@@ -3,23 +3,65 @@
 
 <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Desejo Proibido - Cadastro</title>
-    <link rel="stylesheet" href="css/app.css">
+    <link rel="stylesheet" href="css/app.css" />
 </head>
 
-<body>
-    <div class="box">
-        <h1>Criar conta</h1>
+<body class="auth-body">
+    <main class="auth-wrap">
+        <section class="auth-card">
+            <header class="auth-header">
+                <div class="brand">
+                    <div class="brand-badge">DP</div>
+                    <div class="brand-text">
+                        <div class="brand-title">Criar conta</div>
+                        <div class="brand-sub">Leva menos de 1 minuto</div>
+                    </div>
+                </div>
+            </header>
 
-        <input id="email" placeholder="email" />
-        <input id="senha" placeholder="senha" type="password" />
-        <input id="senha2" placeholder="confirmar senha" type="password" />
+            <form id="formRegister" class="auth-form" autocomplete="on" novalidate>
+                <label class="field">
+                    <span class="field-label">E-mail</span>
+                    <input id="email" type="email" placeholder="seuemail@dominio.com" autocomplete="email" />
+                </label>
 
-        <button id="btnCadastro">Cadastrar</button>
-        <a href="index.html">Voltar para login</a>
+                <label class="field">
+                    <span class="field-label">Senha</span>
+                    <div class="field-inline">
+                        <input id="senha" type="password" placeholder="mínimo 6 caracteres"
+                            autocomplete="new-password" />
+                        <button type="button" class="icon-btn" id="toggleSenha" aria-label="Mostrar/ocultar senha"
+                            title="Mostrar/ocultar senha">
+                            👁
+                        </button>
+                    </div>
+                    <div class="hint">Use pelo menos 6 caracteres.</div>
+                </label>
 
-        <pre id="msg"></pre>
-    </div>
+                <label class="field">
+                    <span class="field-label">Confirmar senha</span>
+                    <input id="senha2" type="password" placeholder="repita a senha" autocomplete="new-password" />
+                </label>
+
+                <button id="btnCadastro" class="btn-primary" type="submit">
+                    Cadastrar
+                </button>
+
+                <p class="auth-links">
+                    Já tem conta?
+                    <a class="link" href="index.html">Voltar para login</a>
+                </p>
+
+                <div id="msg" class="alert" aria-live="polite"></div>
+            </form>
+        </section>
+
+        <footer class="auth-footer">
+            <span class="muted">© Desejo Proibido</span>
+        </footer>
+    </main>
 
     <script type="module" src="js/register.js"></script>
 </body>

@@ -14,17 +14,19 @@ async function listar() {
         return;
     }
 
-    lista.innerHTML = fotos.map(f => `
-    <div class="card">
-      <img class="foto" src="${API_BASE}${f.url}" />
-      <div class="row">
-        <button data-principal="${f.id}">${f.principal ? "✅ Principal" : "Tornar principal"}</button>
-        <button class="danger" data-del="${f.id}">Excluir</button>
-      </div>
-      <div class="muted">ID: ${f.id}</div>
-      <div class="muted">URL: ${f.url}</div>
+    lista.innerHTML = `<div class="gridFotos">` + fotos.map(f => `
+  <div class="fotoCard">
+    <img class="fotoImg" src="${API_BASE}${f.url}" />
+    <div class="fotoActions">
+      <button class="btn ${f.principal ? "btn-primary" : "btn-ghost"}" data-principal="${f.id}">
+        ${f.principal ? "✅ Principal" : "Tornar principal"}
+      </button>
+      <button class="btn btn-danger" data-del="${f.id}">Excluir</button>
     </div>
-  `).join("");
+    
+  </div>
+`).join("") + `</div>`;
+
 
     // listeners
     document.querySelectorAll("[data-principal]").forEach(btn => {
