@@ -7,10 +7,72 @@ let fila = [];
 let atual = null;
 
 document.getElementById("btnSair").onclick = logout;
-
-// botão sair do drawer (se existir)
 const btnSairMobile = document.getElementById("btnSairMobile");
 if (btnSairMobile) btnSairMobile.onclick = logout;
+
+// ===== Modal limite =====
+const overlay = document.getElementById("limiteCurtidasOverlay");
+const btnFecharLimite = document.getElementById("btnFecharLimite");
+const btnVirarPremium = document.getElementById("btnVirarPremium");
+
+// ===== TOAST =====
+const toast = document.getElementById("toast");
+const toastText = document.getElementById("toastText");
+let toastTimer = null;
+
+function showToast(text, type = "success", ms = 2200) {
+    if (!toast || !toastText) return;
+
+    toast.classList.remove("hidden", "success", "error", "warn");
+    toast.classList.add(type);
+
+    toastText.textContent = text;
+
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+        toast.classList.add("hidden");
+    }, ms);
+}
+
+function mostrarLimiteCurtidas() {
+    overlay?.classList.remove("hidden");
+    document.body.classList.add("no-scroll");
+}
+
+function fecharLimiteCurtidas() {
+    overlay?.classList.add("hidden");
+    document.body.classList.remove("no-scroll");
+}
+
+btnFecharLimite?.addEventListener("click", fecharLimiteCurtidas);
+overlay?.addEventListener("click", (e) => {
+    if (e.target === overlay) fecharLimiteCurtidas();
+});
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") fecharLimiteCurtidas();
+});
+
+if (btnVirarPremium) {
+    btnVirarPremium.addEventListener("click", async () => {
+        try {
+            btnVirarPremium.disabled = true;
+            btnVirarPremium.textContent = "Abrindo pagamento...";
+
+            const r = await apiFetch("/pagamentos/premium", { method: "POST" });
+
+            // fecha modal
+            fecharLimiteCurtidas();
+
+            // redireciona pro MP
+            window.location.href = r.init_point;
+        } catch (e) {
+            alert(e.message || "Erro ao abrir pagamento");
+        } finally {
+            btnVirarPremium.disabled = false;
+            btnVirarPremium.textContent = "Virar Premium";
+        }
+    });
+}
 
 function safe(s) {
     return (s ?? "").toString();
@@ -93,11 +155,24 @@ function proximo() {
 document.getElementById("btnCurtir").onclick = async () => {
     try {
         if (!atual) return;
+
         const r = await apiFetch(`/curtidas/${atual.id}`, { method: "POST" });
-        msg.textContent = r.matchCriado ? "✅ Deu MATCH! (conversa criada)" : "✅ Curtido";
+        showToast(r.matchCriado ? "✅ Deu MATCH! (conversa criada)" : "✅ Curtido", "success");
         proximo();
+
     } catch (e) {
-        msg.textContent = e.message;
+        const isLimite =
+            e?.status === 429 ||
+            e?.data?.limite ||
+            (e?.message || "").toLowerCase().includes("limite diário");
+
+        if (isLimite) {
+            showToast("⚠️ Limite diário atingido", "warn", 1400);
+            mostrarLimiteCurtidas();
+            return;
+        }
+
+        msg.textContent = e.message || "Erro ao curtir";
     }
 };
 
@@ -141,32 +216,5 @@ document.getElementById("btnDenunciar").onclick = async () => {
         msg.textContent = e.message;
     }
 };
-
-async function curtir(paraUsuarioId) {
-    try {
-        await apiFetch(`/curtidas/${paraUsuarioId}`, { method: "POST" });
-        // continua fluxo normal
-    } catch (e) {
-        if (e.status === 429) {
-            mostrarLimiteCurtidas();
-            return;
-        }
-
-        alert(e.message || "Erro ao curtir");
-    }
-}
-
-function mostrarLimiteCurtidas() {
-    document
-        .getElementById("limiteCurtidasOverlay")
-        .classList.remove("hidden");
-}
-
-function fecharLimiteCurtidas() {
-    document
-        .getElementById("limiteCurtidasOverlay")
-        .classList.add("hidden");
-}
-
 
 carregar();

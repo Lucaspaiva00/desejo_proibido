@@ -82,6 +82,7 @@ model Usuario {
   acoesAdminFeitas AcaoAdmin[] @relation("AcoesAdminFeitas")
   acoesAdminAlvo   AcaoAdmin[] @relation("AcoesAdminAlvo")
   banGlobal        BanGlobal?
+  pagamentos       Pagamento[]
 
   @@index([ativo])
   @@index([role])
@@ -288,4 +289,22 @@ model BanGlobal {
 
   @@index([ativo])
   @@index([ate])
+}
+
+model Pagamento {
+  id            String   @id @default(cuid())
+  usuarioId     String
+  mpPaymentId   String?  @unique
+  mpOrderId     String?
+  status        String
+  plano         String // "PREMIUM"
+  valorCentavos Int
+  moeda         String   @default("BRL")
+  criadoEm      DateTime @default(now())
+  atualizadoEm  DateTime @updatedAt
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([usuarioId])
+  @@index([status])
 }

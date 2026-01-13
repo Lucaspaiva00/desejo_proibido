@@ -84,6 +84,7 @@
             </div>
         </div>
     </div>
+
     <!-- MODAL LIMITE DE CURTIDAS -->
     <div id="limiteCurtidasOverlay" class="overlay hidden">
         <div class="modal-limit">
@@ -96,16 +97,17 @@
             </p>
 
             <div class="modal-actions">
-                <button class="btn-secondary" onclick="fecharLimiteCurtidas()">
-                    Entendi
-                </button>
-                <button class="btn-primary">
+                <button id="btnFecharLimite" class="btn-secondary">Entendi</button>
+                <button class="btn-primary" id="btnVirarPremium">
                     Virar Premium
                 </button>
             </div>
         </div>
     </div>
 
+    <div id="toast" class="toast hidden" role="status" aria-live="polite">
+        <div id="toastText" class="toast-text"></div>
+    </div>
     <script>
         // Drawer Mobile (hambúrguer) - padrão Tinder
         const navToggle = document.getElementById("navToggle");

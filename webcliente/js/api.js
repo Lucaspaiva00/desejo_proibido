@@ -1,7 +1,7 @@
 export const API_BASE = "http://localhost:3333";
 
 export function getToken() {
-    return localStorage.getItem("token");
+    return localStorage.getItem("token") || "";
 }
 
 export function setToken(token) {
@@ -14,25 +14,34 @@ export function logout() {
     location.href = "index.html";
 }
 
-export async function apiFetch(path, { method = "GET", body, headers = {}, isFormData = false } = {}) {
+export async function apiFetch(path, { method = "GET", body, headers = {} } = {}) {
     const token = getToken();
+    const url = path.startsWith("http") ? path : `${API_BASE}${path}`;
 
-    const finalHeaders = { ...headers };
-    if (!isFormData) finalHeaders["Content-Type"] = "application/json";
-    if (token) finalHeaders["Authorization"] = `Bearer ${token}`;
-
-    const res = await fetch(`${API_BASE}${path}`, {
+    const res = await fetch(url, {
         method,
-        headers: finalHeaders,
-        body: isFormData ? body : body ? JSON.stringify(body) : undefined
+        headers: {
+            ...(body ? { "Content-Type": "application/json" } : {}),
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            ...headers,
+        },
+        body: body ? JSON.stringify(body) : undefined,
     });
 
-    const text = await res.text();
-    const data = text ? JSON.parse(text) : null;
+    const ct = res.headers.get("content-type") || "";
+    const data = ct.includes("application/json")
+        ? await res.json().catch(() => null)
+        : await res.text().catch(() => null);
 
     if (!res.ok) {
-        const msg = data?.erro || data?.message || `Erro HTTP ${res.status}`;
-        throw new Error(msg);
+        const msg =
+            (data && (data.erro || data.error || data.message)) ||
+            `Erro HTTP ${res.status}`;
+
+        const err = new Error(msg);
+        err.status = res.status; // ✅ ESSENCIAL
+        err.data = data;         // ✅ ESSENCIAL
+        throw err;
     }
 
     return data;
