@@ -52,6 +52,11 @@ export async function feed(req, res) {
   const usuarios = await prisma.usuario.findMany({
     where: {
       id: { notIn: excluirIds },
+      ativo: true,
+
+      // ✅ MODO INVISÍVEL: não aparece no feed
+      isInvisivel: false,
+
       perfil: { isNot: null },
       fotos: { some: { principal: true } } // ✅ exige foto principal
     },

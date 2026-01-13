@@ -55,7 +55,7 @@
         </div>
 
         <div class="nav-drawer-links">
-            <a href="home.html" >Feed</a>
+            <a href="home.html">Feed</a>
             <a href="perfil.html" class="active">Perfil</a>
             <a href="fotos.html">Fotos</a>
             <a href="matches.html">Matches</a>
@@ -86,6 +86,21 @@
                 <div style="display:flex; gap:10px; margin-top:12px;">
                     <button id="btnSalvar" class="btn btn-primary" style="flex:1;">Salvar</button>
                     <button id="btnIrFotos" class="btn btn-ghost">Fotos</button>
+                </div>
+                <div class="panel" style="margin-top:14px; padding:14px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                        <div>
+                            <div style="font-weight:900;">Modo invisível</div>
+                            <div class="muted" style="font-size:12px;">(Premium) Você não aparece no feed.</div>
+                        </div>
+
+                        <label style="display:flex; align-items:center; gap:10px;">
+                            <input id="toggleInvisivel" type="checkbox" style="width:20px; height:20px;">
+                            <span id="txtInvisivel" class="muted">Desativado</span>
+                        </label>
+                    </div>
+
+                    <div id="msgInvisivel" class="muted" style="margin-top:10px;"></div>
                 </div>
 
                 <div id="msg" class="msgline muted"></div>

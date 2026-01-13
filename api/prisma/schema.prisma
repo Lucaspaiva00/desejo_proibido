@@ -30,13 +30,13 @@ enum DenunciaStatus {
 }
 
 model Usuario {
-  id        String  @id @default(cuid())
-  email     String  @unique
-  senhaHash String
-  ativo     Boolean @default(true)
-
+  id          String  @id @default(cuid())
+  email       String  @unique
+  senhaHash   String
+  ativo       Boolean @default(true)
+  isInvisivel Boolean @default(false)
   // ✅ Controle de permissões (Admin/moderação)
-  role Role @default(USER)
+  role        Role    @default(USER)
 
   // ✅ Freemium / Premium (pra Doing do Trello)
   plano     String  @default("FREE") // FREE | PREMIUM (string simples pra não travar)

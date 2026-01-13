@@ -1,10 +1,10 @@
 import { Router } from "express";
 import { auth } from "../middlewares/auth.middleware.js";
-import { verPerfilPublico } from "../controllers/usuario.controller.js";
+import { me, setInvisivel } from "../controllers/usuario.controller.js";
 
 const router = Router();
 
-// ver perfil público de um usuário
-router.get("/:id", auth, verPerfilPublico);
+router.get("/me", auth, me);
+router.put("/invisivel", auth, setInvisivel);
 
 export default router;
