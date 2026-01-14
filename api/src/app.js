@@ -23,8 +23,8 @@ import pagamentoRoutes from "./routes/pagamento.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import webhooksRoutes from "./routes/webhooks.routes.js";
 import presenteRoutes from "./routes/presente.routes.js";
-import webhookRoutes from "./routes/webhook.routes.js";
 import ligacaoRoutes from "./routes/ligacao.routes.js";
+import buscaRoutes from "./routes/busca.routes.js";
 
 export const app = express();
 
@@ -50,6 +50,8 @@ app.use("/admin", adminRoutes);
 app.use("/webhooks", webhooksRoutes);
 app.use("/presentes", presenteRoutes);
 app.use("/ligacoes", ligacaoRoutes);
+app.use("/busca", buscaRoutes);
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

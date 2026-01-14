@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Meu Perfil – Desejo Proibido</title>
 
-    <!-- ajuste o caminho se sua pasta for webcliente/ -->
     <link rel="stylesheet" href="css/dating.css" />
 </head>
 
@@ -76,10 +75,32 @@
                     Preencha seu perfil para aparecer no feed.
                 </div>
 
+                <!-- FORM PERFIL -->
                 <div style="display:grid; gap:10px;">
                     <input id="nome" class="input" placeholder="Seu nome" />
-                    <input id="cidade" class="input" placeholder="Cidade" />
-                    <input id="estado" class="input" placeholder="UF (ex: SP)" maxlength="2" />
+
+                    <div style="display:grid; grid-template-columns: 1fr 120px; gap:10px;">
+                        <input id="cidade" class="input" placeholder="Cidade" />
+                        <input id="estado" class="input" placeholder="UF (ex: SP)" maxlength="2" />
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                        <div style="display:grid; gap:6px;">
+                            <div class="muted" style="font-size:12px;">Nascimento (opcional)</div>
+                            <input id="nascimento" class="input" type="date" />
+                        </div>
+
+                        <div style="display:grid; gap:6px;">
+                            <div class="muted" style="font-size:12px;">Gênero (opcional)</div>
+                            <select id="genero" class="input">
+                                <option value="">Qualquer</option>
+                                <option value="MASCULINO">Masculino</option>
+                                <option value="FEMININO">Feminino</option>
+                                <option value="OUTRO">Outro</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <textarea id="bio" class="input" placeholder="Bio (opcional)"></textarea>
                 </div>
 
@@ -87,6 +108,8 @@
                     <button id="btnSalvar" class="btn btn-primary" style="flex:1;">Salvar</button>
                     <button id="btnIrFotos" class="btn btn-ghost">Fotos</button>
                 </div>
+
+                <!-- PREMIUM: INVISÍVEL -->
                 <div class="panel" style="margin-top:14px; padding:14px;">
                     <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
                         <div>
@@ -99,23 +122,26 @@
                             <span id="txtInvisivel" class="muted">Desativado</span>
                         </label>
                     </div>
-                    <div class="panel" style="margin-top:14px; padding:14px;">
-                        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-                            <div>
-                                <div style="font-weight:900;">Boost de Perfil</div>
-                                <div class="muted" style="font-size:12px;">(Premium) Você aparece primeiro no feed por 6
-                                    horas.</div>
-                            </div>
-
-                            <button id="btnBoost" class="btn btn-primary" style="min-width:160px;">
-                                🚀 Dar Boost
-                            </button>
-                        </div>
-
-                        <div id="msgBoost" class="muted" style="margin-top:10px;"></div>
-                    </div>
 
                     <div id="msgInvisivel" class="muted" style="margin-top:10px;"></div>
+                </div>
+
+                <!-- PREMIUM: BOOST -->
+                <div class="panel" style="margin-top:14px; padding:14px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                        <div>
+                            <div style="font-weight:900;">Boost de Perfil</div>
+                            <div class="muted" style="font-size:12px;">
+                                (Premium) Você aparece primeiro no feed por 6 horas.
+                            </div>
+                        </div>
+
+                        <button id="btnBoost" class="btn btn-primary" style="min-width:160px;">
+                            🚀 Dar Boost
+                        </button>
+                    </div>
+
+                    <div id="msgBoost" class="muted" style="margin-top:10px;"></div>
                 </div>
 
                 <div id="msg" class="msgline muted"></div>
@@ -124,11 +150,13 @@
     </div>
 
     <script type="module" src="js/perfil.js"></script>
+
     <script type="module">
         // botão rápido (opcional)
         const b = document.getElementById("btnIrFotos");
         if (b) b.onclick = () => (location.href = "fotos.html");
     </script>
+
     <script>
         // Drawer Mobile (hambúrguer) - padrão Tinder
         const navToggle = document.getElementById("navToggle");

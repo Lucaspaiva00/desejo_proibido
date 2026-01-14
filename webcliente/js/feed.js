@@ -10,6 +10,22 @@ document.getElementById("btnSair").onclick = logout;
 const btnSairMobile = document.getElementById("btnSairMobile");
 if (btnSairMobile) btnSairMobile.onclick = logout;
 
+// ======== Filtros UI ========
+const fQ = document.getElementById("fQ");
+const fCidade = document.getElementById("fCidade");
+const fEstado = document.getElementById("fEstado");
+const fIdadeMin = document.getElementById("fIdadeMin");
+const fIdadeMax = document.getElementById("fIdadeMax");
+const fGenero = document.getElementById("fGenero");
+const fSomenteFoto = document.getElementById("fSomenteFoto");
+const fSomenteVerificado = document.getElementById("fSomenteVerificado");
+const fOrdenar = document.getElementById("fOrdenar");
+
+const btnAplicarFiltros = document.getElementById("btnAplicarFiltros");
+const btnSalvarPrefs = document.getElementById("btnSalvarPrefs");
+const btnLimparFiltros = document.getElementById("btnLimparFiltros");
+
+// ======== helpers ========
 function safe(s) {
     return (s ?? "").toString();
 }
@@ -19,11 +35,13 @@ function setMsg(text) {
     msg.textContent = text || "";
 }
 
-async function carregar() {
-    setMsg("");
-    const r = await apiFetch(`/feed?page=1&limit=20`);
-    fila = r.data || [];
-    proximo();
+function toast(text) {
+    const el = document.getElementById("toast");
+    const txt = document.getElementById("toastText");
+    if (!el || !txt) return;
+    txt.textContent = text || "";
+    el.classList.remove("hidden");
+    setTimeout(() => el.classList.add("hidden"), 2000);
 }
 
 function isBoostAtivo(boostAte) {
@@ -33,12 +51,46 @@ function isBoostAtivo(boostAte) {
     return dt.getTime() > Date.now();
 }
 
+function getFiltrosAtual() {
+    const idadeMin = fIdadeMin?.value ? Number(fIdadeMin.value) : null;
+    const idadeMax = fIdadeMax?.value ? Number(fIdadeMax.value) : null;
+
+    return {
+        q: safe(fQ?.value).trim(),
+        cidade: safe(fCidade?.value).trim(),
+        estado: safe(fEstado?.value).trim(),
+        genero: safe(fGenero?.value || "QUALQUER").trim(),
+
+        idadeMin: Number.isFinite(idadeMin) ? idadeMin : null,
+        idadeMax: Number.isFinite(idadeMax) ? idadeMax : null,
+
+        somenteComFoto: !!fSomenteFoto?.checked,
+        somenteVerificados: !!fSomenteVerificado?.checked,
+        ordenarPor: safe(fOrdenar?.value || "recent").trim(),
+    };
+}
+
+function montarQuery(f) {
+    const qs = new URLSearchParams();
+    if (f.q) qs.set("q", f.q);
+    if (f.cidade) qs.set("cidade", f.cidade);
+    if (f.estado) qs.set("estado", f.estado);
+    if (f.genero && f.genero !== "QUALQUER") qs.set("genero", f.genero);
+    if (f.idadeMin != null) qs.set("idadeMin", String(f.idadeMin));
+    if (f.idadeMax != null) qs.set("idadeMax", String(f.idadeMax));
+    if (f.somenteComFoto) qs.set("somenteComFoto", "true");
+    if (f.somenteVerificados) qs.set("somenteVerificados", "true");
+    if (f.ordenarPor) qs.set("ordenarPor", f.ordenarPor);
+    return qs.toString();
+}
+
+// ======== render ========
 function render(u) {
     if (!u) {
         card.innerHTML = `
       <div class="tfallback">
         <div class="tbadgeBig">DP</div>
-        <div class="muted">Sem pessoas no feed (crie outro usuário com perfil + foto principal).</div>
+        <div class="muted">Sem pessoas no feed com esses filtros.</div>
       </div>
     `;
         return;
@@ -112,6 +164,43 @@ function proximo() {
     render(atual);
 }
 
+// ======== API: carregar feed (agora usando /busca) ========
+async function carregarPreferencias() {
+    try {
+        const pref = await apiFetch("/busca/preferencias");
+
+        // preenche UI com preferências
+        if (fCidade) fCidade.value = pref.cidade || "";
+        if (fEstado) fEstado.value = pref.estado || "";
+        if (fGenero) fGenero.value = pref.generoAlvo || "QUALQUER";
+        if (fIdadeMin) fIdadeMin.value = pref.idadeMin ?? "";
+        if (fIdadeMax) fIdadeMax.value = pref.idadeMax ?? "";
+        if (fSomenteVerificado) fSomenteVerificado.checked = !!pref.somenteVerificados;
+        if (fSomenteFoto) fSomenteFoto.checked = !!pref.somenteComFoto;
+        if (fOrdenar) fOrdenar.value = pref.ordenarPor || "recent";
+    } catch (e) {
+        // sem travar o feed
+        console.warn("Não carregou preferências:", e.message);
+    }
+}
+
+async function carregarComFiltros() {
+    setMsg("");
+    const filtros = getFiltrosAtual();
+    const qs = montarQuery(filtros);
+
+    try {
+        setMsg("Carregando...");
+        const r = await apiFetch(`/busca${qs ? `?${qs}` : ""}`);
+        fila = Array.isArray(r) ? r : (r.data || []);
+        setMsg("");
+        proximo();
+    } catch (e) {
+        setMsg(e.message || "Erro ao carregar feed");
+    }
+}
+
+// ======== Curtir/Pular/Bloquear/Denunciar ========
 document.getElementById("btnCurtir").onclick = async () => {
     if (!atual) return;
     await curtir(atual.id);
@@ -169,21 +258,79 @@ async function curtir(paraUsuarioId) {
             mostrarLimiteCurtidas();
             return;
         }
-
         setMsg(e.message || "Erro ao curtir");
     }
 }
 
+// ======== Limite Curtidas ========
 function mostrarLimiteCurtidas() {
     const el = document.getElementById("limiteCurtidasOverlay");
     if (!el) return;
     el.classList.remove("hidden");
 }
 
-window.fecharLimiteCurtidas = function fecharLimiteCurtidas() {
+const btnFecharLimite = document.getElementById("btnFecharLimite");
+btnFecharLimite?.addEventListener("click", () => {
     const el = document.getElementById("limiteCurtidasOverlay");
     if (!el) return;
     el.classList.add("hidden");
-};
+});
 
-carregar();
+// ======== Eventos filtros ========
+btnAplicarFiltros?.addEventListener("click", async () => {
+    await carregarComFiltros();
+    toast("Filtros aplicados");
+});
+
+btnSalvarPrefs?.addEventListener("click", async () => {
+    try {
+        const f = getFiltrosAtual();
+
+        // salva como preferências
+        await apiFetch("/busca/preferencias", {
+            method: "PUT",
+            body: {
+                idadeMin: f.idadeMin ?? 18,
+                idadeMax: f.idadeMax ?? 99,
+                cidade: f.cidade || null,
+                estado: f.estado || null,
+                generoAlvo: f.genero || "QUALQUER",
+                somenteVerificados: f.somenteVerificados,
+                somenteComFoto: f.somenteComFoto,
+                ordenarPor: f.ordenarPor || "recent",
+            }
+        });
+
+        toast("Preferências salvas ✅");
+    } catch (e) {
+        alert("Erro ao salvar preferências: " + (e.message || e));
+    }
+});
+
+btnLimparFiltros?.addEventListener("click", async () => {
+    if (fQ) fQ.value = "";
+    if (fCidade) fCidade.value = "";
+    if (fEstado) fEstado.value = "";
+    if (fIdadeMin) fIdadeMin.value = "";
+    if (fIdadeMax) fIdadeMax.value = "";
+    if (fGenero) fGenero.value = "QUALQUER";
+    if (fSomenteFoto) fSomenteFoto.checked = false;
+    if (fSomenteVerificado) fSomenteVerificado.checked = false;
+    if (fOrdenar) fOrdenar.value = "recent";
+
+    await carregarComFiltros();
+    toast("Filtros limpos");
+});
+
+// Enter no campo de busca aplica filtros
+fQ?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") carregarComFiltros();
+});
+
+// ======== Init ========
+async function init() {
+    await carregarPreferencias();
+    await carregarComFiltros();
+}
+
+init();

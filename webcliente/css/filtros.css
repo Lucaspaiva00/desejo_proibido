@@ -1,0 +1,94 @@
+/* Painel filtros */
+.filtros {
+    margin-top: 12px;
+    padding: 14px;
+}
+
+.filtros-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.filtros-title {
+    font-weight: 800;
+    font-size: 15px;
+}
+
+.filtros-sub {
+    font-size: 12px;
+    opacity: .75;
+}
+
+/* grid responsivo */
+.filtros-grid {
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 10px;
+}
+
+.col-12 {
+    grid-column: span 12;
+}
+
+.col-6 {
+    grid-column: span 6;
+}
+
+.col-4 {
+    grid-column: span 4;
+}
+
+.col-3 {
+    grid-column: span 3;
+}
+
+@media (max-width: 900px) {
+
+    .col-6,
+    .col-4,
+    .col-3 {
+        grid-column: span 12;
+    }
+}
+
+/* Inputs no padrão do teu tema */
+.finput,
+.fselect {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid rgba(255, 255, 255, .12);
+    color: #fff;
+    outline: none;
+}
+
+.finput::placeholder {
+    color: rgba(255, 255, 255, .55);
+}
+
+.frow {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.fcheck {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 13px;
+    opacity: .85;
+}
+
+.factions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}

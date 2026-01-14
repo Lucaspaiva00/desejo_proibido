@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Feed</title>
     <link rel="stylesheet" href="css/dating.css" />
+    <link rel="stylesheet" href="css/filtros.css" />
 </head>
 
 <body>
@@ -68,6 +69,72 @@
     <div class="wrap">
         <div class="feed-top">
             <div id="msg" class="msgline muted"></div>
+
+            <!-- ✅ FILTROS (MVP) -->
+            <div class="panel filtros">
+                <div class="filtros-head">
+                    <div class="filtros-title">Filtros</div>
+                    <div class="filtros-sub">(Cidade/Estado, Idade, Gênero, Avançados)</div>
+                </div>
+
+                <div class="filtros-grid">
+                    <div class="col-12">
+                        <input id="fQ" class="finput" placeholder="Buscar por nome ou bio..." />
+                    </div>
+
+                    <div class="col-6">
+                        <input id="fCidade" class="finput" placeholder="Cidade (ex: Pedreira)" />
+                    </div>
+
+                    <div class="col-6">
+                        <input id="fEstado" class="finput" placeholder="Estado (ex: SP)" />
+                    </div>
+
+                    <div class="col-3">
+                        <input id="fIdadeMin" class="finput" type="number" min="18" max="99" placeholder="Idade mín" />
+                    </div>
+
+                    <div class="col-3">
+                        <input id="fIdadeMax" class="finput" type="number" min="18" max="99" placeholder="Idade máx" />
+                    </div>
+
+                    <div class="col-6">
+                        <select id="fGenero" class="fselect">
+                            <option value="QUALQUER">Gênero: Qualquer</option>
+                            <option value="M">Gênero: Masculino</option>
+                            <option value="F">Gênero: Feminino</option>
+                            <option value="OUTRO">Gênero: Outro</option>
+                        </select>
+                    </div>
+
+                    <div class="col-6 frow">
+                        <label class="fcheck">
+                            <input id="fSomenteFoto" type="checkbox" />
+                            Somente com foto
+                        </label>
+
+                        <label class="fcheck">
+                            <input id="fSomenteVerificado" type="checkbox" />
+                            Somente verificados
+                        </label>
+                    </div>
+
+                    <div class="col-6">
+                        <select id="fOrdenar" class="fselect">
+                            <option value="recent">Ordenar: Recentes</option>
+                            <option value="boost">Ordenar: Boost</option>
+                        </select>
+                    </div>
+
+                    <div class="col-12 factions">
+                        <button id="btnLimparFiltros" class="btn btn-ghost">Limpar</button>
+                        <button id="btnSalvarPrefs" class="btn btn-ghost">Salvar preferências</button>
+                        <button id="btnAplicarFiltros" class="btn btn-primary">Aplicar filtros</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- /FILTROS -->
         </div>
 
         <div class="feed-stage">
@@ -108,6 +175,7 @@
     <div id="toast" class="toast hidden" role="status" aria-live="polite">
         <div id="toastText" class="toast-text"></div>
     </div>
+
     <script>
         // Drawer Mobile (hambúrguer) - padrão Tinder
         const navToggle = document.getElementById("navToggle");

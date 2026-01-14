@@ -36,14 +36,14 @@ enum MensagemTipo {
 }
 
 model Usuario {
-  id          String  @id @default(cuid())
-  email       String  @unique
-  senhaHash   String
-  ativo       Boolean @default(true)
-  isInvisivel Boolean @default(false)
-
+  id           String            @id @default(cuid())
+  email        String            @unique
+  senhaHash    String
+  ativo        Boolean           @default(true)
+  isInvisivel  Boolean           @default(false)
+  preferencias PreferenciaBusca?
   // ✅ Controle de permissões (Admin/moderação)
-  role Role @default(USER)
+  role         Role              @default(USER)
 
   // ✅ Freemium / Premium
   plano     String  @default("FREE") // FREE | PREMIUM
@@ -122,16 +122,18 @@ model Usuario {
 }
 
 model Perfil {
-  id           String   @id @default(cuid())
-  usuarioId    String   @unique
+  id           String    @id @default(cuid())
+  usuarioId    String    @unique
   nome         String
-  bio          String?  @db.Text
+  bio          String?   @db.Text
   cidade       String?
   estado       String?
-  criadoEm     DateTime @default(now())
-  atualizadoEm DateTime @updatedAt
-
-  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  criadoEm     DateTime  @default(now())
+  atualizadoEm DateTime  @updatedAt
+  genero       String? // M | F | OUTRO (ou livre)
+  nascimento   DateTime? // pra calcular idade
+  verificado   Boolean   @default(false)
+  usuario      Usuario   @relation(fields: [usuarioId], references: [id])
 
   @@index([cidade])
   @@index([estado])
@@ -468,4 +470,33 @@ model PresenteEnviado {
   @@index([conversaId, criadoEm])
   @@index([paraUsuarioId, criadoEm])
   @@index([deUsuarioId, criadoEm])
+}
+
+model PreferenciaBusca {
+  id        String @id @default(cuid())
+  usuarioId String @unique
+
+  // preferências básicas
+  idadeMin Int? @default(18)
+  idadeMax Int? @default(99)
+
+  // filtros por localização
+  cidade String?
+  estado String?
+
+  // filtros por "preferência"
+  generoAlvo         String? // M | F | OUTRO | QUALQUER
+  somenteVerificados Boolean @default(false)
+  somenteComFoto     Boolean @default(false)
+
+  // ordenação
+  ordenarPor String @default("recent") // recent | boost
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([cidade])
+  @@index([estado])
 }
