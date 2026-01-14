@@ -328,6 +328,11 @@ model Pagamento {
   plano         String
   valorCentavos Int
   moeda         String   @default("BRL")
+
+  // ✅ novos (opcionais)
+  tipo          String?  // "MINUTOS" | "PREMIUM"
+  pacoteId      String?  // "MIN_10" | "MIN_30" etc
+
   criadoEm      DateTime @default(now())
   atualizadoEm  DateTime @updatedAt
 
@@ -336,6 +341,7 @@ model Pagamento {
   @@index([usuarioId])
   @@index([status])
 }
+
 
 model LogAcesso {
   id        String   @id @default(cuid())
