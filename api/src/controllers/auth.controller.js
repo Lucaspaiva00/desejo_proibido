@@ -1,6 +1,7 @@
 import bcrypt from "bcrypt";
 import { prisma } from "../prisma.js";
 import { assinarToken } from "../utils/jwt.js";
+import { logAcesso } from "../utils/auditoria.js";
 
 export async function registrar(req, res) {
     try {
@@ -66,22 +67,82 @@ export async function login(req, res) {
         const { email, senha } = req.body;
 
         if (!email || !senha) {
+            await logAcesso(req, {
+                evento: "LOGIN_FALHA",
+                status: 400,
+                email: email || null,
+                detalhe: "Email/senha ausentes",
+            });
             return res.status(400).json({ erro: "Email e senha são obrigatórios" });
         }
 
         const usuario = await prisma.usuario.findUnique({ where: { email } });
-        if (!usuario) return res.status(401).json({ erro: "Credenciais inválidas" });
+        if (!usuario) {
+            await logAcesso(req, {
+                evento: "LOGIN_FALHA",
+                status: 401,
+                email,
+                detalhe: "Email não encontrado",
+            });
+            return res.status(401).json({ erro: "Credenciais inválidas" });
+        }
 
         const ok = await bcrypt.compare(senha, usuario.senhaHash);
-        if (!ok) return res.status(401).json({ erro: "Credenciais inválidas" });
+        if (!ok) {
+            await logAcesso(req, {
+                evento: "LOGIN_FALHA",
+                status: 401,
+                usuarioId: usuario.id,
+                email,
+                detalhe: "Senha inválida",
+            });
+            return res.status(401).json({ erro: "Credenciais inválidas" });
+        }
+
+        // Bloqueia login se estiver desativado (opcional, mas recomendado)
+        if (!usuario.ativo) {
+            await logAcesso(req, {
+                evento: "LOGIN_BLOQUEADO",
+                status: 403,
+                usuarioId: usuario.id,
+                email,
+                detalhe: "Usuário desativado",
+            });
+            return res.status(403).json({ erro: "Usuário desativado" });
+        }
+
+        // Se ban global ativo, bloqueia login também (recomendado)
+        const ban = await prisma.banGlobal.findUnique({ where: { usuarioId: usuario.id } });
+        if (ban?.ativo) {
+            const agora = new Date();
+            const dentroDoPrazo = !ban.ate || new Date(ban.ate) > agora;
+            if (dentroDoPrazo) {
+                await logAcesso(req, {
+                    evento: "LOGIN_BLOQUEADO",
+                    status: 403,
+                    usuarioId: usuario.id,
+                    email,
+                    detalhe: ban.motivo || "Ban global ativo",
+                });
+                return res.status(403).json({ erro: "Usuário banido" });
+            }
+        }
 
         const token = assinarToken({ id: usuario.id, email: usuario.email });
+
+        await logAcesso(req, {
+            evento: "LOGIN_OK",
+            status: 200,
+            usuarioId: usuario.id,
+            email: usuario.email,
+        });
 
         return res.json({
             usuario: { id: usuario.id, email: usuario.email },
             token,
         });
     } catch (e) {
+        await logAcesso(req, { evento: "LOGIN_ERRO", status: 500, detalhe: e.message });
         return res.status(500).json({ erro: "Erro ao logar", detalhe: e.message });
     }
 }

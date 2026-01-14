@@ -9,13 +9,16 @@ import {
     desbanir,
     verUsuarioAdmin,
     listarAcoesAdmin,
+    listarLogsAcesso,
+    listarLogsDenuncia,
 } from "../controllers/admin.controller.js";
 
 const router = Router();
 
 // tudo aqui exige auth + admin
 router.use(auth, adminOnly);
-
+router.get("/logs/acessos", listarLogsAcesso);
+router.get("/logs/denuncias", listarLogsDenuncia);
 router.get("/denuncias", listarDenuncias);
 router.get("/denuncias/:id", detalheDenuncia);
 router.put("/denuncias/:id/status", atualizarStatusDenuncia);

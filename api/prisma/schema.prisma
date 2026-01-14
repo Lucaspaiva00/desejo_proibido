@@ -83,6 +83,12 @@ model Usuario {
   acoesAdminAlvo   AcaoAdmin[] @relation("AcoesAdminAlvo")
   banGlobal        BanGlobal?
   pagamentos       Pagamento[]
+  logsAcesso       LogAcesso[]
+
+  // ✅ Logs de denúncia (3 relações diferentes)
+  logDenunciasComoDenunciante LogDenuncia[] @relation("LogDenunciaDenunciante")
+  logDenunciasComoDenunciado  LogDenuncia[] @relation("LogDenunciaDenunciado")
+  logDenunciasComoAdmin       LogDenuncia[] @relation("LogDenunciaAdmin")
 
   @@index([ativo])
   @@index([role])
@@ -211,8 +217,9 @@ model Denuncia {
   criadoEm      DateTime       @default(now())
   atualizadoEm  DateTime       @updatedAt
 
-  denunciante Usuario @relation("DenunciasFeitas", fields: [denuncianteId], references: [id])
-  denunciado  Usuario @relation("DenunciasRecebidas", fields: [denunciadoId], references: [id])
+  denunciante  Usuario       @relation("DenunciasFeitas", fields: [denuncianteId], references: [id])
+  denunciado   Usuario       @relation("DenunciasRecebidas", fields: [denunciadoId], references: [id])
+  logDenuncias LogDenuncia[]
 
   @@index([denunciadoId])
   @@index([denuncianteId])
@@ -307,4 +314,54 @@ model Pagamento {
 
   @@index([usuarioId])
   @@index([status])
+}
+
+model LogAcesso {
+  id        String  @id @default(cuid())
+  usuarioId String?
+  email     String?
+  evento    String // LOGIN_OK, LOGIN_FALHA, TOKEN_AUSENTE, TOKEN_INVALIDO, BANIDO, DESATIVADO...
+  rota      String? // /auth/login, /feed, etc
+  metodo    String? // GET, POST...
+  status    Int? // 200, 401, 403...
+  ip        String?
+  userAgent String?
+  detalhe   String? // mensagem extra (ex: "senha inválida")
+
+  criadoEm DateTime @default(now())
+
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@index([usuarioId])
+  @@index([evento])
+  @@index([criadoEm])
+}
+
+model LogDenuncia {
+  id            String  @id @default(cuid())
+  denunciaId    String?
+  denuncianteId String?
+  denunciadoId  String?
+
+  adminId      String? // quando ação é feita pelo admin
+  tipo         String // DENUNCIA_CRIADA, STATUS_ALTERADO, BAN_APLICADO, DESBANIDO
+  statusAntes  String?
+  statusDepois String?
+  motivo       String?
+  detalhes     String?
+
+  ip        String?
+  userAgent String?
+
+  criadoEm DateTime @default(now())
+
+  denuncia    Denuncia? @relation(fields: [denunciaId], references: [id], onDelete: SetNull)
+  denunciante Usuario?  @relation("LogDenunciaDenunciante", fields: [denuncianteId], references: [id], onDelete: SetNull)
+  denunciado  Usuario?  @relation("LogDenunciaDenunciado", fields: [denunciadoId], references: [id], onDelete: SetNull)
+  admin       Usuario?  @relation("LogDenunciaAdmin", fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@index([denunciaId])
+  @@index([denunciadoId])
+  @@index([tipo])
+  @@index([criadoEm])
 }

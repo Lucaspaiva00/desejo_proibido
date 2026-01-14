@@ -1,4 +1,5 @@
 import { prisma } from "../prisma.js";
+import { logDenuncia } from "../utils/auditoria.js";
 import { z } from "zod";
 
 const criarSchema = z.object({
@@ -6,6 +7,40 @@ const criarSchema = z.object({
     motivo: z.string().min(3).max(60),
     descricao: z.string().max(2000).optional().nullable()
 });
+
+
+// POST /denuncias  body: { denunciadoId, motivo }
+export async function criarDenuncia(req, res) {
+    try {
+        const denuncianteId = req.usuario.id;
+        const { denunciadoId, motivo } = req.body;
+
+        if (!denunciadoId) return res.status(400).json({ erro: "denunciadoId é obrigatório" });
+
+        const d = await prisma.denuncia.create({
+            data: {
+                denuncianteId,
+                denunciadoId,
+                motivo: motivo ?? null,
+                status: "ABERTA",
+            },
+        });
+
+        await logDenuncia(req, {
+            denunciaId: d.id,
+            denuncianteId,
+            denunciadoId,
+            tipo: "DENUNCIA_CRIADA",
+            statusDepois: d.status,
+            motivo: motivo ?? "Denúncia criada",
+        });
+
+        return res.json(d);
+    } catch (e) {
+        return res.status(500).json({ erro: "Erro ao denunciar", detalhe: e.message });
+    }
+}
+
 
 export async function denunciar(req, res) {
     const denuncianteId = req.usuario.id;

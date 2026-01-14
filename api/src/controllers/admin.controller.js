@@ -1,4 +1,5 @@
 import { prisma } from "../prisma.js";
+import { logDenuncia } from "../utils/auditoria.js";
 
 // helper: log de ação
 async function logAcaoAdmin({ adminId, alvoId, tipo, motivo, detalhes }) {
@@ -87,6 +88,8 @@ export async function atualizarStatusDenuncia(req, res) {
     const existe = await prisma.denuncia.findUnique({ where: { id } });
     if (!existe) return res.status(404).json({ erro: "Denúncia não encontrada" });
 
+    const statusAntes = existe.status;
+
     const updated = await prisma.denuncia.update({
         where: { id },
         data: { status },
@@ -100,8 +103,21 @@ export async function atualizarStatusDenuncia(req, res) {
         detalhes: detalhes ?? null,
     });
 
+    await logDenuncia(req, {
+        denunciaId: id,
+        denuncianteId: existe.denuncianteId,
+        denunciadoId: existe.denunciadoId,
+        adminId,
+        tipo: "STATUS_ALTERADO",
+        statusAntes,
+        statusDepois: status,
+        motivo: `Status atualizado`,
+        detalhes: detalhes ?? null,
+    });
+
     return res.json(updated);
 }
+
 
 /**
  * POST /admin/ban-global
@@ -123,20 +139,10 @@ export async function banGlobal(req, res) {
 
     const ban = await prisma.banGlobal.upsert({
         where: { usuarioId },
-        update: {
-            ativo: true,
-            motivo: motivo ?? null,
-            ate: dataAte,
-        },
-        create: {
-            usuarioId,
-            ativo: true,
-            motivo: motivo ?? null,
-            ate: dataAte,
-        },
+        update: { ativo: true, motivo: motivo ?? null, ate: dataAte },
+        create: { usuarioId, ativo: true, motivo: motivo ?? null, ate: dataAte },
     });
 
-    // opcional: desativar usuário também
     await prisma.usuario.update({
         where: { id: usuarioId },
         data: { ativo: false },
@@ -150,8 +156,17 @@ export async function banGlobal(req, res) {
         detalhes: dataAte ? `Até: ${dataAte.toISOString()}` : null,
     });
 
+    await logDenuncia(req, {
+        denunciadoId: usuarioId,
+        adminId,
+        tipo: "BAN_APLICADO",
+        motivo: motivo ?? "Ban global aplicado",
+        detalhes: dataAte ? `Até: ${dataAte.toISOString()}` : null,
+    });
+
     return res.json({ ok: true, ban });
 }
+
 
 /**
  * POST /admin/desbanir
@@ -171,7 +186,6 @@ export async function desbanir(req, res) {
         data: { ativo: false, ate: null },
     });
 
-    // reativar usuário
     await prisma.usuario.update({
         where: { id: usuarioId },
         data: { ativo: true },
@@ -185,8 +199,17 @@ export async function desbanir(req, res) {
         detalhes: null,
     });
 
+    await logDenuncia(req, {
+        denunciadoId: usuarioId,
+        adminId,
+        tipo: "DESBANIDO",
+        motivo: motivo ?? "Desbanido",
+        detalhes: null,
+    });
+
     return res.json({ ok: true, ban: updated });
 }
+
 
 /**
  * GET /admin/usuarios/:id
@@ -226,6 +249,49 @@ export async function listarAcoesAdmin(req, res) {
                 admin: { select: { id: true, email: true } },
                 alvo: { select: { id: true, email: true } },
             },
+        }),
+    ]);
+
+    return res.json({ page, limit, total, data: items });
+}
+
+export async function listarLogsAcesso(req, res) {
+    const page = Number(req.query.page || 1);
+    const limit = Number(req.query.limit || 30);
+    const skip = (page - 1) * limit;
+
+    const evento = req.query.evento || null;
+    const where = evento ? { evento } : {};
+
+    const [total, items] = await Promise.all([
+        prisma.logAcesso.count({ where }),
+        prisma.logAcesso.findMany({
+            where,
+            orderBy: { criadoEm: "desc" },
+            skip,
+            take: limit,
+            include: { usuario: { select: { id: true, email: true } } },
+        }),
+    ]);
+
+    return res.json({ page, limit, total, data: items });
+}
+
+export async function listarLogsDenuncia(req, res) {
+    const page = Number(req.query.page || 1);
+    const limit = Number(req.query.limit || 30);
+    const skip = (page - 1) * limit;
+
+    const tipo = req.query.tipo || null;
+    const where = tipo ? { tipo } : {};
+
+    const [total, items] = await Promise.all([
+        prisma.logDenuncia.count({ where }),
+        prisma.logDenuncia.findMany({
+            where,
+            orderBy: { criadoEm: "desc" },
+            skip,
+            take: limit,
         }),
     ]);
 
