@@ -1,7 +1,11 @@
 import { apiFetch, API_BASE, logout } from "./api.js";
 
 const msg = document.getElementById("msg");
-document.getElementById("btnSair").onclick = logout;
+const btnSair = document.getElementById("btnSair");
+if (btnSair) btnSair.onclick = logout;
+
+const btnSairMobile = document.getElementById("btnSairMobile");
+if (btnSairMobile) btnSairMobile.onclick = logout;
 
 const fotoPrincipal = document.getElementById("fotoPrincipal");
 const heroFallback = document.getElementById("heroFallback");
@@ -16,8 +20,12 @@ const btnVoltar = document.getElementById("btnVoltar");
 const btnVoltarTop = document.getElementById("btnVoltarTop");
 const btnBloquear = document.getElementById("btnBloquear");
 
+// ==============================
+// ✅ pega id de qualquer param
+// ==============================
 function getUserId() {
-    return new URL(location.href).searchParams.get("userId");
+    const params = new URL(location.href).searchParams;
+    return params.get("userId") || params.get("usuarioId") || params.get("id");
 }
 
 function setHero(url) {
@@ -38,9 +46,17 @@ function setHero(url) {
 }
 
 function marcarSelecionada(url) {
-    document.querySelectorAll(".gFoto").forEach(img => {
+    document.querySelectorAll(".gFoto").forEach((img) => {
         img.classList.toggle("sel", img.getAttribute("data-url") === url);
     });
+}
+
+function fullUrl(pathOrUrl) {
+    if (!pathOrUrl) return "";
+    // se já é URL absoluta, retorna direto
+    if (String(pathOrUrl).startsWith("http")) return pathOrUrl;
+    // garante 1 barra
+    return `${API_BASE}${pathOrUrl.startsWith("/") ? "" : "/"}${pathOrUrl}`;
 }
 
 async function carregar() {
@@ -48,27 +64,37 @@ async function carregar() {
         msg.textContent = "";
 
         const userId = getUserId();
-        if (!userId) throw new Error("userId não informado");
+        if (!userId) throw new Error("ID do usuário não informado na URL (use ?id=...)");
 
+        // ✅ pega o usuário
         const u = await apiFetch(`/usuarios/${userId}`);
 
         elNome.textContent = u.perfil?.nome || "Sem nome";
         elLocal.textContent = `${u.perfil?.cidade || ""} ${u.perfil?.estado || ""}`.trim();
         elBio.textContent = u.perfil?.bio || "";
 
-        const principalUrl = u.fotoPrincipal ? `${API_BASE}${u.fotoPrincipal}` : "";
+        // ✅ foto principal: tenta fotoPrincipal, senão acha no array fotos
+        const fotos = Array.isArray(u.fotos) ? u.fotos : [];
+        const fotoPrincipalObj = fotos.find((f) => f.principal) || fotos[0] || null;
+
+        const principalUrl =
+            u.fotoPrincipal ? fullUrl(u.fotoPrincipal) :
+                (fotoPrincipalObj?.url ? fullUrl(fotoPrincipalObj.url) : "");
+
         setHero(principalUrl);
 
-        const fotos = u.fotos || [];
+        // ✅ galeria
         if (!fotos.length) {
             galeria.innerHTML = `<div class="muted">Usuário ainda não tem fotos.</div>`;
         } else {
-            galeria.innerHTML = fotos.map(f => {
-                const url = `${API_BASE}${f.url}`;
-                return `<img class="gFoto" src="${url}" data-url="${url}" alt="foto" />`;
-            }).join("");
+            galeria.innerHTML = fotos
+                .map((f) => {
+                    const url = fullUrl(f.url);
+                    return `<img class="gFoto" src="${url}" data-url="${url}" alt="foto" />`;
+                })
+                .join("");
 
-            document.querySelectorAll(".gFoto").forEach(img => {
+            document.querySelectorAll(".gFoto").forEach((img) => {
                 img.onerror = () => (img.style.opacity = 0.25);
                 img.onclick = () => {
                     const url = img.getAttribute("data-url");
@@ -77,19 +103,26 @@ async function carregar() {
                 };
             });
 
-            // marca a principal se existir
             if (principalUrl) marcarSelecionada(principalUrl);
         }
 
-        // Chat: pega conversa com esse user
-        const conversas = await apiFetch(`/conversas/minhas`);
-        const conversa = (conversas || []).find(c => c.outroUsuario?.id === userId);
+        // ==============================
+        // ✅ Chat: usa o endpoint novo /conversas
+        // ==============================
+        btnChat.disabled = true;
+        btnChat.textContent = "Carregando conversa...";
 
-        if (conversa?.conversaId) {
+        const conversas = await apiFetch(`/conversas`);
+        const conversa = (Array.isArray(conversas) ? conversas : []).find((c) => {
+            // controller novo retorna: outroUsuarioId + outro
+            return (c.outroUsuarioId === userId) || (c.outro?.id === userId);
+        });
+
+        if (conversa?.id) {
             btnChat.disabled = false;
             btnChat.textContent = "Abrir Chat";
             btnChat.onclick = () => {
-                localStorage.setItem("conversaSelecionadaId", conversa.conversaId);
+                localStorage.setItem("conversaSelecionadaId", conversa.id);
                 location.href = "conversas.html";
             };
         } else {
@@ -97,19 +130,26 @@ async function carregar() {
             btnChat.textContent = "Sem conversa";
         }
 
+        // Voltar
         const voltar = () => history.back();
-        btnVoltar.onclick = voltar;
-        btnVoltarTop.onclick = voltar;
+        if (btnVoltar) btnVoltar.onclick = voltar;
+        if (btnVoltarTop) btnVoltarTop.onclick = voltar;
 
-        btnBloquear.onclick = async () => {
-            if (!confirm("Bloquear este usuário? Isso remove match e conversa.")) return;
-            await apiFetch(`/bloqueios/${userId}`, { method: "POST" });
-            alert("Usuário bloqueado.");
-            location.href = "matches.html";
-        };
-
+        // Bloquear
+        if (btnBloquear) {
+            btnBloquear.onclick = async () => {
+                if (!confirm("Bloquear este usuário? Isso remove match e conversa.")) return;
+                await apiFetch(`/bloqueios/${userId}`, { method: "POST" });
+                alert("Usuário bloqueado.");
+                location.href = "matches.html";
+            };
+        }
     } catch (e) {
-        msg.textContent = e.message;
+        msg.textContent = e.message || "Erro ao carregar perfil.";
+        if (btnChat) {
+            btnChat.disabled = true;
+            btnChat.textContent = "Abrir Chat";
+        }
     }
 }
 

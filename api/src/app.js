@@ -21,6 +21,10 @@ import termosRoutes from "./routes/termos.routes.js";
 import premiumRoutes from "./routes/premium.routes.js";
 import pagamentoRoutes from "./routes/pagamento.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
+import webhooksRoutes from "./routes/webhooks.routes.js";
+import presenteRoutes from "./routes/presente.routes.js";
+import webhookRoutes from "./routes/webhook.routes.js";
+import ligacaoRoutes from "./routes/ligacao.routes.js";
 
 export const app = express();
 
@@ -43,6 +47,9 @@ app.use("/termos", termosRoutes);
 app.use("/premium", premiumRoutes);
 app.use("/pagamentos", pagamentoRoutes);
 app.use("/admin", adminRoutes);
+app.use("/webhooks", webhooksRoutes);
+app.use("/presentes", presenteRoutes);
+app.use("/ligacoes", ligacaoRoutes);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

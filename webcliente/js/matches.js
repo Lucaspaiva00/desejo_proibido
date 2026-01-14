@@ -1,106 +1,105 @@
-import { apiFetch, API_BASE, logout } from "./api.js";
+import { apiFetch, logout } from "./api.js";
 
+const grid = document.getElementById("grid");
+const q = document.getElementById("q");
+const btnReload = document.getElementById("btnReload");
 const msg = document.getElementById("msg");
-const lista = document.getElementById("lista");
-const busca = document.getElementById("busca");
-document.getElementById("btnSair").onclick = logout;
+
+document.getElementById("btnSair")?.addEventListener("click", logout);
+document.getElementById("btnSairMobile")?.addEventListener("click", logout);
+
+function setMsg(t, type="muted"){
+  if(!msg) return;
+  msg.className = `msgline ${type}`;
+  msg.textContent = t || "";
+}
+
+function escapeHtml(s){
+  return String(s || "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
 
 let matches = [];
-let conversaPorMatch = new Map(); // matchId -> conversaId
 
-function normalizar(s) {
-    return (s || "").toString().toLowerCase().trim();
+async function loadMatches(){
+  try{
+    setMsg("Carregando matches...");
+    const data = await apiFetch("/matches");
+    matches = Array.isArray(data) ? data : (data.data || []);
+    render();
+    setMsg("");
+  }catch(e){
+    setMsg("Erro ao carregar matches: " + e.message, "error");
+    grid.innerHTML = "";
+  }
 }
 
-function filtrar() {
-    const q = normalizar(busca.value);
-    if (!q) return matches;
+function render(){
+  const filtro = (q?.value || "").trim().toLowerCase();
 
-    return matches.filter(m => {
-        const p = m?.outroUsuario?.perfil;
-        const nome = normalizar(p?.nome);
-        const cidade = normalizar(p?.cidade);
-        const estado = normalizar(p?.estado);
-        return nome.includes(q) || cidade.includes(q) || estado.includes(q);
-    });
-}
+  const items = matches.filter(m => {
+    const nome = (m.outro?.perfil?.nome || m.outro?.email || "").toLowerCase();
+    const cidade = (m.outro?.perfil?.cidade || "").toLowerCase();
+    const estado = (m.outro?.perfil?.estado || "").toLowerCase();
+    return !filtro || nome.includes(filtro) || cidade.includes(filtro) || estado.includes(filtro);
+  });
 
-function render() {
-    const data = filtrar();
+  if(!items.length){
+    grid.innerHTML = `<div class="muted">Nenhum match.</div>`;
+    return;
+  }
 
-    if (!data.length) {
-        lista.innerHTML = `<p class="muted">Nenhum match ainda. Curta alguém que te curta de volta 😉</p>`;
-        return;
-    }
+  grid.innerHTML = items.map(m => {
+    const outro = m.outro || {};
+    const nome = outro?.perfil?.nome || outro?.email || "Usuário";
+    const cidade = outro?.perfil?.cidade || "";
+    const estado = outro?.perfil?.estado || "";
 
-    lista.innerHTML =
-        `<div class="gridMatch">` +
-        data.map(m => {
-            const u = m.outroUsuario;
-            const p = u?.perfil || {};
-            const foto = u?.fotoPrincipal ? `${API_BASE}${u.fotoPrincipal}` : "";
+    const foto = outro?.fotos?.find?.(f => f.principal)?.url || outro?.fotos?.[0]?.url || "";
+    const fotoSrc = foto ? foto : "data:image/svg+xml;charset=utf-8," + encodeURIComponent(`
+      <svg xmlns='http://www.w3.org/2000/svg' width='800' height='500'>
+        <rect width='100%' height='100%' fill='#1b1b1f'/>
+        <text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='#ffffffaa' font-size='28' font-family='Arial'>Sem foto</text>
+      </svg>
+    `);
 
-            const conversaId = conversaPorMatch.get(m.matchId) || null;
+    return `
+      <div class="match-card">
+        <img class="match-photo" src="${fotoSrc}" alt="foto" />
+        <div class="match-body">
+          <div class="match-name">${escapeHtml(nome)}</div>
+          <div class="match-sub">${escapeHtml(cidade)}${cidade && estado ? " - " : ""}${escapeHtml(estado)}</div>
 
-            return `
-        <div class="mCard">
-          <img class="mFoto" src="${foto}" onerror="this.style.opacity=.25" />
-          <div class="mNome">${p.nome || "Sem nome"}</div>
-          <div class="mMeta">${p.cidade || ""} ${p.estado || ""}</div>
-
-          <div class="mActions">
-            <button class="btn btn-primary" data-chat="${m.matchId}" ${conversaId ? "" : "disabled"}>
-              ${conversaId ? "Abrir Chat" : "Sem conversa"}
-            </button>
-            <button class="btn btn-ghost" data-ver="${u.id}">
-              Ver perfil
-            </button>
+          <div class="match-actions">
+            <button class="btn btn-primary" data-chat="${m.conversaId}">Abrir Chat</button>
+            <button class="btn" data-perfil="${outro.id}">Ver perfil</button>
           </div>
         </div>
-      `;
-        }).join("") +
-        `</div>`;
+      </div>
+    `;
+  }).join("");
 
-    document.querySelectorAll("[data-chat]").forEach(btn => {
-        btn.onclick = () => {
-            const matchId = btn.getAttribute("data-chat");
-            const conversaId = conversaPorMatch.get(matchId);
-            if (!conversaId) return;
-            // guarda a conversa selecionada e manda pro chat
-            localStorage.setItem("conversaSelecionadaId", conversaId);
-            location.href = "conversas.html";
-        };
+  grid.querySelectorAll("button[data-chat]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const conversaId = btn.getAttribute("data-chat");
+      // ✅ abre chat já focado na conversa
+      location.href = `conversas.html?conversaId=${conversaId}`;
     });
+  });
 
-    document.querySelectorAll("[data-ver]").forEach(btn => {
-        btn.onclick = () => {
-            const userId = btn.getAttribute("data-ver");
-            location.href = `perfil-match.html?userId=${userId}`;
-        };
+  grid.querySelectorAll("button[data-perfil]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const uid = btn.getAttribute("data-perfil");
+      location.href = `perfil-match.html?id=${uid}`;
     });
+  });
 }
 
-async function carregar() {
-    try {
-        msg.textContent = "";
-        lista.innerHTML = `<p class="muted">Carregando...</p>`;
+q?.addEventListener("input", render);
+btnReload?.addEventListener("click", loadMatches);
 
-        // 1) pega matches
-        const r = await apiFetch("/matches/minhas");
-        matches = r || [];
-
-        // 2) pega conversas e monta mapa matchId -> conversaId
-        const c = await apiFetch("/conversas/minhas");
-        conversaPorMatch = new Map((c || []).map(x => [x.matchId, x.conversaId]));
-
-        render();
-    } catch (e) {
-        msg.textContent = e.message;
-        lista.innerHTML = "";
-    }
-}
-
-document.getElementById("btnRecarregar").onclick = carregar;
-busca.addEventListener("input", render);
-
-carregar();
+await loadMatches();

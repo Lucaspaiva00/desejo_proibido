@@ -29,17 +29,24 @@ enum DenunciaStatus {
   IGNORADA
 }
 
+enum MensagemTipo {
+  TEXTO
+  PRESENTE
+  SISTEMA
+}
+
 model Usuario {
   id          String  @id @default(cuid())
   email       String  @unique
   senhaHash   String
   ativo       Boolean @default(true)
   isInvisivel Boolean @default(false)
-  // ✅ Controle de permissões (Admin/moderação)
-  role        Role    @default(USER)
 
-  // ✅ Freemium / Premium (pra Doing do Trello)
-  plano     String  @default("FREE") // FREE | PREMIUM (string simples pra não travar)
+  // ✅ Controle de permissões (Admin/moderação)
+  role Role @default(USER)
+
+  // ✅ Freemium / Premium
+  plano     String  @default("FREE") // FREE | PREMIUM
   isPremium Boolean @default(false)
 
   // ✅ Modo invisível (Premium)
@@ -47,6 +54,9 @@ model Usuario {
 
   // ✅ Boost de perfil (destaque temporário)
   boostAte DateTime?
+
+  // ✅ Minutos disponíveis (para ligações / presentes / Woo)
+  minutosDisponiveis Int @default(0)
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -82,13 +92,28 @@ model Usuario {
   acoesAdminFeitas AcaoAdmin[] @relation("AcoesAdminFeitas")
   acoesAdminAlvo   AcaoAdmin[] @relation("AcoesAdminAlvo")
   banGlobal        BanGlobal?
-  pagamentos       Pagamento[]
-  logsAcesso       LogAcesso[]
+
+  pagamentos Pagamento[]
+
+  // ✅ Logs
+  logsAcesso LogAcesso[]
 
   // ✅ Logs de denúncia (3 relações diferentes)
   logDenunciasComoDenunciante LogDenuncia[] @relation("LogDenunciaDenunciante")
   logDenunciasComoDenunciado  LogDenuncia[] @relation("LogDenunciaDenunciado")
   logDenunciasComoAdmin       LogDenuncia[] @relation("LogDenunciaAdmin")
+
+  // ✅ Minutos e compras no Woo
+  creditosMinutos CreditoMinuto[]
+  comprasWoo      CompraWoo[]
+
+  // ✅ Ligações (evita ambiguidade com @relation)
+  ligacoesIniciadas SessaoLigacao[] @relation("LigacaoIniciada")
+  ligacoesRecebidas SessaoLigacao[] @relation("LigacaoRecebida")
+
+  // ✅ Presentes enviados/recebidos
+  presentesEnviados  PresenteEnviado[] @relation("PresenteDe")
+  presentesRecebidos PresenteEnviado[] @relation("PresentePara")
 
   @@index([ativo])
   @@index([role])
@@ -136,7 +161,7 @@ model Curtida {
 
   @@unique([deUsuarioId, paraUsuarioId])
   @@index([paraUsuarioId])
-  @@index([deUsuarioId, criadoEm]) // ✅ ajuda no limite diário (freemium)
+  @@index([deUsuarioId, criadoEm])
 }
 
 model Match {
@@ -160,23 +185,26 @@ model Conversa {
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
-  match     Match      @relation(fields: [matchId], references: [id])
-  mensagens Mensagem[]
+  match            Match             @relation(fields: [matchId], references: [id])
+  mensagens        Mensagem[]
+  presenteEnviados PresenteEnviado[]
 }
 
 model Mensagem {
-  id         String   @id @default(cuid())
+  id         String       @id @default(cuid())
   conversaId String
   autorId    String
-  texto      String   @db.Text
-  criadoEm   DateTime @default(now())
+  tipo       MensagemTipo @default(TEXTO)
+  texto      String?      @db.Text
+  metaJson   Json?
+  criadoEm   DateTime     @default(now())
 
   conversa Conversa @relation(fields: [conversaId], references: [id])
   autor    Usuario  @relation(fields: [autorId], references: [id])
 
   @@index([conversaId])
   @@index([autorId])
-  @@index([conversaId, criadoEm]) // ✅ ordenar chat rápido
+  @@index([conversaId, criadoEm])
 }
 
 model Skip {
@@ -190,7 +218,7 @@ model Skip {
 
   @@unique([deUsuarioId, paraUsuarioId])
   @@index([paraUsuarioId])
-  @@index([deUsuarioId, criadoEm]) // ✅ também serve pra limite diário se você quiser
+  @@index([deUsuarioId, criadoEm])
 }
 
 model Bloqueio {
@@ -227,9 +255,6 @@ model Denuncia {
   @@index([criadoEm])
 }
 
-//
-// ✅ Termos/Privacidade com versionamento + aceite obrigatório
-//
 model Termo {
   id       String    @id @default(cuid())
   tipo     TermoTipo
@@ -261,14 +286,11 @@ model AceiteTermos {
   @@index([termoId])
 }
 
-//
-// ✅ Auditoria/Admin (para moderação/bloqueio global etc.)
-//
 model AcaoAdmin {
   id       String   @id @default(cuid())
   adminId  String
   alvoId   String?
-  tipo     String // "BAN_GLOBAL" | "DESBANIR" | "SUSPENDER" | "REMOVER_BOOST" | etc
+  tipo     String
   motivo   String?  @db.Text
   detalhes String?  @db.Text
   criadoEm DateTime @default(now())
@@ -281,9 +303,6 @@ model AcaoAdmin {
   @@index([tipo])
 }
 
-//
-// ✅ Bloqueio global (banir usuário do sistema inteiro)
-//
 model BanGlobal {
   id        String    @id @default(cuid())
   usuarioId String    @unique
@@ -304,7 +323,7 @@ model Pagamento {
   mpPaymentId   String?  @unique
   mpOrderId     String?
   status        String
-  plano         String // "PREMIUM"
+  plano         String
   valorCentavos Int
   moeda         String   @default("BRL")
   criadoEm      DateTime @default(now())
@@ -317,18 +336,17 @@ model Pagamento {
 }
 
 model LogAcesso {
-  id        String  @id @default(cuid())
+  id        String   @id @default(cuid())
   usuarioId String?
   email     String?
-  evento    String // LOGIN_OK, LOGIN_FALHA, TOKEN_AUSENTE, TOKEN_INVALIDO, BANIDO, DESATIVADO...
-  rota      String? // /auth/login, /feed, etc
-  metodo    String? // GET, POST...
-  status    Int? // 200, 401, 403...
+  evento    String
+  rota      String?
+  metodo    String?
+  status    Int?
   ip        String?
   userAgent String?
-  detalhe   String? // mensagem extra (ex: "senha inválida")
-
-  criadoEm DateTime @default(now())
+  detalhe   String?
+  criadoEm  DateTime @default(now())
 
   usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
 
@@ -343,8 +361,8 @@ model LogDenuncia {
   denuncianteId String?
   denunciadoId  String?
 
-  adminId      String? // quando ação é feita pelo admin
-  tipo         String // DENUNCIA_CRIADA, STATUS_ALTERADO, BAN_APLICADO, DESBANIDO
+  adminId      String?
+  tipo         String
   statusAntes  String?
   statusDepois String?
   motivo       String?
@@ -364,4 +382,90 @@ model LogDenuncia {
   @@index([denunciadoId])
   @@index([tipo])
   @@index([criadoEm])
+}
+
+model CreditoMinuto {
+  id        String   @id @default(cuid())
+  usuarioId String
+  tipo      String
+  minutos   Int
+  refTipo   String?
+  refId     String?
+  detalhes  String?
+  criadoEm  DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@index([refTipo, refId])
+  @@index([criadoEm])
+}
+
+model CompraWoo {
+  id                String   @id @default(cuid())
+  usuarioId         String
+  orderId           String   @unique
+  status            String
+  produtoId         String?
+  produtoNome       String?
+  minutosCreditados Int
+  payloadJson       Json?
+  criadoEm          DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@index([criadoEm])
+}
+
+model SessaoLigacao {
+  id String @id @default(cuid())
+
+  usuarioId String
+  usuario   Usuario @relation("LigacaoIniciada", fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  alvoId String
+  alvo   Usuario @relation("LigacaoRecebida", fields: [alvoId], references: [id], onDelete: Cascade)
+
+  status             String
+  iniciadoEm         DateTime  @default(now())
+  finalizadoEm       DateTime?
+  segundosConsumidos Int       @default(0)
+  minutosCobrados    Int       @default(0)
+
+  @@index([usuarioId])
+  @@index([alvoId])
+  @@index([status])
+}
+
+model Presente {
+  id        String   @id @default(cuid())
+  nome      String
+  minutos   Int      @default(0)
+  imagemUrl String?
+  ativo     Boolean  @default(true)
+  criadoEm  DateTime @default(now())
+
+  enviados PresenteEnviado[]
+
+  @@index([ativo])
+}
+
+model PresenteEnviado {
+  id            String   @id @default(cuid())
+  presenteId    String
+  conversaId    String
+  deUsuarioId   String
+  paraUsuarioId String
+  minutos       Int
+  criadoEm      DateTime @default(now())
+
+  presente    Presente @relation(fields: [presenteId], references: [id], onDelete: Cascade)
+  conversa    Conversa @relation(fields: [conversaId], references: [id], onDelete: Cascade)
+  deUsuario   Usuario  @relation("PresenteDe", fields: [deUsuarioId], references: [id], onDelete: Cascade)
+  paraUsuario Usuario  @relation("PresentePara", fields: [paraUsuarioId], references: [id], onDelete: Cascade)
+
+  @@index([conversaId, criadoEm])
+  @@index([paraUsuarioId, criadoEm])
+  @@index([deUsuarioId, criadoEm])
 }

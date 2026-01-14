@@ -1,249 +1,500 @@
-import { apiFetch, API_BASE, logout } from "./api.js";
+import { apiFetch, logout } from "./api.js";
 
 const msg = document.getElementById("msg");
-const lista = document.getElementById("lista");
-const q = document.getElementById("q");
-
-const chatAvatar = document.getElementById("chatAvatar");
-const chatAvatarFallback = document.getElementById("chatAvatarFallback");
-const chatNome = document.getElementById("chatNome");
-const chatSub = document.getElementById("chatSub");
-const chatStatus = document.getElementById("chatStatus");
-const msgsEl = document.getElementById("msgs");
-
-const textoEl = document.getElementById("texto");
-const btnEnviar = document.getElementById("btnEnviar");
 
 document.getElementById("btnSair").onclick = logout;
+const btnSairMobile = document.getElementById("btnSairMobile");
+if (btnSairMobile) btnSairMobile.onclick = logout;
 
-const meu = JSON.parse(localStorage.getItem("usuario") || "null");
-const meuId = meu?.id;
+// UI
+const q = document.getElementById("q");
+const lista = document.getElementById("lista");
 
-let conversas = [];
-let conversaAtiva = null;
-let timer = null;
-let lastMsgHash = "";
+const chatNome = document.getElementById("chatNome");
+const chatSub = document.getElementById("chatSub");
+const chatAvatar = document.getElementById("chatAvatar");
+const chatAvatarFallback = document.getElementById("chatAvatarFallback");
+const chatStatus = document.getElementById("chatStatus");
 
-function fmtHora(iso) {
+const msgs = document.getElementById("msgs");
+const texto = document.getElementById("texto");
+const btnEnviar = document.getElementById("btnEnviar");
+
+const btnGift = document.getElementById("btnGift");
+const btnCall = document.getElementById("btnCall");
+const minutosPill = document.getElementById("minutosPill");
+
+// Modal presentes
+const giftOverlay = document.getElementById("giftOverlay");
+const giftClose = document.getElementById("giftClose");
+const giftList = document.getElementById("giftList");
+
+// =====================================
+// ✅ Auth robusto (não depende da chave)
+// =====================================
+function safeJsonParse(v) {
     try {
-        const d = new Date(iso);
-        return d.toLocaleString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+        return JSON.parse(v);
     } catch {
-        return "";
+        return null;
     }
 }
 
-function safeText(s) {
-    return (s ?? "").toString();
-}
+function getAuth() {
+    // tenta achar token/usuário em várias chaves comuns do projeto
+    const keysUser = ["usuarioLogado", "usuario", "user", "authUser"];
+    const keysToken = ["token", "authToken", "dp_token", "tokenJwt"];
 
-function setAvatar(elImg, elFallback, url) {
-    if (!url) {
-        elImg.style.display = "none";
-        elFallback.style.display = "flex";
-        return;
+    let usuario = null;
+    for (const k of keysUser) {
+        const v = localStorage.getItem(k);
+        if (v) {
+            const obj = safeJsonParse(v);
+            if (obj) {
+                usuario = obj;
+                break;
+            }
+        }
     }
-    elFallback.style.display = "none";
-    elImg.style.display = "block";
-    elImg.src = url;
-    elImg.onerror = () => {
-        elImg.style.display = "none";
-        elFallback.style.display = "flex";
-    };
+
+    let token = null;
+    for (const k of keysToken) {
+        const v = localStorage.getItem(k);
+        if (v) {
+            token = v;
+            break;
+        }
+    }
+
+    // fallback: se você guarda um objeto "auth" com { token, usuario }
+    const authRaw = localStorage.getItem("auth");
+    if (authRaw) {
+        const a = safeJsonParse(authRaw);
+        if (a) {
+            if (!token && a.token) token = a.token;
+            if (!usuario && a.usuario) usuario = a.usuario;
+        }
+    }
+
+    // fallback final: se o login guardou só "usuarioLogado" e token não
+    // (nesse caso, o api.js provavelmente falha; a gente tenta puxar de "usuarioLogado.token")
+    if (!token && usuario?.token) token = usuario.token;
+
+    return { usuario, token };
 }
 
-function buildItem(c) {
-    const outro = c.outroUsuario;
-    const nome = outro?.perfil?.nome || "Sem nome";
-    const foto = outro?.fotoPrincipal ? `${API_BASE}${outro.fotoPrincipal}` : "";
+const auth = getAuth();
 
-    const prev = c.ultimaMensagem?.texto ? c.ultimaMensagem.texto : "Sem mensagens ainda";
-    const hora = c.ultimaMensagem?.criadoEm ? fmtHora(c.ultimaMensagem.criadoEm) : "";
+// garante token na chave "token" (muitos api.js usam essa)
+if (auth.token && !localStorage.getItem("token")) {
+    localStorage.setItem("token", auth.token);
+}
 
-    const div = document.createElement("div");
-    div.className = "item";
-    div.dataset.id = c.conversaId;
+// Estado
+const state = {
+    usuario: auth.usuario,
+    conversaId: null,
+    outroUsuarioId: null,
+    conversas: [],
+    presentesCache: null,
 
-    div.innerHTML = `
-    <div class="avatarWrap">
-      <img class="avatar" alt="avatar"/>
-      <div class="avatarFallback">DP</div>
-    </div>
+    // Ligação MVP
+    sessaoIdAtiva: null,
+    t0: null,
+};
 
-    <div style="min-width:0">
-      <div class="nameRow">
-        <div class="name">${safeText(nome)}</div>
-        <div class="muted">${hora}</div>
-      </div>
-      <div class="preview">${safeText(prev)}</div>
-    </div>
-  `;
+// se não achou nada, manda pro login
+if (!state.usuario && !localStorage.getItem("token")) {
+    alert("Sessão expirada. Faça login.");
+    location.href = "login.html";
+}
 
-    // seta imagem com fallback
-    const img = div.querySelector("img.avatar");
-    const fb = div.querySelector(".avatarFallback");
-    setAvatar(img, fb, foto);
+// ==============================
+// Helpers
+// ==============================
+function setMsg(text, type = "muted") {
+    msg.className = `msgline ${type}`;
+    msg.textContent = text || "";
+}
 
-    div.onclick = () => abrirConversa(c.conversaId);
-    return div;
+function escapeHtml(s) {
+    return String(s || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+function openGiftModal() {
+    giftOverlay?.classList.add("show");
+    giftOverlay?.setAttribute("aria-hidden", "false");
+    document.body.classList.add("no-scroll");
+}
+
+function closeGiftModal() {
+    giftOverlay?.classList.remove("show");
+    giftOverlay?.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("no-scroll");
+}
+
+giftClose?.addEventListener("click", closeGiftModal);
+giftOverlay?.addEventListener("click", (e) => {
+    if (e.target === giftOverlay) closeGiftModal();
+});
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeGiftModal();
+});
+
+// ==============================
+// API endpoints
+// ==============================
+const API = {
+    listarConversas: "/conversas",
+    mensagensDaConversa: (conversaId) => `/conversas/${conversaId}/mensagens`,
+    enviarMensagem: "/mensagens",
+
+    listarPresentes: "/presentes",
+    enviarPresente: "/presentes/enviar",
+
+    saldoMinutos: "/ligacoes/saldo",
+    iniciarLigacao: "/ligacoes/iniciar",
+    finalizarLigacao: "/ligacoes/finalizar",
+};
+
+// ==============================
+// Carregar lista de conversas
+// ==============================
+async function carregarConversas() {
+    try {
+        setMsg("Carregando conversas...");
+        const data = await apiFetch(API.listarConversas);
+        state.conversas = Array.isArray(data) ? data : (data.data || []);
+        renderLista();
+        setMsg("");
+    } catch (e) {
+        setMsg("Erro ao carregar conversas: " + e.message, "error");
+    }
 }
 
 function renderLista() {
-    const termo = (q.value || "").trim().toLowerCase();
+    const filtro = (q.value || "").toLowerCase().trim();
 
-    const filtradas = conversas.filter(c => {
-        const nome = c.outroUsuario?.perfil?.nome || "";
-        const texto = c.ultimaMensagem?.texto || "";
-        return (nome + " " + texto).toLowerCase().includes(termo);
+    const items = state.conversas.filter((c) => {
+        const nome = (c.outro?.perfil?.nome || c.outroNome || c.outroEmail || "").toLowerCase();
+        return !filtro || nome.includes(filtro);
     });
 
-    lista.innerHTML = "";
-    if (!filtradas.length) {
-        lista.innerHTML = `<div class="empty">Nenhuma conversa encontrada.</div>`;
+    if (!items.length) {
+        lista.innerHTML = `<div class="empty">Nenhuma conversa.</div>`;
         return;
     }
 
-    filtradas.forEach(c => {
-        const el = buildItem(c);
-        if (conversaAtiva?.conversaId === c.conversaId) el.classList.add("active");
-        lista.appendChild(el);
-    });
-}
-
-async function carregarConversas({ keepActive = true } = {}) {
-    try {
-        msg.textContent = "";
-        conversas = await apiFetch("/conversas/minhas");
-        renderLista();
-
-        // abrir a conversa do match selecionado (se existir)
-        const saved = localStorage.getItem("conversaSelecionadaId");
-
-        if (!keepActive) conversaAtiva = null;
-
-        if (!conversaAtiva) {
-            if (saved) {
-                localStorage.removeItem("conversaSelecionadaId");
-                const existe = conversas.find(c => c.conversaId === saved);
-                if (existe) await abrirConversa(saved);
-                else if (conversas.length) await abrirConversa(conversas[0].conversaId);
-            } else if (conversas.length) {
-                await abrirConversa(conversas[0].conversaId);
-            }
-        }
-    } catch (e) {
-        msg.textContent = e.message;
-    }
-}
-
-function setAtiva(conversaId) {
-    conversaAtiva = conversas.find(c => c.conversaId === conversaId) || null;
-    renderLista();
-}
-
-function hashMsgs(arr) {
-    return (arr || []).map(m => `${m.id}:${m.texto}`).join("|");
-}
-
-function renderMensagens(mensagens) {
-    msgsEl.innerHTML = "";
-
-    if (!mensagens?.length) {
-        msgsEl.innerHTML = `<div class="empty">Sem mensagens ainda. Mande a primeira 🙂</div>`;
-        return;
-    }
-
-    // sua API retorna DESC, então vamos inverter pra ficar "antiga -> nova" e scroll bottom
-    const asc = [...mensagens].reverse();
-
-    asc.forEach(m => {
-        const div = document.createElement("div");
-        div.className = "bubble" + (m.autorId === meuId ? " me" : "");
-        div.innerHTML = `
-      ${safeText(m.texto)}
-      <span class="time">${fmtHora(m.criadoEm)}</span>
+    lista.innerHTML = items.map((c) => {
+        const nome = c.outro?.perfil?.nome || c.outroNome || c.outro?.email || "Usuário";
+        const sub = c.ultimaMensagem?.texto || c.ultimaMensagem || "";
+        const active = (state.conversaId === c.id) ? "active" : "";
+        return `
+      <button class="item ${active}" data-id="${c.id}">
+        <div class="row1">
+          <div class="title">${escapeHtml(nome)}</div>
+          <div class="time muted">${c.atualizadoEm ? new Date(c.atualizadoEm).toLocaleDateString() : ""}</div>
+        </div>
+        <div class="row2 muted">${escapeHtml(sub).slice(0, 60)}</div>
+      </button>
     `;
-        msgsEl.appendChild(div);
-    });
+    }).join("");
 
-    // scroll no final (última msg)
-    msgsEl.scrollTop = msgsEl.scrollHeight;
+    [...lista.querySelectorAll("button[data-id]")].forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const id = btn.getAttribute("data-id");
+            abrirConversa(id);
+        });
+    });
 }
 
-async function carregarMensagens(conversaId, { silent = false } = {}) {
+q?.addEventListener("input", renderLista);
+
+// ==============================
+// Abrir conversa (lado direito)
+// ==============================
+async function abrirConversa(conversaId) {
+    state.conversaId = conversaId;
+
+    const c = state.conversas.find((x) => x.id === conversaId);
+    if (!c) return;
+
+    // tenta descobrir "outro usuário"
+    const outro = c.outro || c.usuarioB || c.usuarioA || null;
+    const nome = outro?.perfil?.nome || c.outroNome || outro?.email || "Conversa";
+    const sub = outro?.email ? outro.email : "";
+
+    state.outroUsuarioId =
+        c.outroUsuarioId ||
+        outro?.id ||
+        c.outroId ||
+        null;
+
+    chatNome.textContent = nome;
+    chatSub.textContent = sub;
+
+    // avatar
+    const foto = outro?.fotos?.find?.((f) => f.principal)?.url || outro?.fotoPrincipal || null;
+    if (foto) {
+        chatAvatar.src = foto;
+        chatAvatar.style.display = "block";
+        chatAvatarFallback.style.display = "none";
+    } else {
+        chatAvatar.removeAttribute("src");
+        chatAvatar.style.display = "none";
+        chatAvatarFallback.style.display = "flex";
+        chatAvatarFallback.textContent = (nome || "DP").slice(0, 2).toUpperCase();
+    }
+
+    // habilita composer e botões
+    if (texto) texto.disabled = false;
+    if (btnEnviar) btnEnviar.disabled = false;
+    if (btnGift) btnGift.disabled = false;
+    if (btnCall) btnCall.disabled = false;
+
+    // render lista com active
+    renderLista();
+
+    await atualizarSaldo();
+    await carregarMensagens();
+}
+
+// ==============================
+// Mensagens
+// ==============================
+async function carregarMensagens() {
+    if (!state.conversaId) return;
+
     try {
-        if (!silent) chatStatus.textContent = "Carregando...";
-        const r = await apiFetch(`/mensagens/${conversaId}?page=1&limit=40`);
-        const mensagens = r.data || [];
-
-        const h = hashMsgs(mensagens);
-        if (h !== lastMsgHash) {
-            lastMsgHash = h;
-            renderMensagens(mensagens);
-        }
-
+        chatStatus.textContent = "Carregando...";
+        const data = await apiFetch(API.mensagensDaConversa(state.conversaId));
+        const items = Array.isArray(data) ? data : (data.data || []);
+        renderMensagens(items);
         chatStatus.textContent = "";
     } catch (e) {
-        chatStatus.textContent = "";
-        msg.textContent = e.message;
+        chatStatus.textContent = "Erro";
+        msgs.innerHTML = `<div class="empty">Erro ao carregar mensagens: ${escapeHtml(e.message)}</div>`;
     }
 }
 
-async function abrirConversa(conversaId) {
-    setAtiva(conversaId);
+function renderMensagens(items) {
+    if (!items?.length) {
+        msgs.innerHTML = `<div class="empty">Sem mensagens ainda.</div>`;
+        return;
+    }
 
-    const c = conversaAtiva;
-    const outro = c?.outroUsuario;
+    const me = state.usuario?.id;
 
-    chatNome.textContent = outro?.perfil?.nome || "Sem nome";
-    chatSub.textContent = `${outro?.perfil?.cidade || ""} ${outro?.perfil?.estado || ""}`.trim();
+    msgs.innerHTML = items.map((m) => {
+        const isMe = (m.autorId === me);
+        const tipo = m.tipo || "TEXTO";
 
-    const foto = outro?.fotoPrincipal ? `${API_BASE}${outro.fotoPrincipal}` : "";
-    setAvatar(chatAvatar, chatAvatarFallback, foto);
+        const dt = m.criadoEm ? new Date(m.criadoEm).toLocaleString() : "";
+        const meta = m.metaJson || {};
 
-    textoEl.disabled = false;
-    btnEnviar.disabled = false;
+        let extraClass = "";
+        if (tipo === "SISTEMA") extraClass = "system";
+        if (tipo === "PRESENTE") extraClass = "gift";
 
-    lastMsgHash = "";
-    await carregarMensagens(conversaId);
+        let conteudo = "";
+        if (tipo === "PRESENTE") {
+            const nome = meta.nome || (m.texto || "🎁 Presente");
+            const min = meta.minutos ?? 0;
+            conteudo = `<div><b>🎁 ${escapeHtml(nome)}</b> <span class="dp-pill">${min} min</span></div>`;
+        } else {
+            conteudo = `<div>${escapeHtml(m.texto || "")}</div>`;
+        }
 
-    if (timer) clearInterval(timer);
-    timer = setInterval(() => {
-        if (!conversaAtiva) return;
-        carregarMensagens(conversaAtiva.conversaId, { silent: true });
-    }, 2500);
+        return `
+      <div class="msgRow ${isMe ? "me" : "other"}">
+        <div class="bubble ${extraClass}">
+          ${conteudo}
+          <div class="meta muted">${escapeHtml(dt)}</div>
+        </div>
+      </div>
+    `;
+    }).join("");
+
+    msgs.scrollTop = msgs.scrollHeight;
 }
 
-async function enviar() {
+async function enviarMensagem() {
+    const t = (texto.value || "").trim();
+    if (!t || !state.conversaId) return;
+
+    texto.value = "";
+    btnEnviar.disabled = true;
+
     try {
-        if (!conversaAtiva) return;
-
-        const texto = (textoEl.value || "").trim();
-        if (!texto) return;
-
-        textoEl.value = "";
-
-        await apiFetch(`/mensagens/${conversaAtiva.conversaId}`, {
+        await apiFetch(API.enviarMensagem, {
             method: "POST",
-            body: { texto }
+            body: { conversaId: state.conversaId, texto: t },
         });
 
-        await carregarMensagens(conversaAtiva.conversaId);
-        await carregarConversas(); // atualiza lista
+        await carregarMensagens();
     } catch (e) {
-        msg.textContent = e.message;
+        alert("Erro ao enviar: " + e.message);
+    } finally {
+        btnEnviar.disabled = false;
+        texto.focus();
     }
 }
 
-btnEnviar.onclick = enviar;
-
-textoEl.addEventListener("keydown", (e) => {
+btnEnviar?.addEventListener("click", enviarMensagem);
+texto?.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        enviar();
+        enviarMensagem();
     }
 });
 
-q.addEventListener("input", renderLista);
+// ==============================
+// Presentes (webcliente)
+// ==============================
+btnGift?.addEventListener("click", async () => {
+    if (!state.conversaId) return;
+    await carregarPresentes();
+    openGiftModal();
+});
 
-carregarConversas({ keepActive: false });
+async function carregarPresentes() {
+    giftList.innerHTML = "Carregando...";
+
+    try {
+        if (!state.presentesCache) {
+            state.presentesCache = await apiFetch(API.listarPresentes);
+        }
+        const itens = state.presentesCache || [];
+
+        if (!itens.length) {
+            giftList.innerHTML = `<div class="muted">Nenhum presente cadastrado.</div>`;
+            return;
+        }
+
+        giftList.innerHTML = itens.map((p) => `
+      <button class="dp-gift" data-id="${p.id}">
+        <div>
+          <span class="name">${escapeHtml(p.nome)}</span>
+          <span class="sub">Crédita ${p.minutos} minuto(s)</span>
+        </div>
+        <span class="dp-pill">${p.minutos} min</span>
+      </button>
+    `).join("");
+
+        [...giftList.querySelectorAll("button[data-id]")].forEach((btn) => {
+            btn.addEventListener("click", async () => {
+                const presenteId = btn.getAttribute("data-id");
+                await enviarPresente(presenteId);
+            });
+        });
+    } catch (e) {
+        giftList.innerHTML = `<div class="muted">Erro: ${escapeHtml(e.message)}</div>`;
+    }
+}
+
+async function enviarPresente(presenteId) {
+    try {
+        await apiFetch(API.enviarPresente, {
+            method: "POST",
+            body: { conversaId: state.conversaId, presenteId },
+        });
+
+        closeGiftModal();
+        await carregarMensagens();
+        await atualizarSaldo();
+    } catch (e) {
+        alert("Erro ao enviar presente: " + e.message);
+    }
+}
+
+// ==============================
+// Minutos + Ligações (MVP)
+// ==============================
+async function atualizarSaldo() {
+    try {
+        const r = await apiFetch(API.saldoMinutos);
+        if (minutosPill) minutosPill.textContent = `⏱️ Minutos: ${r.minutosDisponiveis}`;
+    } catch {
+        if (minutosPill) minutosPill.textContent = "⏱️ Minutos: -";
+    }
+}
+
+btnCall?.addEventListener("click", async () => {
+    if (!state.conversaId) return;
+
+    if (!state.sessaoIdAtiva) {
+        await iniciarLigacaoMVP();
+    } else {
+        await finalizarLigacaoMVP();
+    }
+});
+
+async function iniciarLigacaoMVP() {
+    try {
+        btnCall.disabled = true;
+        chatStatus.textContent = "Iniciando ligação...";
+
+        const r = await apiFetch(API.iniciarLigacao, {
+            method: "POST",
+            body: { conversaId: state.conversaId },
+        });
+
+        state.sessaoIdAtiva = r.sessaoId;
+        state.t0 = Date.now();
+
+        chatStatus.textContent = "Ligação em andamento (MVP)";
+        btnCall.textContent = "⛔";
+    } catch (e) {
+        alert("Erro ao iniciar ligação: " + e.message);
+        chatStatus.textContent = "";
+    } finally {
+        btnCall.disabled = false;
+    }
+}
+
+async function finalizarLigacaoMVP() {
+    try {
+        btnCall.disabled = true;
+        chatStatus.textContent = "Finalizando...";
+
+        const segundos = Math.max(1, Math.floor((Date.now() - state.t0) / 1000));
+
+        const r = await apiFetch(API.finalizarLigacao, {
+            method: "POST",
+            body: {
+                sessaoId: state.sessaoIdAtiva,
+                conversaId: state.conversaId,
+                segundosConsumidos: segundos,
+            },
+        });
+
+        state.sessaoIdAtiva = null;
+        state.t0 = null;
+
+        btnCall.textContent = "📞";
+        chatStatus.textContent = `Finalizada: ${r.sessao?.minutosCobrados ?? "?"} min`;
+
+        await carregarMensagens();
+        await atualizarSaldo();
+    } catch (e) {
+        alert("Erro ao finalizar ligação: " + e.message);
+        chatStatus.textContent = "";
+    } finally {
+        btnCall.disabled = false;
+    }
+}
+
+// ==============================
+// Init
+// ==============================
+await carregarConversas();
+
+// auto refresh se uma conversa estiver aberta
+setInterval(() => {
+    if (state.conversaId) carregarMensagens();
+}, 4000);

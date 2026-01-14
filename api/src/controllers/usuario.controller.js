@@ -80,3 +80,40 @@ export async function ativarBoost(req, res) {
         mensagem: `✅ Boost ativado até ${atualizado.boostAte.toLocaleString()}`,
     });
 }
+
+// GET /usuarios/:id
+export async function getUsuarioById(req, res) {
+    try {
+        const { id } = req.params;
+
+        const u = await prisma.usuario.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                email: true, // se quiser esconder depois, tira
+                ativo: true,
+                isPremium: true,
+                isInvisivel: true,
+                boostAte: true,
+                perfil: true,
+                fotos: {
+                    orderBy: { principal: "desc" },
+                    select: {
+                        id: true,
+                        url: true,
+                        principal: true,
+                        criadoEm: true,
+                    },
+                },
+            },
+        });
+
+        if (!u || !u.ativo) {
+            return res.status(404).json({ erro: "Usuário não encontrado" });
+        }
+
+        return res.json(u);
+    } catch (e) {
+        return res.status(500).json({ erro: "Erro ao buscar usuário", detalhe: e.message });
+    }
+}

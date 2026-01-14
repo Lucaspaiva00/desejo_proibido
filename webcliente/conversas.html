@@ -8,64 +8,209 @@
 
   <link rel="stylesheet" href="css/dating.css" />
   <link rel="stylesheet" href="css/conversas.css" />
+
+  <style>
+    /* === Modal simples (sem bootstrap) === */
+    .dp-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 9999;
+    }
+
+    .dp-modal-overlay.show {
+      display: flex;
+    }
+
+    .dp-modal {
+      width: min(520px, 100%);
+      background: #111;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 18px 60px rgba(0, 0, 0, .6);
+    }
+
+    .dp-modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, .10);
+    }
+
+    .dp-modal-title {
+      font-weight: 700;
+    }
+
+    .dp-modal-close {
+      background: transparent;
+      border: 0;
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer;
+      opacity: .85;
+    }
+
+    .dp-modal-close:hover {
+      opacity: 1;
+    }
+
+    .dp-modal-body {
+      padding: 12px 14px;
+    }
+
+    .dp-gifts {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .dp-gift {
+      width: 100%;
+      text-align: left;
+      border: 1px solid rgba(255, 255, 255, .12);
+      background: rgba(255, 255, 255, .04);
+      color: #fff;
+      padding: 10px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .dp-gift:hover {
+      background: rgba(255, 255, 255, .08);
+    }
+
+    .dp-gift .name {
+      font-weight: 700;
+      display: block;
+    }
+
+    .dp-gift .sub {
+      opacity: .75;
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    .dp-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, .12);
+      background: rgba(255, 255, 255, .06);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    /* Botões extras */
+    .chat-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .iconbtn {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, .12);
+      background: rgba(255, 255, 255, .06);
+      color: #fff;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .iconbtn:hover {
+      background: rgba(255, 255, 255, .10);
+    }
+
+    .iconbtn:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+
+    /* Mensagem de sistema/presente */
+    .bubble.system {
+      background: rgba(255, 255, 255, .08) !important;
+      border: 1px dashed rgba(255, 255, 255, .18);
+    }
+
+    .bubble.gift {
+      background: rgba(255, 255, 255, .10) !important;
+      border: 1px solid rgba(255, 255, 255, .18);
+    }
+  </style>
 </head>
 
 <body>
-   <!-- TOPNAV: Desktop normal + Mobile com menu sanduíche -->
-    <nav class="topnav" role="navigation" aria-label="Navegação principal">
-        <div class="brand">
-            <div class="brand-badge">DP</div>
-            <span class="brand-name">Desejo Proibido</span>
-        </div>
+  <!-- TOPNAV: Desktop normal + Mobile com menu sanduíche -->
+  <nav class="topnav" role="navigation" aria-label="Navegação principal">
+    <div class="brand">
+      <div class="brand-badge">DP</div>
+      <span class="brand-name">Desejo Proibido</span>
+    </div>
 
-        <!-- Desktop links -->
-        <div class="navlinks navlinks-desktop" aria-label="Links do menu">
-            <a href="home.html">Feed</a>
-            <a href="perfil.html">Perfil</a>
-            <a href="fotos.html">Fotos</a>
-            <a href="matches.html">Matches</a>
-            <a href="conversas.html" class="active">Chat</a>
-        </div>
+    <!-- Desktop links -->
+    <div class="navlinks navlinks-desktop" aria-label="Links do menu">
+      <a href="home.html">Feed</a>
+      <a href="perfil.html">Perfil</a>
+      <a href="fotos.html">Fotos</a>
+      <a href="matches.html">Matches</a>
+      <a href="conversas.html" class="active">Chat</a>
+    </div>
 
-        <div class="spacer"></div>
+    <div class="spacer"></div>
 
-        <!-- Botão sair (sempre visível) -->
-        <button id="btnSair" class="btn btn-ghost">Sair</button>
+    <!-- Botão sair (sempre visível) -->
+    <button id="btnSair" class="btn btn-ghost">Sair</button>
 
-        <!-- Botão hambúrguer (mobile) -->
-        <button class="nav-toggle" id="navToggle" aria-label="Abrir menu" aria-expanded="false"
-            aria-controls="navDrawer">
-            <span></span><span></span><span></span>
-        </button>
-    </nav>
+    <!-- Botão hambúrguer (mobile) -->
+    <button class="nav-toggle" id="navToggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="navDrawer">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
 
-    <!-- Overlay + Drawer Mobile -->
-    <div class="nav-overlay" id="navOverlay" aria-hidden="true"></div>
+  <!-- Overlay + Drawer Mobile -->
+  <div class="nav-overlay" id="navOverlay" aria-hidden="true"></div>
 
-    <aside class="nav-drawer" id="navDrawer" aria-hidden="true">
-        <div class="nav-drawer-head">
-            <div class="brand">
-                <div class="brand-badge">DP</div>
-                <span class="brand-name">Desejo Proibido</span>
-            </div>
+  <aside class="nav-drawer" id="navDrawer" aria-hidden="true">
+    <div class="nav-drawer-head">
+      <div class="brand">
+        <div class="brand-badge">DP</div>
+        <span class="brand-name">Desejo Proibido</span>
+      </div>
 
-            <button class="iconbtn" id="navClose" aria-label="Fechar menu">
-                <span class="xicon"></span>
-            </button>
-        </div>
+      <button class="iconbtn" id="navClose" aria-label="Fechar menu">
+        <span class="xicon"></span>
+      </button>
+    </div>
 
-        <div class="nav-drawer-links">
-            <a href="home.html">Feed</a>
-            <a href="perfil.html">Perfil</a>
-            <a href="fotos.html">Fotos</a>
-            <a href="matches.html">Matches</a>
-            <a href="conversas.html" class="active">Chat</a>
-        </div>
+    <div class="nav-drawer-links">
+      <a href="home.html">Feed</a>
+      <a href="perfil.html">Perfil</a>
+      <a href="fotos.html">Fotos</a>
+      <a href="matches.html">Matches</a>
+      <a href="conversas.html" class="active">Chat</a>
+    </div>
 
-        <div class="nav-drawer-foot">
-            <button id="btnSairMobile" class="btn btn-ghost w100">Sair</button>
-        </div>
-    </aside>
+    <div class="nav-drawer-foot">
+      <button id="btnSairMobile" class="btn btn-ghost w100">Sair</button>
+    </div>
+  </aside>
 
   <div class="wrap">
     <div class="headRow">
@@ -99,7 +244,17 @@
             </div>
           </div>
 
-          <div class="muted" id="chatStatus"></div>
+          <div class="chat-actions">
+            <span class="dp-pill" id="minutosPill">⏱️ Minutos: -</span>
+
+            <!-- Ligação (MVP) -->
+            <button class="iconbtn" id="btnCall" title="Ligar" disabled>📞</button>
+
+            <!-- Presentes -->
+            <button class="iconbtn" id="btnGift" title="Enviar presente" disabled>🎁</button>
+
+            <div class="muted" id="chatStatus"></div>
+          </div>
         </div>
 
         <div id="msgs" class="msgs">
@@ -111,6 +266,20 @@
           <button id="btnEnviar" class="btn btn-primary" disabled>Enviar</button>
         </div>
       </section>
+    </div>
+  </div>
+
+  <!-- MODAL PRESENTES -->
+  <div class="dp-modal-overlay" id="giftOverlay" aria-hidden="true">
+    <div class="dp-modal" role="dialog" aria-modal="true" aria-label="Enviar presente">
+      <div class="dp-modal-head">
+        <div class="dp-modal-title">Enviar presente 🎁</div>
+        <button class="dp-modal-close" id="giftClose" aria-label="Fechar">✕</button>
+      </div>
+      <div class="dp-modal-body">
+        <div class="muted">Escolha um presente para enviar nesta conversa.</div>
+        <div id="giftList" class="dp-gifts">Carregando...</div>
+      </div>
     </div>
   </div>
 

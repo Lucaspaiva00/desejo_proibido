@@ -1,80 +1,42 @@
 import { prisma } from "../prisma.js";
-import { z } from "zod";
-
-const enviarSchema = z.object({
-    texto: z.string().min(1).max(2000)
-});
-
-async function validarAcessoConversa(conversaId, meuId) {
-    const conversa = await prisma.conversa.findUnique({
-        where: { id: conversaId },
-        include: { match: true }
-    });
-
-    if (!conversa) return { ok: false, status: 404, erro: "Conversa não encontrada" };
-
-    const { usuarioAId, usuarioBId } = conversa.match;
-    if (usuarioAId !== meuId && usuarioBId !== meuId) {
-        return { ok: false, status: 403, erro: "Sem permissão para esta conversa" };
-    }
-
-    return { ok: true, conversa };
-}
-
-export async function listarMensagens(req, res) {
-    const meuId = req.usuario.id;
-    const { conversaId } = req.params;
-
-    const check = await validarAcessoConversa(conversaId, meuId);
-    if (!check.ok) return res.status(check.status).json({ erro: check.erro });
-
-    const page = Number(req.query.page || 1);
-    const limit = Number(req.query.limit || 30);
-    const skip = (page - 1) * limit;
-
-    const mensagens = await prisma.mensagem.findMany({
-        where: { conversaId },
-        orderBy: { criadoEm: "desc" },
-        skip,
-        take: limit,
-        include: {
-            autor: { select: { id: true } }
-        }
-    });
-
-    return res.json({
-        page,
-        limit,
-        total: mensagens.length,
-        data: mensagens
-    });
-}
 
 export async function enviarMensagem(req, res) {
-    const meuId = req.usuario.id;
-    const { conversaId } = req.params;
+    try {
+        const userId = req.usuario.id;
+        const { conversaId, texto } = req.body;
 
-    const parsed = enviarSchema.safeParse(req.body);
-    if (!parsed.success) {
-        return res.status(400).json({ erro: "Dados inválidos", detalhes: parsed.error.flatten() });
+        if (!conversaId) return res.status(400).json({ erro: "conversaId é obrigatório" });
+        if (!texto || !String(texto).trim()) return res.status(400).json({ erro: "texto é obrigatório" });
+
+        // valida acesso
+        const conv = await prisma.conversa.findUnique({
+            where: { id: conversaId },
+            include: {
+                match: { select: { usuarioAId: true, usuarioBId: true } },
+            },
+        });
+
+        if (!conv) return res.status(404).json({ erro: "Conversa não encontrada" });
+
+        const isParte = conv.match.usuarioAId === userId || conv.match.usuarioBId === userId;
+        if (!isParte) return res.status(403).json({ erro: "Sem acesso a esta conversa" });
+
+        const msg = await prisma.mensagem.create({
+            data: {
+                conversaId,
+                autorId: userId,
+                texto: String(texto).trim(),
+            },
+        });
+
+        // atualiza "atualizadoEm" da conversa pra ordenar na lista
+        await prisma.conversa.update({
+            where: { id: conversaId },
+            data: { atualizadoEm: new Date() },
+        });
+
+        return res.status(201).json(msg);
+    } catch (e) {
+        return res.status(500).json({ erro: "Erro ao enviar mensagem", detalhe: e.message });
     }
-
-    const check = await validarAcessoConversa(conversaId, meuId);
-    if (!check.ok) return res.status(check.status).json({ erro: check.erro });
-
-    const msg = await prisma.mensagem.create({
-        data: {
-            conversaId,
-            autorId: meuId,
-            texto: parsed.data.texto
-        }
-    });
-
-    // “bump” na conversa (atualizadoEm)
-    await prisma.conversa.update({
-        where: { id: conversaId },
-        data: { atualizadoEm: new Date() }
-    });
-
-    return res.status(201).json(msg);
 }

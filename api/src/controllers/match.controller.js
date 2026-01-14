@@ -1,46 +1,65 @@
 import { prisma } from "../prisma.js";
 
-export async function meusMatches(req, res) {
-    const meuId = req.usuario.id;
+/**
+ * GET /matches
+ * Lista os matches do usuário logado e já devolve "outro usuário" pronto pro front.
+ * Também garante que existe uma conversa para cada match.
+ */
+export async function listarMatches(req, res) {
+    try {
+        const userId = req.usuario.id;
 
-    const matches = await prisma.match.findMany({
-        where: {
-            OR: [{ usuarioAId: meuId }, { usuarioBId: meuId }]
-        },
-        orderBy: { criadoEm: "desc" },
-        include: {
-            usuarioA: {
-                select: {
-                    id: true,
-                    email: true,
-                    perfil: true,
-                    fotos: { where: { principal: true } }
-                }
+        const matches = await prisma.match.findMany({
+            where: {
+                OR: [{ usuarioAId: userId }, { usuarioBId: userId }],
             },
-            usuarioB: {
-                select: {
-                    id: true,
-                    email: true,
-                    perfil: true,
-                    fotos: { where: { principal: true } }
-                }
+            orderBy: { criadoEm: "desc" },
+            include: {
+                conversa: true,
+                usuarioA: {
+                    select: {
+                        id: true,
+                        email: true,
+                        perfil: true,
+                        fotos: { orderBy: { principal: "desc" } },
+                    },
+                },
+                usuarioB: {
+                    select: {
+                        id: true,
+                        email: true,
+                        perfil: true,
+                        fotos: { orderBy: { principal: "desc" } },
+                    },
+                },
+            },
+        });
+
+        // garante conversa em todos os matches
+        const out = [];
+        for (const m of matches) {
+            let conversaId = m.conversa?.id;
+
+            if (!conversaId) {
+                const conv = await prisma.conversa.create({
+                    data: { matchId: m.id },
+                });
+                conversaId = conv.id;
             }
+
+            const outro = m.usuarioA.id === userId ? m.usuarioB : m.usuarioA;
+
+            out.push({
+                id: m.id,
+                criadoEm: m.criadoEm,
+                conversaId,
+                outroUsuarioId: outro.id,
+                outro,
+            });
         }
-    });
 
-    // transforma pra retornar "o outro usuário"
-    const payload = matches.map((m) => {
-        const outro = m.usuarioAId === meuId ? m.usuarioB : m.usuarioA;
-        return {
-            matchId: m.id,
-            criadoEm: m.criadoEm,
-            outroUsuario: {
-                id: outro.id,
-                perfil: outro.perfil,
-                fotoPrincipal: outro.fotos?.[0]?.url || null
-            }
-        };
-    });
-
-    return res.json(payload);
+        return res.json(out);
+    } catch (e) {
+        return res.status(500).json({ erro: "Erro ao listar matches", detalhe: e.message });
+    }
 }

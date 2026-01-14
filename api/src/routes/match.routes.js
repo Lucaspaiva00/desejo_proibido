@@ -1,9 +1,15 @@
 import { Router } from "express";
 import { auth } from "../middlewares/auth.middleware.js";
-import { meusMatches } from "../controllers/match.controller.js";
+import { listarMatches } from "../controllers/match.controller.js";
 
 const router = Router();
 
-router.get("/minhas", auth, meusMatches);
+router.use(auth);
+
+// ✅ o front chama GET /matches
+router.get("/", listarMatches);
+
+// ✅ alias (se você quiser usar também)
+router.get("/minhas", listarMatches);
 
 export default router;
