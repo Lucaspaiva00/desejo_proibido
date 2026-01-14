@@ -11,11 +11,6 @@ function clamp(n, a, b) {
     return Math.max(a, Math.min(b, n));
 }
 
-/**
- * Gera range por idade usando Perfil.nascimento
- * idadeMin => nascimento <= hoje-idadeMin
- * idadeMax => nascimento >= hoje-(idadeMax+1)+1dia
- */
 function buildNascimentoRange(idadeMin, idadeMax) {
     const now = new Date();
     let gte = undefined;
@@ -47,15 +42,6 @@ function orderByFrom(ordenarPor) {
     return [{ criadoEm: "desc" }];
 }
 
-/**
- * GET /busca
- * Query:
- * q, cidade, estado, genero
- * idadeMin, idadeMax
- * somenteComFoto (0/1), somenteVerificados (0/1)
- * ordenarPor: recent|boost|random
- * take: default 50
- */
 export async function buscar(req, res) {
     try {
         const userId = req.usuario.id;
@@ -86,7 +72,6 @@ export async function buscar(req, res) {
             Number.isFinite(idadeMax) ? idadeMax : NaN
         );
 
-        // bloqueios
         const bloqueios = await prisma.bloqueio.findMany({
             where: { OR: [{ deUsuarioId: userId }, { paraUsuarioId: userId }] },
             select: { deUsuarioId: true, paraUsuarioId: true },
@@ -98,7 +83,6 @@ export async function buscar(req, res) {
             if (b.paraUsuarioId === userId) idsBloqueados.add(b.deUsuarioId);
         }
 
-        // where base
         const where = {
             ativo: true,
             isInvisivel: false,
@@ -109,16 +93,15 @@ export async function buscar(req, res) {
                     ...(q
                         ? {
                             OR: [
-                                { nome: { contains: q, mode: "insensitive" } },
-                                { bio: { contains: q, mode: "insensitive" } },
+                                { nome: { contains: q } },
+                                { bio: { contains: q } },
                             ],
                         }
                         : {}),
 
-                    ...(cidade ? { cidade: { contains: cidade, mode: "insensitive" } } : {}),
+                    ...(cidade ? { cidade: { contains: cidade } } : {}),
                     ...(estado && estado.length === 2 ? { estado } : {}),
                     ...(genero && genero !== "Qualquer" ? { genero } : {}),
-
                     ...(somenteVerificados ? { verificado: true } : {}),
 
                     ...(nascRange
@@ -132,7 +115,6 @@ export async function buscar(req, res) {
                 },
             },
 
-            // ✅ SEM fotoPrincipal NO USUÁRIO
             ...(somenteComFoto ? { fotos: { some: { principal: true } } } : {}),
         };
 
@@ -146,8 +128,6 @@ export async function buscar(req, res) {
                 id: true,
                 boostAte: true,
                 perfil: true,
-
-                // ✅ pega a foto principal pelo relacionamento Fotos
                 fotos: {
                     where: { principal: true },
                     take: 1,
@@ -156,7 +136,6 @@ export async function buscar(req, res) {
             },
         });
 
-        // random pós-busca
         if (!orderBy) {
             rows = rows
                 .map((x) => ({ x, r: Math.random() }))
@@ -164,7 +143,6 @@ export async function buscar(req, res) {
                 .map((o) => o.x);
         }
 
-        // ✅ normaliza para o front que espera u.fotoPrincipal
         const out = rows.map((u) => ({
             id: u.id,
             boostAte: u.boostAte,
@@ -179,9 +157,6 @@ export async function buscar(req, res) {
     }
 }
 
-/**
- * GET /busca/preferencias (MVP)
- */
 export async function preferencias(req, res) {
     return res.json({
         q: "",
@@ -196,9 +171,6 @@ export async function preferencias(req, res) {
     });
 }
 
-/**
- * PUT /busca/preferencias (MVP)
- */
 export async function salvarPreferencias(req, res) {
     return res.json({ ok: true });
 }
