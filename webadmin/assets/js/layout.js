@@ -2,10 +2,10 @@
 import { logout } from "./api.js";
 
 export function mountLayout(active = "") {
-    const el = document.getElementById("layout");
-    if (!el) return;
+  const el = document.getElementById("layout");
+  if (!el) return;
 
-    el.innerHTML = `
+  el.innerHTML = `
   <div class="admin-shell">
     <aside class="admin-sidebar">
       <div class="brand">
@@ -26,6 +26,13 @@ export function mountLayout(active = "") {
         <a class="nav-link ${active === "acoes" ? "active" : ""}" href="acoes.html">
           <i class="fa-solid fa-list-check"></i><span>Ações Admin</span>
         </a>
+        <a class="nav-link ${active === "logs_acesso" ? "active" : ""}" href="logs-acesso.html">
+        <i class="fa-solid fa-shield-halved"></i><span>Logs de Acesso</span>
+        </a>
+        <a class="nav-link ${active === "logs_denuncia" ? "active" : ""}" href="logs-denuncia.html">
+          <i class="fa-solid fa-file-lines"></i><span>Logs de Denúncia</span>
+        </a>
+
         <div class="nav-sep"></div>
         <button class="nav-link danger" id="btnSair">
           <i class="fa-solid fa-right-from-bracket"></i><span>Sair</span>
@@ -57,15 +64,15 @@ export function mountLayout(active = "") {
   </div>
   `;
 
-    document.getElementById("btnSair").onclick = logout;
+  document.getElementById("btnSair").onclick = logout;
 
-    const btnToggle = document.getElementById("btnToggleMenu");
-    if (btnToggle) {
-        btnToggle.onclick = () => document.body.classList.toggle("menu-open");
-    }
+  const btnToggle = document.getElementById("btnToggleMenu");
+  if (btnToggle) {
+    btnToggle.onclick = () => document.body.classList.toggle("menu-open");
+  }
 }
 
 export function setTitle(title) {
-    const t = document.getElementById("pageTitle");
-    if (t) t.textContent = title;
+  const t = document.getElementById("pageTitle");
+  if (t) t.textContent = title;
 }
