@@ -10,79 +10,27 @@ document.getElementById("btnSair").onclick = logout;
 const btnSairMobile = document.getElementById("btnSairMobile");
 if (btnSairMobile) btnSairMobile.onclick = logout;
 
-// ===== Modal limite =====
-const overlay = document.getElementById("limiteCurtidasOverlay");
-const btnFecharLimite = document.getElementById("btnFecharLimite");
-const btnVirarPremium = document.getElementById("btnVirarPremium");
-
-// ===== TOAST =====
-const toast = document.getElementById("toast");
-const toastText = document.getElementById("toastText");
-let toastTimer = null;
-
-function showToast(text, type = "success", ms = 2200) {
-    if (!toast || !toastText) return;
-
-    toast.classList.remove("hidden", "success", "error", "warn");
-    toast.classList.add(type);
-
-    toastText.textContent = text;
-
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => {
-        toast.classList.add("hidden");
-    }, ms);
-}
-
-function mostrarLimiteCurtidas() {
-    overlay?.classList.remove("hidden");
-    document.body.classList.add("no-scroll");
-}
-
-function fecharLimiteCurtidas() {
-    overlay?.classList.add("hidden");
-    document.body.classList.remove("no-scroll");
-}
-
-btnFecharLimite?.addEventListener("click", fecharLimiteCurtidas);
-overlay?.addEventListener("click", (e) => {
-    if (e.target === overlay) fecharLimiteCurtidas();
-});
-document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") fecharLimiteCurtidas();
-});
-
-if (btnVirarPremium) {
-    btnVirarPremium.addEventListener("click", async () => {
-        try {
-            btnVirarPremium.disabled = true;
-            btnVirarPremium.textContent = "Abrindo pagamento...";
-
-            const r = await apiFetch("/pagamentos/premium", { method: "POST" });
-
-            // fecha modal
-            fecharLimiteCurtidas();
-
-            // redireciona pro MP
-            window.location.href = r.init_point;
-        } catch (e) {
-            alert(e.message || "Erro ao abrir pagamento");
-        } finally {
-            btnVirarPremium.disabled = false;
-            btnVirarPremium.textContent = "Virar Premium";
-        }
-    });
-}
-
 function safe(s) {
     return (s ?? "").toString();
 }
 
+function setMsg(text) {
+    if (!msg) return;
+    msg.textContent = text || "";
+}
+
 async function carregar() {
-    msg.textContent = "";
+    setMsg("");
     const r = await apiFetch(`/feed?page=1&limit=20`);
     fila = r.data || [];
     proximo();
+}
+
+function isBoostAtivo(boostAte) {
+    if (!boostAte) return false;
+    const dt = new Date(boostAte);
+    if (Number.isNaN(dt.getTime())) return false;
+    return dt.getTime() > Date.now();
 }
 
 function render(u) {
@@ -104,14 +52,21 @@ function render(u) {
 
     const fotoUrl = u.fotoPrincipal ? `${API_BASE}${u.fotoPrincipal}` : "";
 
+    const boostAtivo = isBoostAtivo(u.boostAte);
+
     card.innerHTML = `
     ${fotoUrl ? `<img class="tphoto" src="${fotoUrl}" alt="Foto" />` : ""}
+
     ${fotoUrl ? `<div class="toverlay"></div>` : `
       <div class="tfallback">
         <div class="tbadgeBig">${(nome[0] || "D").toUpperCase()}</div>
         <div class="muted">Sem foto principal</div>
       </div>
     `}
+
+    ${boostAtivo ? `
+      <div class="tboostBadge" title="Perfil em destaque">🔥 BOOST</div>
+    ` : ""}
 
     <div class="tcontent">
       <div class="tnameRow">
@@ -135,6 +90,11 @@ function render(u) {
           <div class="tbadgeBig">${(nome[0] || "D").toUpperCase()}</div>
           <div class="muted">Não foi possível carregar a foto</div>
         </div>
+
+        ${boostAtivo ? `
+          <div class="tboostBadge" title="Perfil em destaque">🔥 BOOST</div>
+        ` : ""}
+
         <div class="tcontent">
           <div class="tnameRow"><div class="tname">${nome}</div></div>
           <div class="tchipRow">
@@ -153,37 +113,18 @@ function proximo() {
 }
 
 document.getElementById("btnCurtir").onclick = async () => {
-    try {
-        if (!atual) return;
-
-        const r = await apiFetch(`/curtidas/${atual.id}`, { method: "POST" });
-        showToast(r.matchCriado ? "✅ Deu MATCH! (conversa criada)" : "✅ Curtido", "success");
-        proximo();
-
-    } catch (e) {
-        const isLimite =
-            e?.status === 429 ||
-            e?.data?.limite ||
-            (e?.message || "").toLowerCase().includes("limite diário");
-
-        if (isLimite) {
-            showToast("⚠️ Limite diário atingido", "warn", 1400);
-            mostrarLimiteCurtidas();
-            return;
-        }
-
-        msg.textContent = e.message || "Erro ao curtir";
-    }
+    if (!atual) return;
+    await curtir(atual.id);
 };
 
 document.getElementById("btnPular").onclick = async () => {
     try {
         if (!atual) return;
         await apiFetch(`/skips/${atual.id}`, { method: "POST" });
-        msg.textContent = "⟲ Pulado";
+        setMsg("⟲ Pulado");
         proximo();
     } catch (e) {
-        msg.textContent = e.message;
+        setMsg(e.message);
     }
 };
 
@@ -191,10 +132,10 @@ document.getElementById("btnBloquear").onclick = async () => {
     try {
         if (!atual) return;
         await apiFetch(`/bloqueios/${atual.id}`, { method: "POST" });
-        msg.textContent = "⛔ Bloqueado";
+        setMsg("⛔ Bloqueado");
         proximo();
     } catch (e) {
-        msg.textContent = e.message;
+        setMsg(e.message);
     }
 };
 
@@ -210,11 +151,39 @@ document.getElementById("btnDenunciar").onclick = async () => {
             body: { denunciadoId: atual.id, motivo, descricao }
         });
 
-        msg.textContent = "🚩 Denúncia enviada";
+        setMsg("🚩 Denúncia enviada");
         proximo();
     } catch (e) {
-        msg.textContent = e.message;
+        setMsg(e.message);
     }
+};
+
+async function curtir(paraUsuarioId) {
+    try {
+        const r = await apiFetch(`/curtidas/${paraUsuarioId}`, { method: "POST" });
+
+        setMsg(r.matchCriado ? "✅ Deu MATCH! (conversa criada)" : "✅ Curtido");
+        proximo();
+    } catch (e) {
+        if (e.status === 429) {
+            mostrarLimiteCurtidas();
+            return;
+        }
+
+        setMsg(e.message || "Erro ao curtir");
+    }
+}
+
+function mostrarLimiteCurtidas() {
+    const el = document.getElementById("limiteCurtidasOverlay");
+    if (!el) return;
+    el.classList.remove("hidden");
+}
+
+window.fecharLimiteCurtidas = function fecharLimiteCurtidas() {
+    const el = document.getElementById("limiteCurtidasOverlay");
+    if (!el) return;
+    el.classList.add("hidden");
 };
 
 carregar();

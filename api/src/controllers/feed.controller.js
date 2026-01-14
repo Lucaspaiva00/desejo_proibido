@@ -7,38 +7,42 @@ export async function feed(req, res) {
   const limit = Number(req.query.limit || 10);
   const skip = (page - 1) * limit;
 
+  const now = new Date();
+
   // já curti
   const curtidos = await prisma.curtida.findMany({
     where: { deUsuarioId: meuId },
-    select: { paraUsuarioId: true }
+    select: { paraUsuarioId: true },
   });
-  const idsCurtidos = curtidos.map(c => c.paraUsuarioId);
+  const idsCurtidos = curtidos.map((c) => c.paraUsuarioId);
 
   // já pulei
   const pulados = await prisma.skip.findMany({
     where: { deUsuarioId: meuId },
-    select: { paraUsuarioId: true }
+    select: { paraUsuarioId: true },
   });
-  const idsPulados = pulados.map(s => s.paraUsuarioId);
+  const idsPulados = pulados.map((s) => s.paraUsuarioId);
 
   // bloqueios (quem eu bloqueei e quem me bloqueou)
   const bloqueiosEnviados = await prisma.bloqueio.findMany({
     where: { deUsuarioId: meuId },
-    select: { paraUsuarioId: true }
+    select: { paraUsuarioId: true },
   });
   const bloqueiosRecebidos = await prisma.bloqueio.findMany({
     where: { paraUsuarioId: meuId },
-    select: { deUsuarioId: true }
+    select: { deUsuarioId: true },
   });
 
-  const idsBloqueados = bloqueiosEnviados.map(b => b.paraUsuarioId);
-  const idsQueMeBloquearam = bloqueiosRecebidos.map(b => b.deUsuarioId);
+  const idsBloqueados = bloqueiosEnviados.map((b) => b.paraUsuarioId);
+  const idsQueMeBloquearam = bloqueiosRecebidos.map((b) => b.deUsuarioId);
 
   // já é match
   const matches = await prisma.match.findMany({
-    where: { OR: [{ usuarioAId: meuId }, { usuarioBId: meuId }] }
+    where: { OR: [{ usuarioAId: meuId }, { usuarioBId: meuId }] },
   });
-  const idsMatch = matches.map(m => (m.usuarioAId === meuId ? m.usuarioBId : m.usuarioAId));
+  const idsMatch = matches.map((m) =>
+    m.usuarioAId === meuId ? m.usuarioBId : m.usuarioAId
+  );
 
   const excluirIds = [
     meuId,
@@ -46,33 +50,87 @@ export async function feed(req, res) {
     ...idsPulados,
     ...idsMatch,
     ...idsBloqueados,
-    ...idsQueMeBloquearam
+    ...idsQueMeBloquearam,
   ];
 
-  const usuarios = await prisma.usuario.findMany({
+  const baseWhere = {
+    id: { notIn: excluirIds },
+    perfil: { isNot: null },
+    fotos: { some: { principal: true } },
+    // 🔒 regra do invisível: se o alvo estiver invisível, não aparece no feed
+    // (mantém match/público em outra rota)
+    isInvisivel: false,
+  };
+
+  // 1) Conta quantos boostados existem
+  const boostedCount = await prisma.usuario.count({
     where: {
-      id: { notIn: excluirIds },
-      ativo: true,
-
-      // ✅ MODO INVISÍVEL: não aparece no feed
-      isInvisivel: false,
-
-      perfil: { isNot: null },
-      fotos: { some: { principal: true } } // ✅ exige foto principal
+      ...baseWhere,
+      boostAte: { gt: now },
     },
-    skip,
-    take: limit,
-    orderBy: { criadoEm: "desc" },
-    include: {
-      perfil: true,
-      fotos: { where: { principal: true }, take: 1 }
-    }
   });
 
-  const payload = usuarios.map(u => ({
+  // 2) Define quanto pegar de boostados vs normais com base no skip/paginação
+  let boostedSkip = 0;
+  let boostedTake = 0;
+  let normalSkip = 0;
+  let normalTake = 0;
+
+  if (skip < boostedCount) {
+    boostedSkip = skip;
+    boostedTake = Math.min(limit, boostedCount - skip);
+    normalSkip = 0;
+    normalTake = limit - boostedTake;
+  } else {
+    boostedSkip = 0;
+    boostedTake = 0;
+    normalSkip = skip - boostedCount;
+    normalTake = limit;
+  }
+
+  // 3) Busca boostados primeiro
+  const boostedUsers =
+    boostedTake > 0
+      ? await prisma.usuario.findMany({
+        where: { ...baseWhere, boostAte: { gt: now } },
+        skip: boostedSkip,
+        take: boostedTake,
+        orderBy: { boostAte: "desc" },
+        include: {
+          perfil: true,
+          fotos: { where: { principal: true }, take: 1 },
+        },
+      })
+      : [];
+
+  // 4) Busca normais depois (excluindo quem já veio boostado)
+  const boostedIds = boostedUsers.map((u) => u.id);
+
+  const normalUsers =
+    normalTake > 0
+      ? await prisma.usuario.findMany({
+        where: {
+          ...baseWhere,
+          id: { notIn: [...excluirIds, ...boostedIds] },
+        },
+        skip: normalSkip,
+        take: normalTake,
+        orderBy: { criadoEm: "desc" },
+        include: {
+          perfil: true,
+          fotos: { where: { principal: true }, take: 1 },
+        },
+      })
+      : [];
+
+  const usuarios = [...boostedUsers, ...normalUsers];
+
+  const payload = usuarios.map((u) => ({
     id: u.id,
     perfil: u.perfil,
-    fotoPrincipal: u.fotos?.[0]?.url || null
+    fotoPrincipal: u.fotos?.[0]?.url || null,
+    boostAtivo: !!u.boostAte && u.boostAte > now,
+    boostAte: u.boostAte,
   }));
 
   return res.json({ page, limit, total: payload.length, data: payload });

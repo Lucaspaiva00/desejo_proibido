@@ -816,3 +816,20 @@ textarea {
         top: 70px;
     }
 }
+
+.tboostBadge {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-weight: 950;
+    font-size: 12px;
+    letter-spacing: .3px;
+    color: #fff;
+    background: rgba(0, 0, 0, .45);
+    border: 1px solid rgba(255, 255, 255, .16);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 16px 35px rgba(0, 0, 0, .45);
+    z-index: 5;
+}

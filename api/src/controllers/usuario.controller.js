@@ -1,11 +1,14 @@
 import { prisma } from "../prisma.js";
 
-/**
- * GET /usuarios/me
- * Retorna dados da conta logada (pra UI saber Premium/Invisível)
- */
+function addHours(date, hours) {
+    const d = new Date(date);
+    d.setHours(d.getHours() + hours);
+    return d;
+}
+
+// GET /usuarios/me
 export async function me(req, res) {
-    const u = await prisma.usuario.findUnique({
+    const usuario = await prisma.usuario.findUnique({
         where: { id: req.usuario.id },
         select: {
             id: true,
@@ -13,51 +16,67 @@ export async function me(req, res) {
             ativo: true,
             isPremium: true,
             isInvisivel: true,
+            boostAte: true,
+            role: true,
             criadoEm: true,
-            atualizadoEm: true,
         },
     });
 
-    if (!u) return res.status(404).json({ erro: "Usuário não encontrado" });
-    return res.json(u);
+    return res.json(usuario);
 }
 
-/**
- * PUT /usuarios/invisivel
- * body: { ativo: true|false }  (se não enviar, faz toggle)
- * Regras:
- * - Só Premium pode ativar/desativar modo invisível
- */
+// PUT /usuarios/invisivel  { ativo: true/false }
 export async function setInvisivel(req, res) {
-    const meuId = req.usuario.id;
+    const { ativo } = req.body;
 
     const usuario = await prisma.usuario.findUnique({
-        where: { id: meuId },
-        select: { id: true, isPremium: true, isInvisivel: true },
+        where: { id: req.usuario.id },
+        select: { id: true, isPremium: true },
     });
 
     if (!usuario) return res.status(401).json({ erro: "Usuário inválido" });
 
     if (!usuario.isPremium) {
-        return res.status(403).json({
-            erro: "Recurso disponível apenas para Premium",
-            premium: false,
-        });
+        return res.status(403).json({ erro: "Disponível apenas no Premium" });
     }
 
-    const { ativo } = req.body || {};
+    const atualizado = await prisma.usuario.update({
+        where: { id: usuario.id },
+        data: { isInvisivel: !!ativo },
+        select: { id: true, isInvisivel: true, isPremium: true },
+    });
 
-    const novoValor =
-        typeof ativo === "boolean" ? ativo : !Boolean(usuario.isInvisivel);
+    return res.json(atualizado);
+}
+
+// PUT /usuarios/boost  { horas?: 6 }
+export async function ativarBoost(req, res) {
+    const horas = Number(req.body?.horas || 6);
+
+    const usuario = await prisma.usuario.findUnique({
+        where: { id: req.usuario.id },
+        select: { id: true, isPremium: true, boostAte: true },
+    });
+
+    if (!usuario) return res.status(401).json({ erro: "Usuário inválido" });
+
+    if (!usuario.isPremium) {
+        return res.status(403).json({ erro: "Boost disponível apenas no Premium" });
+    }
+
+    const now = new Date();
+    const base = usuario.boostAte && usuario.boostAte > now ? usuario.boostAte : now;
+    const novoBoostAte = addHours(base, horas);
 
     const atualizado = await prisma.usuario.update({
-        where: { id: meuId },
-        data: { isInvisivel: novoValor },
-        select: { id: true, isPremium: true, isInvisivel: true },
+        where: { id: usuario.id },
+        data: { boostAte: novoBoostAte },
+        select: { id: true, boostAte: true },
     });
 
     return res.json({
         ok: true,
-        isInvisivel: atualizado.isInvisivel,
+        boostAte: atualizado.boostAte,
+        mensagem: `✅ Boost ativado até ${atualizado.boostAte.toLocaleString()}`,
     });
 }

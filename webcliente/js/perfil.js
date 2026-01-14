@@ -15,6 +15,10 @@ const toggle = document.getElementById("toggleInvisivel");
 const txt = document.getElementById("txtInvisivel");
 const msgInv = document.getElementById("msgInvisivel");
 
+// ✅ BOOST (precisa existir no HTML)
+const btnBoost = document.getElementById("btnBoost");
+const msgBoost = document.getElementById("msgBoost");
+
 function setMsg(text) {
     if (!msg) return;
     msg.textContent = text || "";
@@ -32,24 +36,39 @@ async function carregarPerfil() {
         const perfil = await apiFetch("/perfil/me");
         preencherPerfil(perfil);
     } catch (e) {
-        // se der 401, vai estourar no apiFetch (token inválido) -> normalmente cai no fluxo do seu app
+        // silencioso
     }
 }
 
-async function carregarInvisivel() {
+async function carregarInvisivelEBoost() {
+    // invisível precisa existir
     if (!toggle || !txt || !msgInv) return;
 
     try {
-        const u = await apiFetch("/usuarios/me"); // precisa existir no seu backend
+        const u = await apiFetch("/usuarios/me");
 
+        // =========================
+        // 🔒 INVISÍVEL (Premium)
+        // =========================
         if (!u.isPremium) {
             toggle.disabled = true;
             toggle.checked = false;
             txt.textContent = "Disponível no Premium";
             msgInv.textContent = "";
+
+            // =========================
+            // 🔒 BOOST (Premium)
+            // =========================
+            if (btnBoost && msgBoost) {
+                btnBoost.disabled = true;
+                btnBoost.textContent = "Disponível no Premium";
+                msgBoost.textContent = "";
+            }
+
             return;
         }
 
+        // Premium: libera invisível
         toggle.disabled = false;
         toggle.checked = !!u.isInvisivel;
         txt.textContent = toggle.checked ? "Ativado" : "Desativado";
@@ -71,6 +90,36 @@ async function carregarInvisivel() {
                 msgInv.textContent = e.message;
             }
         };
+
+        // =========================
+        // 🚀 BOOST (Premium)
+        // =========================
+        if (btnBoost && msgBoost) {
+            btnBoost.disabled = false;
+            btnBoost.textContent = "🚀 Dar Boost";
+
+            btnBoost.onclick = async () => {
+                msgBoost.textContent = "";
+                btnBoost.disabled = true;
+                btnBoost.textContent = "Ativando...";
+
+                try {
+                    const r = await apiFetch("/usuarios/boost", {
+                        method: "PUT",
+                        body: { horas: 6 },
+                    });
+
+                    msgBoost.textContent = `✅ Boost ativado até: ${new Date(
+                        r.boostAte
+                    ).toLocaleString()}`;
+                } catch (e) {
+                    msgBoost.textContent = e.message || "Erro ao ativar boost";
+                } finally {
+                    btnBoost.disabled = false;
+                    btnBoost.textContent = "🚀 Dar Boost";
+                }
+            };
+        }
     } catch (e) {
         // silencioso
     }
@@ -88,7 +137,8 @@ document.getElementById("btnSalvar").onclick = async () => {
         };
 
         if (!body.nome) throw new Error("Nome é obrigatório");
-        if (!body.estado || body.estado.length !== 2) throw new Error("Estado deve ter 2 letras (ex: SP)");
+        if (!body.estado || body.estado.length !== 2)
+            throw new Error("Estado deve ter 2 letras (ex: SP)");
 
         // ✅ seu backend é PUT /perfil (upsert). NÃO TEM POST.
         await apiFetch("/perfil", { method: "PUT", body });
@@ -100,8 +150,8 @@ document.getElementById("btnSalvar").onclick = async () => {
 };
 
 async function init() {
-    await carregarPerfil();     // ✅ preenche os inputs
-    await carregarInvisivel();  // ✅ configura toggle premium/invisível
+    await carregarPerfil(); // ✅ preenche os inputs
+    await carregarInvisivelEBoost(); // ✅ configura invisível + boost
 }
 
 init();
