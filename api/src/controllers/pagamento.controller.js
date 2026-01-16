@@ -1,5 +1,10 @@
 import crypto from "crypto";
-import { MercadoPagoConfig, Preference, Payment, MerchantOrder } from "mercadopago";
+import {
+  MercadoPagoConfig,
+  Preference,
+  Payment,
+  MerchantOrder,
+} from "mercadopago";
 import { prisma } from "../prisma.js";
 
 function getClient() {
@@ -45,7 +50,10 @@ function validarAssinaturaWebhook(req) {
   // padrão: id:[data.id];request-id:[x-request-id];ts:[ts];
   const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
 
-  const hash = crypto.createHmac("sha256", secret).update(manifest).digest("hex");
+  const hash = crypto
+    .createHmac("sha256", secret)
+    .update(manifest)
+    .digest("hex");
   return hash === v1;
 }
 
@@ -83,9 +91,9 @@ export async function criarCheckoutPremium(req, res) {
       external_reference,
 
       back_urls: {
-        success: `${webUrl}/webcliente/home.html?mp=success`,
-        pending: `${webUrl}/webcliente/home.html?mp=pending`,
-        failure: `${webUrl}/webcliente/home.html?mp=failure`,
+        success: `${webUrl}/home.html?mp=success`,
+        pending: `${webUrl}/home.html?mp=pending`,
+        failure: `${webUrl}/home.html?mp=failure`,
       },
 
       auto_return: "approved",
@@ -117,7 +125,9 @@ export async function criarCheckoutPremium(req, res) {
       preference_id: pref.id,
     });
   } catch (e) {
-    return res.status(500).json({ erro: e.message || "Erro ao criar checkout premium" });
+    return res
+      .status(500)
+      .json({ erro: e.message || "Erro ao criar checkout premium" });
   }
 }
 

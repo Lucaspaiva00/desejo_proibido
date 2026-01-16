@@ -17,19 +17,29 @@ export function mountLayout(active = "") {
       </div>
 
       <nav class="nav">
-        <a class="nav-link ${active === "dashboard" ? "active" : ""}" href="index.html">
+        <a class="nav-link ${
+          active === "dashboard" ? "active" : ""
+        }" href="index.html">
           <i class="fa-solid fa-chart-line"></i><span>Dashboard</span>
         </a>
-        <a class="nav-link ${active === "denuncias" ? "active" : ""}" href="denuncias.html">
+        <a class="nav-link ${
+          active === "denuncias" ? "active" : ""
+        }" href="denuncias.html">
           <i class="fa-solid fa-flag"></i><span>Denúncias</span>
         </a>
-        <a class="nav-link ${active === "acoes" ? "active" : ""}" href="acoes.html">
+        <a class="nav-link ${
+          active === "acoes" ? "active" : ""
+        }" href="acoes.html">
           <i class="fa-solid fa-list-check"></i><span>Ações Admin</span>
         </a>
-        <a class="nav-link ${active === "logs_acesso" ? "active" : ""}" href="logs-acesso.html">
+        <a class="nav-link ${
+          active === "logs_acesso" ? "active" : ""
+        }" href="logs-acesso.html">
         <i class="fa-solid fa-shield-halved"></i><span>Logs de Acesso</span>
         </a>
-        <a class="nav-link ${active === "logs_denuncia" ? "active" : ""}" href="logs-denuncia.html">
+        <a class="nav-link ${
+          active === "logs_denuncia" ? "active" : ""
+        }" href="logs-denuncia.html">
           <i class="fa-solid fa-file-lines"></i><span>Logs de Denúncia</span>
         </a>
 
@@ -40,7 +50,7 @@ export function mountLayout(active = "") {
       </nav>
 
       <div class="sidebar-foot">
-        <small>API: <span class="muted">localhost:3333</span></small>
+        <small>API: <span class="muted">https://desejoproibido.app/api</span></small>
       </div>
     </aside>
 
