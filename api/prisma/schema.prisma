@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -125,7 +125,7 @@ model Perfil {
   id           String    @id @default(cuid())
   usuarioId    String    @unique
   nome         String
-  bio          String?   @db.Text
+  bio          String?
   cidade       String?
   estado       String?
   criadoEm     DateTime  @default(now())
@@ -197,7 +197,7 @@ model Mensagem {
   conversaId String
   autorId    String
   tipo       MensagemTipo @default(TEXTO)
-  texto      String?      @db.Text
+  texto      String?
   metaJson   Json?
   criadoEm   DateTime     @default(now())
 
@@ -242,7 +242,7 @@ model Denuncia {
   denuncianteId String
   denunciadoId  String
   motivo        String
-  descricao     String?        @db.Text
+  descricao     String?
   status        DenunciaStatus @default(ABERTA)
   criadoEm      DateTime       @default(now())
   atualizadoEm  DateTime       @updatedAt
@@ -261,7 +261,7 @@ model Termo {
   id       String    @id @default(cuid())
   tipo     TermoTipo
   versao   String
-  conteudo String    @db.LongText
+  conteudo String
   ativo    Boolean   @default(true)
   criadoEm DateTime  @default(now())
 
@@ -293,8 +293,8 @@ model AcaoAdmin {
   adminId  String
   alvoId   String?
   tipo     String
-  motivo   String?  @db.Text
-  detalhes String?  @db.Text
+  motivo   String?
+  detalhes String?
   criadoEm DateTime @default(now())
 
   admin Usuario  @relation("AcoesAdminFeitas", fields: [adminId], references: [id])
@@ -308,7 +308,7 @@ model AcaoAdmin {
 model BanGlobal {
   id        String    @id @default(cuid())
   usuarioId String    @unique
-  motivo    String?   @db.Text
+  motivo    String?
   ate       DateTime?
   ativo     Boolean   @default(true)
   criadoEm  DateTime  @default(now())
@@ -320,28 +320,27 @@ model BanGlobal {
 }
 
 model Pagamento {
-  id            String   @id @default(cuid())
+  id            String  @id @default(cuid())
   usuarioId     String
-  mpPaymentId   String?  @unique
+  mpPaymentId   String? @unique
   mpOrderId     String?
   status        String
   plano         String
   valorCentavos Int
-  moeda         String   @default("BRL")
+  moeda         String  @default("BRL")
 
   // ✅ novos (opcionais)
-  tipo          String?  // "MINUTOS" | "PREMIUM"
-  pacoteId      String?  // "MIN_10" | "MIN_30" etc
+  tipo     String? // "MINUTOS" | "PREMIUM"
+  pacoteId String? // "MIN_10" | "MIN_30" etc
 
-  criadoEm      DateTime @default(now())
-  atualizadoEm  DateTime @updatedAt
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
 
   usuario Usuario @relation(fields: [usuarioId], references: [id])
 
   @@index([usuarioId])
   @@index([status])
 }
-
 
 model LogAcesso {
   id        String   @id @default(cuid())
