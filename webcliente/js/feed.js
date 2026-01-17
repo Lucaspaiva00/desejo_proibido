@@ -27,98 +27,106 @@ const btnLimparFiltros = document.getElementById("btnLimparFiltros");
 
 // ======== helpers ========
 function safe(s) {
-    return (s ?? "").toString();
+  return (s ?? "").toString();
 }
 
 function setMsg(text) {
-    if (!msg) return;
-    msg.textContent = text || "";
+  if (!msg) return;
+  msg.textContent = text || "";
 }
 
 function toast(text) {
-    const el = document.getElementById("toast");
-    const txt = document.getElementById("toastText");
-    if (!el || !txt) return;
-    txt.textContent = text || "";
-    el.classList.remove("hidden");
-    setTimeout(() => el.classList.add("hidden"), 2000);
+  const el = document.getElementById("toast");
+  const txt = document.getElementById("toastText");
+  if (!el || !txt) return;
+  txt.textContent = text || "";
+  el.classList.remove("hidden");
+  setTimeout(() => el.classList.add("hidden"), 2000);
 }
 
 function isBoostAtivo(boostAte) {
-    if (!boostAte) return false;
-    const dt = new Date(boostAte);
-    if (Number.isNaN(dt.getTime())) return false;
-    return dt.getTime() > Date.now();
+  if (!boostAte) return false;
+  const dt = new Date(boostAte);
+  if (Number.isNaN(dt.getTime())) return false;
+  return dt.getTime() > Date.now();
 }
 
 function getFiltrosAtual() {
-    const idadeMin = fIdadeMin?.value ? Number(fIdadeMin.value) : null;
-    const idadeMax = fIdadeMax?.value ? Number(fIdadeMax.value) : null;
+  const idadeMin = fIdadeMin?.value ? Number(fIdadeMin.value) : null;
+  const idadeMax = fIdadeMax?.value ? Number(fIdadeMax.value) : null;
 
-    return {
-        q: safe(fQ?.value).trim(),
-        cidade: safe(fCidade?.value).trim(),
-        estado: safe(fEstado?.value).trim(),
-        genero: safe(fGenero?.value || "QUALQUER").trim(),
+  return {
+    q: safe(fQ?.value).trim(),
+    cidade: safe(fCidade?.value).trim(),
+    estado: safe(fEstado?.value).trim(),
+    genero: safe(fGenero?.value || "QUALQUER").trim(),
 
-        idadeMin: Number.isFinite(idadeMin) ? idadeMin : null,
-        idadeMax: Number.isFinite(idadeMax) ? idadeMax : null,
+    idadeMin: Number.isFinite(idadeMin) ? idadeMin : null,
+    idadeMax: Number.isFinite(idadeMax) ? idadeMax : null,
 
-        somenteComFoto: !!fSomenteFoto?.checked,
-        somenteVerificados: !!fSomenteVerificado?.checked,
-        ordenarPor: safe(fOrdenar?.value || "recent").trim(),
-    };
+    somenteComFoto: !!fSomenteFoto?.checked,
+    somenteVerificados: !!fSomenteVerificado?.checked,
+    ordenarPor: safe(fOrdenar?.value || "recent").trim(),
+  };
 }
 
 function montarQuery(f) {
-    const qs = new URLSearchParams();
-    if (f.q) qs.set("q", f.q);
-    if (f.cidade) qs.set("cidade", f.cidade);
-    if (f.estado) qs.set("estado", f.estado);
-    if (f.genero && f.genero !== "QUALQUER") qs.set("genero", f.genero);
-    if (f.idadeMin != null) qs.set("idadeMin", String(f.idadeMin));
-    if (f.idadeMax != null) qs.set("idadeMax", String(f.idadeMax));
-    if (f.somenteComFoto) qs.set("somenteComFoto", "true");
-    if (f.somenteVerificados) qs.set("somenteVerificados", "true");
-    if (f.ordenarPor) qs.set("ordenarPor", f.ordenarPor);
-    return qs.toString();
+  const qs = new URLSearchParams();
+  if (f.q) qs.set("q", f.q);
+  if (f.cidade) qs.set("cidade", f.cidade);
+  if (f.estado) qs.set("estado", f.estado);
+  if (f.genero && f.genero !== "QUALQUER") qs.set("genero", f.genero);
+  if (f.idadeMin != null) qs.set("idadeMin", String(f.idadeMin));
+  if (f.idadeMax != null) qs.set("idadeMax", String(f.idadeMax));
+  if (f.somenteComFoto) qs.set("somenteComFoto", "true");
+  if (f.somenteVerificados) qs.set("somenteVerificados", "true");
+  if (f.ordenarPor) qs.set("ordenarPor", f.ordenarPor);
+  return qs.toString();
 }
 
 // ======== render ========
 function render(u) {
-    if (!u) {
-        card.innerHTML = `
+  if (!u) {
+    card.innerHTML = `
       <div class="tfallback">
         <div class="tbadgeBig">DP</div>
         <div class="muted">Sem pessoas no feed com esses filtros.</div>
       </div>
     `;
-        return;
-    }
+    return;
+  }
 
-    const nome = safe(u.perfil?.nome).trim() || "Sem nome";
-    const bio = safe(u.perfil?.bio).trim();
-    const cidade = safe(u.perfil?.cidade).trim();
-    const estado = safe(u.perfil?.estado).trim();
-    const loc = `${cidade} ${estado}`.trim();
+  const nome = safe(u.perfil?.nome).trim() || "Sem nome";
+  const bio = safe(u.perfil?.bio).trim();
+  const cidade = safe(u.perfil?.cidade).trim();
+  const estado = safe(u.perfil?.estado).trim();
+  const loc = `${cidade} ${estado}`.trim();
 
-    const fotoUrl = u.fotoPrincipal ? `${API_BASE}${u.fotoPrincipal}` : "";
+  const fotoUrl = u.fotoPrincipal ? `${u.fotoPrincipal}` : "";
 
-    const boostAtivo = isBoostAtivo(u.boostAte);
+  const boostAtivo = isBoostAtivo(u.boostAte);
 
-    card.innerHTML = `
+  card.innerHTML = `
     ${fotoUrl ? `<img class="tphoto" src="${fotoUrl}" alt="Foto" />` : ""}
 
-    ${fotoUrl ? `<div class="toverlay"></div>` : `
+    ${
+      fotoUrl
+        ? `<div class="toverlay"></div>`
+        : `
       <div class="tfallback">
         <div class="tbadgeBig">${(nome[0] || "D").toUpperCase()}</div>
         <div class="muted">Sem foto principal</div>
       </div>
-    `}
+    `
+    }
 
-    ${boostAtivo ? `
+    ${
+      boostAtivo
+        ? `
       <div class="tboostBadge" title="Perfil em destaque">🔥 BOOST</div>
-    ` : ""}
+    `
+        : ""
+    }
 
     <div class="tcontent">
       <div class="tnameRow">
@@ -133,19 +141,23 @@ function render(u) {
     </div>
   `;
 
-    // fallback se imagem quebrar
-    const img = card.querySelector(".tphoto");
-    if (img) {
-        img.onerror = () => {
-            card.innerHTML = `
+  // fallback se imagem quebrar
+  const img = card.querySelector(".tphoto");
+  if (img) {
+    img.onerror = () => {
+      card.innerHTML = `
         <div class="tfallback">
           <div class="tbadgeBig">${(nome[0] || "D").toUpperCase()}</div>
           <div class="muted">Não foi possível carregar a foto</div>
         </div>
 
-        ${boostAtivo ? `
+        ${
+          boostAtivo
+            ? `
           <div class="tboostBadge" title="Perfil em destaque">🔥 BOOST</div>
-        ` : ""}
+        `
+            : ""
+        }
 
         <div class="tcontent">
           <div class="tnameRow"><div class="tname">${nome}</div></div>
@@ -155,182 +167,183 @@ function render(u) {
           ${bio ? `<div class="tbio">${bio}</div>` : ""}
         </div>
       `;
-        };
-    }
+    };
+  }
 }
 
 function proximo() {
-    atual = fila.shift() || null;
-    render(atual);
+  atual = fila.shift() || null;
+  render(atual);
 }
 
 // ======== API: carregar feed (agora usando /busca) ========
 async function carregarPreferencias() {
-    try {
-        const pref = await apiFetch("/busca/preferencias");
+  try {
+    const pref = await apiFetch("/busca/preferencias");
 
-        // preenche UI com preferências
-        if (fCidade) fCidade.value = pref.cidade || "";
-        if (fEstado) fEstado.value = pref.estado || "";
-        if (fGenero) fGenero.value = pref.generoAlvo || "QUALQUER";
-        if (fIdadeMin) fIdadeMin.value = pref.idadeMin ?? "";
-        if (fIdadeMax) fIdadeMax.value = pref.idadeMax ?? "";
-        if (fSomenteVerificado) fSomenteVerificado.checked = !!pref.somenteVerificados;
-        if (fSomenteFoto) fSomenteFoto.checked = !!pref.somenteComFoto;
-        if (fOrdenar) fOrdenar.value = pref.ordenarPor || "recent";
-    } catch (e) {
-        // sem travar o feed
-        console.warn("Não carregou preferências:", e.message);
-    }
+    // preenche UI com preferências
+    if (fCidade) fCidade.value = pref.cidade || "";
+    if (fEstado) fEstado.value = pref.estado || "";
+    if (fGenero) fGenero.value = pref.generoAlvo || "QUALQUER";
+    if (fIdadeMin) fIdadeMin.value = pref.idadeMin ?? "";
+    if (fIdadeMax) fIdadeMax.value = pref.idadeMax ?? "";
+    if (fSomenteVerificado)
+      fSomenteVerificado.checked = !!pref.somenteVerificados;
+    if (fSomenteFoto) fSomenteFoto.checked = !!pref.somenteComFoto;
+    if (fOrdenar) fOrdenar.value = pref.ordenarPor || "recent";
+  } catch (e) {
+    // sem travar o feed
+    console.warn("Não carregou preferências:", e.message);
+  }
 }
 
 async function carregarComFiltros() {
-    setMsg("");
-    const filtros = getFiltrosAtual();
-    const qs = montarQuery(filtros);
+  setMsg("");
+  const filtros = getFiltrosAtual();
+  const qs = montarQuery(filtros);
 
-    try {
-        setMsg("Carregando...");
-        const r = await apiFetch(`/busca${qs ? `?${qs}` : ""}`);
-        fila = Array.isArray(r) ? r : (r.data || []);
-        setMsg("");
-        proximo();
-    } catch (e) {
-        setMsg(e.message || "Erro ao carregar feed");
-    }
+  try {
+    setMsg("Carregando...");
+    const r = await apiFetch(`/busca${qs ? `?${qs}` : ""}`);
+    fila = Array.isArray(r) ? r : r.data || [];
+    setMsg("");
+    proximo();
+  } catch (e) {
+    setMsg(e.message || "Erro ao carregar feed");
+  }
 }
 
 // ======== Curtir/Pular/Bloquear/Denunciar ========
 document.getElementById("btnCurtir").onclick = async () => {
-    if (!atual) return;
-    await curtir(atual.id);
+  if (!atual) return;
+  await curtir(atual.id);
 };
 
 document.getElementById("btnPular").onclick = async () => {
-    try {
-        if (!atual) return;
-        await apiFetch(`/skips/${atual.id}`, { method: "POST" });
-        setMsg("⟲ Pulado");
-        proximo();
-    } catch (e) {
-        setMsg(e.message);
-    }
+  try {
+    if (!atual) return;
+    await apiFetch(`/skips/${atual.id}`, { method: "POST" });
+    setMsg("⟲ Pulado");
+    proximo();
+  } catch (e) {
+    setMsg(e.message);
+  }
 };
 
 document.getElementById("btnBloquear").onclick = async () => {
-    try {
-        if (!atual) return;
-        await apiFetch(`/bloqueios/${atual.id}`, { method: "POST" });
-        setMsg("⛔ Bloqueado");
-        proximo();
-    } catch (e) {
-        setMsg(e.message);
-    }
+  try {
+    if (!atual) return;
+    await apiFetch(`/bloqueios/${atual.id}`, { method: "POST" });
+    setMsg("⛔ Bloqueado");
+    proximo();
+  } catch (e) {
+    setMsg(e.message);
+  }
 };
 
 document.getElementById("btnDenunciar").onclick = async () => {
-    try {
-        if (!atual) return;
-        const motivo = prompt("Motivo da denúncia (ex: perfil falso):");
-        if (!motivo) return;
-        const descricao = prompt("Descrição (opcional):") || null;
+  try {
+    if (!atual) return;
+    const motivo = prompt("Motivo da denúncia (ex: perfil falso):");
+    if (!motivo) return;
+    const descricao = prompt("Descrição (opcional):") || null;
 
-        await apiFetch(`/denuncias`, {
-            method: "POST",
-            body: { denunciadoId: atual.id, motivo, descricao }
-        });
+    await apiFetch(`/denuncias`, {
+      method: "POST",
+      body: { denunciadoId: atual.id, motivo, descricao },
+    });
 
-        setMsg("🚩 Denúncia enviada");
-        proximo();
-    } catch (e) {
-        setMsg(e.message);
-    }
+    setMsg("🚩 Denúncia enviada");
+    proximo();
+  } catch (e) {
+    setMsg(e.message);
+  }
 };
 
 async function curtir(paraUsuarioId) {
-    try {
-        const r = await apiFetch(`/curtidas/${paraUsuarioId}`, { method: "POST" });
+  try {
+    const r = await apiFetch(`/curtidas/${paraUsuarioId}`, { method: "POST" });
 
-        setMsg(r.matchCriado ? "✅ Deu MATCH! (conversa criada)" : "✅ Curtido");
-        proximo();
-    } catch (e) {
-        if (e.status === 429) {
-            mostrarLimiteCurtidas();
-            return;
-        }
-        setMsg(e.message || "Erro ao curtir");
+    setMsg(r.matchCriado ? "✅ Deu MATCH! (conversa criada)" : "✅ Curtido");
+    proximo();
+  } catch (e) {
+    if (e.status === 429) {
+      mostrarLimiteCurtidas();
+      return;
     }
+    setMsg(e.message || "Erro ao curtir");
+  }
 }
 
 // ======== Limite Curtidas ========
 function mostrarLimiteCurtidas() {
-    const el = document.getElementById("limiteCurtidasOverlay");
-    if (!el) return;
-    el.classList.remove("hidden");
+  const el = document.getElementById("limiteCurtidasOverlay");
+  if (!el) return;
+  el.classList.remove("hidden");
 }
 
 const btnFecharLimite = document.getElementById("btnFecharLimite");
 btnFecharLimite?.addEventListener("click", () => {
-    const el = document.getElementById("limiteCurtidasOverlay");
-    if (!el) return;
-    el.classList.add("hidden");
+  const el = document.getElementById("limiteCurtidasOverlay");
+  if (!el) return;
+  el.classList.add("hidden");
 });
 
 // ======== Eventos filtros ========
 btnAplicarFiltros?.addEventListener("click", async () => {
-    await carregarComFiltros();
-    toast("Filtros aplicados");
+  await carregarComFiltros();
+  toast("Filtros aplicados");
 });
 
 btnSalvarPrefs?.addEventListener("click", async () => {
-    try {
-        const f = getFiltrosAtual();
+  try {
+    const f = getFiltrosAtual();
 
-        // salva como preferências
-        await apiFetch("/busca/preferencias", {
-            method: "PUT",
-            body: {
-                idadeMin: f.idadeMin ?? 18,
-                idadeMax: f.idadeMax ?? 99,
-                cidade: f.cidade || null,
-                estado: f.estado || null,
-                generoAlvo: f.genero || "QUALQUER",
-                somenteVerificados: f.somenteVerificados,
-                somenteComFoto: f.somenteComFoto,
-                ordenarPor: f.ordenarPor || "recent",
-            }
-        });
+    // salva como preferências
+    await apiFetch("/busca/preferencias", {
+      method: "PUT",
+      body: {
+        idadeMin: f.idadeMin ?? 18,
+        idadeMax: f.idadeMax ?? 99,
+        cidade: f.cidade || null,
+        estado: f.estado || null,
+        generoAlvo: f.genero || "QUALQUER",
+        somenteVerificados: f.somenteVerificados,
+        somenteComFoto: f.somenteComFoto,
+        ordenarPor: f.ordenarPor || "recent",
+      },
+    });
 
-        toast("Preferências salvas ✅");
-    } catch (e) {
-        alert("Erro ao salvar preferências: " + (e.message || e));
-    }
+    toast("Preferências salvas ✅");
+  } catch (e) {
+    alert("Erro ao salvar preferências: " + (e.message || e));
+  }
 });
 
 btnLimparFiltros?.addEventListener("click", async () => {
-    if (fQ) fQ.value = "";
-    if (fCidade) fCidade.value = "";
-    if (fEstado) fEstado.value = "";
-    if (fIdadeMin) fIdadeMin.value = "";
-    if (fIdadeMax) fIdadeMax.value = "";
-    if (fGenero) fGenero.value = "QUALQUER";
-    if (fSomenteFoto) fSomenteFoto.checked = false;
-    if (fSomenteVerificado) fSomenteVerificado.checked = false;
-    if (fOrdenar) fOrdenar.value = "recent";
+  if (fQ) fQ.value = "";
+  if (fCidade) fCidade.value = "";
+  if (fEstado) fEstado.value = "";
+  if (fIdadeMin) fIdadeMin.value = "";
+  if (fIdadeMax) fIdadeMax.value = "";
+  if (fGenero) fGenero.value = "QUALQUER";
+  if (fSomenteFoto) fSomenteFoto.checked = false;
+  if (fSomenteVerificado) fSomenteVerificado.checked = false;
+  if (fOrdenar) fOrdenar.value = "recent";
 
-    await carregarComFiltros();
-    toast("Filtros limpos");
+  await carregarComFiltros();
+  toast("Filtros limpos");
 });
 
 // Enter no campo de busca aplica filtros
 fQ?.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") carregarComFiltros();
+  if (e.key === "Enter") carregarComFiltros();
 });
 
 // ======== Init ========
 async function init() {
-    await carregarPreferencias();
-    await carregarComFiltros();
+  await carregarPreferencias();
+  await carregarComFiltros();
 }
 
 init();
