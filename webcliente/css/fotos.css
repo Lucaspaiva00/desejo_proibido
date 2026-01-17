@@ -29,7 +29,6 @@
 
 .fotoActions .btn {
     flex: 1;
-    height: 40px;
 }
 
 @media (max-width: 900px) {
