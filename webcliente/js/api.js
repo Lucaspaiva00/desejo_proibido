@@ -1,4 +1,5 @@
-export const API_BASE = "https://desejoproibido.app/api";
+// export const API_BASE = "https://desejoproibido.app/api";
+export const API_BASE = "http://localhost:5000";
 
 export function getToken() {
   return localStorage.getItem("token") || "";

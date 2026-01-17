@@ -5,91 +5,122 @@ const lista = document.getElementById("lista");
 document.getElementById("btnSair").onclick = logout;
 
 async function listar() {
-    msg.textContent = "";
-    lista.innerHTML = "Carregando...";
+  msg.textContent = "";
+  lista.innerHTML = "Carregando...";
 
-    const fotos = await apiFetch("/fotos/minhas");
-    if (!fotos?.length) {
-        lista.innerHTML = "<p class='muted'>Você ainda não enviou fotos.</p>";
-        return;
-    }
+  const fotos = await apiFetch("/fotos/minhas");
+  if (!fotos?.length) {
+    lista.innerHTML = "<p class='muted'>Você ainda não enviou fotos.</p>";
+    return;
+  }
 
-    lista.innerHTML = `<div class="gridFotos">` + fotos.map(f => `
+  lista.innerHTML =
+    `<div class="gridFotos">` +
+    fotos
+      .map(
+        (f) => `
   <div class="fotoCard">
-    <img class="fotoImg" src="${API_BASE}${f.url}" />
+    <img class="fotoImg" src="${f.url}" />
     <div class="fotoActions">
-      <button class="btn ${f.principal ? "btn-primary" : "btn-ghost"}" data-principal="${f.id}">
+      <button class="btn ${
+        f.principal ? "btn-primary" : "btn-ghost"
+      }" data-principal="${f.id}">
         ${f.principal ? "✅ Principal" : "Tornar principal"}
       </button>
       <button class="btn btn-danger" data-del="${f.id}">Excluir</button>
     </div>
     
   </div>
-`).join("") + `</div>`;
+`
+      )
+      .join("") +
+    `</div>`;
 
+  // listeners
+  document.querySelectorAll("[data-principal]").forEach((btn) => {
+    btn.onclick = async () => {
+      try {
+        const id = btn.getAttribute("data-principal");
+        await apiFetch(`/fotos/${id}/principal`, { method: "PATCH" });
+        msg.textContent = "✅ Foto principal atualizada!";
+        await listar();
+      } catch (e) {
+        msg.textContent = e.message;
+      }
+    };
+  });
 
-    // listeners
-    document.querySelectorAll("[data-principal]").forEach(btn => {
-        btn.onclick = async () => {
-            try {
-                const id = btn.getAttribute("data-principal");
-                await apiFetch(`/fotos/${id}/principal`, { method: "PATCH" });
-                msg.textContent = "✅ Foto principal atualizada!";
-                await listar();
-            } catch (e) {
-                msg.textContent = e.message;
-            }
-        };
-    });
-
-    document.querySelectorAll("[data-del]").forEach(btn => {
-        btn.onclick = async () => {
-            try {
-                const id = btn.getAttribute("data-del");
-                if (!confirm("Excluir esta foto?")) return;
-                await apiFetch(`/fotos/${id}`, { method: "DELETE" });
-                msg.textContent = "🗑️ Foto excluída!";
-                await listar();
-            } catch (e) {
-                msg.textContent = e.message;
-            }
-        };
-    });
+  document.querySelectorAll("[data-del]").forEach((btn) => {
+    btn.onclick = async () => {
+      try {
+        const id = btn.getAttribute("data-del");
+        if (!confirm("Excluir esta foto?")) return;
+        await apiFetch(`/fotos/${id}`, { method: "DELETE" });
+        msg.textContent = "🗑️ Foto excluída!";
+        await listar();
+      } catch (e) {
+        msg.textContent = e.message;
+      }
+    };
+  });
 }
 
 document.getElementById("btnUpload").onclick = async () => {
-    try {
-        msg.textContent = "";
+  try {
+    msg.textContent = "";
 
-        const file = document.getElementById("arquivo").files?.[0];
-        if (!file) throw new Error("Selecione um arquivo");
+    const file = document.getElementById("arquivo").files?.[0];
+    if (!file) throw new Error("Selecione um arquivo");
+    const CLOUDINARY_API_KEY = "839478495457115";
+    const CLOUDINARY_API_SECRET = "H00NjZ74G8NAOGL-MxhCAaVge9g";
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "desejoproibido");
+    formData.append("cloud_name", "dfdinbti3");
+    formData.append("folder", "desejoproibido");
+    formData.append("api_key", CLOUDINARY_API_KEY);
+    formData.append("api_secret", CLOUDINARY_API_SECRET);
 
-        const form = new FormData();
-        form.append("foto", file);
+    const responseUpload = await fetch(
+      "https://api.cloudinary.com/v1_1/desejoproibido/image/upload",
+      {
+        method: "POST",
+        body: formData,
+      }
+    ).then((res) => res.json());
 
-        const token = localStorage.getItem("token");
-        const res = await fetch(`${API_BASE}/fotos/upload`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${token}` },
-            body: form
-        });
-
-        const text = await res.text();
-        const data = text ? JSON.parse(text) : null;
-        if (!res.ok) throw new Error(data?.erro || `Erro HTTP ${res.status}`);
-
-        // ✅ se não veio principal, já seta como principal automaticamente
-        if (!data.principal) {
-            await apiFetch(`/fotos/${data.id}/principal`, { method: "PATCH" });
-        }
-
-        msg.textContent = "✅ Upload feito e definido como principal!";
-        document.getElementById("arquivo").value = "";
-        await listar();
-    } catch (e) {
-        msg.textContent = e.message;
+    if (responseUpload.error) {
+      throw new Error(responseUpload.error.message);
     }
-};
+    console.log(responseUpload);
 
+    const token = localStorage.getItem("token");
+    const res = await fetch(`${API_BASE}/fotos/upload`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        url: responseUpload.secure_url,
+      }),
+    });
+
+    const text = await res.text();
+    const data = text ? JSON.parse(text) : null;
+    if (!res.ok) throw new Error(data?.erro || `Erro HTTP ${res.status}`);
+
+    // ✅ se não veio principal, já seta como principal automaticamente
+    if (!data.principal) {
+      await apiFetch(`/fotos/${data.id}/principal`, { method: "PATCH" });
+    }
+
+    msg.textContent = "✅ Upload feito e definido como principal!";
+    document.getElementById("arquivo").value = "";
+    await listar();
+  } catch (e) {
+    msg.textContent = e.message;
+  }
+};
 
 listar();
