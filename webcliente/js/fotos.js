@@ -2,98 +2,143 @@ import { apiFetch, API_BASE, logout } from "./api.js";
 
 const msg = document.getElementById("msg");
 const lista = document.getElementById("lista");
+const arquivo = document.getElementById("arquivo");
+const btnUpload = document.getElementById("btnUpload");
+const uploadHint = document.getElementById("uploadHint");
+
 document.getElementById("btnSair").onclick = logout;
 
+function setMsg(text, isError = false) {
+  msg.textContent = text || "";
+  msg.style.color = isError ? "rgba(255,120,120,.95)" : "rgba(255,255,255,.72)";
+}
+
+function setHint(text) {
+  uploadHint.textContent = text || "Selecione uma foto para enviar.";
+}
+
+function setLoading(on) {
+  btnUpload.classList.toggle("is-loading", !!on);
+  btnUpload.disabled = !!on;
+
+  const title = btnUpload.querySelector(".upload-btn-title");
+  const sub = btnUpload.querySelector(".upload-btn-sub");
+
+  if (on) {
+    title.textContent = "Enviando...";
+    sub.textContent = "aguarde alguns segundos";
+  } else {
+    title.textContent = "Adicionar Foto";
+    sub.textContent = "JPG ou PNG • até 10MB";
+  }
+}
+
 async function listar() {
-  msg.textContent = "";
-  lista.innerHTML = "Carregando...";
+  setMsg("");
+  lista.innerHTML = `<div style="padding:14px; color:rgba(255,255,255,.72);">Carregando...</div>`;
 
   const fotos = await apiFetch("/fotos/minhas");
   if (!fotos?.length) {
-    lista.innerHTML = "<p class='muted'>Você ainda não enviou fotos.</p>";
+    lista.innerHTML = `<div style="padding:14px; color:rgba(255,255,255,.72);">Você ainda não enviou fotos.</div>`;
     return;
   }
 
-  lista.innerHTML =
-    `<div class="gridFotos">` +
-    fotos
-      .map(
-        (f) => `
-  <div class="fotoCard">
-    <img class="fotoImg" src="${f.url}" />
-    <div class="fotoActions">
-      <button class="btn ${
-        f.principal ? "btn-primary" : "btn-ghost"
-      }" data-principal="${f.id}">
-        ${f.principal ? "✅ Principal" : "Tornar principal"}
-      </button>
-      <button class="btn btn-danger" data-del="${f.id}">Excluir</button>
-    </div>
-    
-  </div>
-`
-      )
-      .join("") +
-    `</div>`;
+  lista.innerHTML = fotos.map((f) => {
+    const principal = !!f.principal;
 
-  // listeners
+    return `
+      <div class="foto-card">
+        <div class="foto-img-wrap">
+          <img class="foto-img" src="${f.url}" alt="Foto" />
+          ${principal ? `<div class="badge-destaque"><span class="badge-dot"></span>Em Destaque</div>` : ``}
+        </div>
+
+        <div class="foto-actions ${principal ? "uma" : "duas"}">
+          ${principal ? `` : `
+            <button class="fbtn fbtn-red" data-principal="${f.id}">
+              Definir como Destaque
+            </button>
+          `}
+          <button class="fbtn ${principal ? "fbtn-red" : "fbtn-dark"}" data-del="${f.id}">
+            Remover
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  // definir principal
   document.querySelectorAll("[data-principal]").forEach((btn) => {
     btn.onclick = async () => {
       try {
         const id = btn.getAttribute("data-principal");
         await apiFetch(`/fotos/${id}/principal`, { method: "PATCH" });
-        msg.textContent = "✅ Foto principal atualizada!";
+        setMsg("✅ Foto definida como destaque!");
         await listar();
       } catch (e) {
-        msg.textContent = e.message;
+        setMsg(e?.message || "Erro ao definir destaque", true);
       }
     };
   });
 
+  // remover
   document.querySelectorAll("[data-del]").forEach((btn) => {
     btn.onclick = async () => {
       try {
         const id = btn.getAttribute("data-del");
-        if (!confirm("Excluir esta foto?")) return;
+        if (!confirm("Remover esta foto?")) return;
         await apiFetch(`/fotos/${id}`, { method: "DELETE" });
-        msg.textContent = "🗑️ Foto excluída!";
+        setMsg("🗑️ Foto removida!");
         await listar();
       } catch (e) {
-        msg.textContent = e.message;
+        setMsg(e?.message || "Erro ao remover foto", true);
       }
     };
   });
 }
 
-document.getElementById("btnUpload").onclick = async () => {
-  try {
-    msg.textContent = "";
+/* =========================
+   UPLOAD igual print:
+   - botão abre seletor
+   - ao escolher arquivo, faz upload
+========================= */
+btnUpload.onclick = () => {
+  setMsg("");
+  arquivo.click();
+};
 
-    const file = document.getElementById("arquivo").files?.[0];
-    if (!file) throw new Error("Selecione um arquivo");
-    const CLOUDINARY_API_KEY = "839478495457115";
-    const CLOUDINARY_API_SECRET = "H00NjZ74G8NAOGL-MxhCAaVge9g";
+arquivo.onchange = async () => {
+  const file = arquivo.files?.[0];
+  if (!file) return;
+
+  try {
+    setMsg("");
+    // validações
+    const isImg = /^image\//.test(file.type);
+    if (!isImg) throw new Error("Arquivo inválido (envie uma imagem).");
+
+    const mb = file.size / (1024 * 1024);
+    if (mb > 10) throw new Error("Arquivo acima de 10MB.");
+
+    setHint(`Selecionado: ${file.name}`);
+    setLoading(true);
+
+    // ✅ Cloudinary unsigned (SEM SECRET NO FRONT)
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("upload_preset", "desejoproibido");
-    formData.append("cloud_name", "dfdinbti3");
+    formData.append("upload_preset", "desejoproibido"); // precisa ser UNSIGNED
     formData.append("folder", "desejoproibido");
-    formData.append("api_key", CLOUDINARY_API_KEY);
-    formData.append("api_secret", CLOUDINARY_API_SECRET);
 
     const responseUpload = await fetch(
       "https://api.cloudinary.com/v1_1/desejoproibido/image/upload",
-      {
-        method: "POST",
-        body: formData,
-      }
+      { method: "POST", body: formData }
     ).then((res) => res.json());
 
     if (responseUpload.error) {
       throw new Error(responseUpload.error.message);
     }
-    console.log(responseUpload);
 
+    // grava no seu backend
     const token = localStorage.getItem("token");
     const res = await fetch(`${API_BASE}/fotos/upload`, {
       method: "POST",
@@ -101,25 +146,26 @@ document.getElementById("btnUpload").onclick = async () => {
         Authorization: `Bearer ${token}`,
         "content-type": "application/json",
       },
-      body: JSON.stringify({
-        url: responseUpload.secure_url,
-      }),
+      body: JSON.stringify({ url: responseUpload.secure_url }),
     });
 
     const text = await res.text();
     const data = text ? JSON.parse(text) : null;
     if (!res.ok) throw new Error(data?.erro || `Erro HTTP ${res.status}`);
 
-    // ✅ se não veio principal, já seta como principal automaticamente
+    // se não veio principal, seta
     if (!data.principal) {
       await apiFetch(`/fotos/${data.id}/principal`, { method: "PATCH" });
     }
 
-    msg.textContent = "✅ Upload feito e definido como principal!";
-    document.getElementById("arquivo").value = "";
+    setMsg("✅ Upload feito e definido como principal!");
+    setHint("Selecione uma foto para enviar.");
+    arquivo.value = "";
     await listar();
   } catch (e) {
-    msg.textContent = e.message;
+    setMsg(e?.message || "Erro no upload", true);
+  } finally {
+    setLoading(false);
   }
 };
 

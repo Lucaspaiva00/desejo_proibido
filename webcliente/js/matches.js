@@ -8,37 +8,48 @@ const msg = document.getElementById("msg");
 document.getElementById("btnSair")?.addEventListener("click", logout);
 document.getElementById("btnSairMobile")?.addEventListener("click", logout);
 
-function setMsg(t, type="muted"){
-  if(!msg) return;
+const btnLimpar = document.getElementById("btnLimpar");
+const stats = document.getElementById("stats");
+const empty = document.getElementById("empty");
+
+btnLimpar?.addEventListener("click", () => {
+  const busca = document.getElementById("busca");
+  busca.value = "";
+  busca.dispatchEvent(new Event("input"));
+});
+
+
+function setMsg(t, type = "muted") {
+  if (!msg) return;
   msg.className = `msgline ${type}`;
   msg.textContent = t || "";
 }
 
-function escapeHtml(s){
+function escapeHtml(s) {
   return String(s || "")
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'","&#039;");
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 let matches = [];
 
-async function loadMatches(){
-  try{
+async function loadMatches() {
+  try {
     setMsg("Carregando matches...");
     const data = await apiFetch("/matches");
     matches = Array.isArray(data) ? data : (data.data || []);
     render();
     setMsg("");
-  }catch(e){
+  } catch (e) {
     setMsg("Erro ao carregar matches: " + e.message, "error");
     grid.innerHTML = "";
   }
 }
 
-function render(){
+function render() {
   const filtro = (q?.value || "").trim().toLowerCase();
 
   const items = matches.filter(m => {
@@ -48,7 +59,7 @@ function render(){
     return !filtro || nome.includes(filtro) || cidade.includes(filtro) || estado.includes(filtro);
   });
 
-  if(!items.length){
+  if (!items.length) {
     grid.innerHTML = `<div class="muted">Nenhum match.</div>`;
     return;
   }

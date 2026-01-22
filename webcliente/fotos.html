@@ -12,16 +12,15 @@
 
 <body>
 
-  <!-- TOPNAV: Desktop normal + Mobile com menu sanduíche -->
+  <!-- TOPNAV -->
   <nav class="topnav" role="navigation" aria-label="Navegação principal">
     <div class="brand">
       <div class="brand-badge">DP</div>
       <span class="brand-name">Desejo Proibido</span>
     </div>
 
-    <!-- Desktop links -->
     <div class="navlinks navlinks-desktop" aria-label="Links do menu">
-      <a href="home.html" >Feed</a>
+      <a href="home.html">Feed</a>
       <a href="perfil.html">Perfil</a>
       <a href="fotos.html" class="active">Fotos</a>
       <a href="matches.html">Matches</a>
@@ -30,16 +29,13 @@
 
     <div class="spacer"></div>
 
-    <!-- Botão sair (sempre visível) -->
     <button id="btnSair" class="btn btn-ghost">Sair</button>
 
-    <!-- Botão hambúrguer (mobile) -->
     <button class="nav-toggle" id="navToggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="navDrawer">
       <span></span><span></span><span></span>
     </button>
   </nav>
 
-  <!-- Overlay + Drawer Mobile -->
   <div class="nav-overlay" id="navOverlay" aria-hidden="true"></div>
 
   <aside class="nav-drawer" id="navDrawer" aria-hidden="true">
@@ -67,34 +63,57 @@
     </div>
   </aside>
 
-  <div class="wrap">
-    <h2 class="h-title">Minhas Fotos</h2>
-    <div id="msg" class="msgline muted"></div>
+  <!-- CONTEÚDO -->
+  <div class="wrap fotos-wrap">
+    <section class="fotos-shell panel">
 
-    <div class="center">
-      <div class="panel" style="width:720px; padding:16px;">
-
-        <div class="muted" style="margin-bottom:10px;">
-          Dica: defina uma foto como <b>principal</b> para aparecer no feed.
+      <header class="fotos-head">
+        <div class="fotos-title">
+          Galeria Premium
+          <span class="sparkle" aria-hidden="true">
+            <!-- ✨ dourado real (SVG com gradiente) -->
+            <svg viewBox="0 0 64 64" class="sparkle-svg">
+              <defs>
+                <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#FFF2B2" />
+                  <stop offset="0.45" stop-color="#FFD36A" />
+                  <stop offset="1" stop-color="#C99A2E" />
+                </linearGradient>
+              </defs>
+              <path fill="url(#gold)" d="M32 6l3.4 14.4L50 24l-14.6 3.6L32 42l-3.4-14.4L14 24l14.6-3.6L32 6z" />
+              <path fill="url(#gold)" opacity=".9"
+                d="M10 34l1.8 7.6L20 44l-8.2 2.1L10 54l-1.8-7.9L0 44l8.2-2.4L10 34z" />
+              <path fill="url(#gold)" opacity=".85" d="M54 36l1.4 6L62 44l-6.6 1.7L54 52l-1.4-6.3L46 44l6.6-2L54 36z" />
+            </svg>
+          </span>
         </div>
 
-        <!-- upload -->
-        <div style="display:grid; grid-template-columns: 1fr auto; gap:10px; align-items:center;">
-          <input class="input" type="file" id="arquivo" accept="image/*" />
-          <button id="btnUpload" class="btn btn-primary">Enviar</button>
-        </div>
+        <div class="fotos-sub muted">Sua foto principal define sua posição no feed.</div>
+      </header>
 
-        <!-- lista -->
-        <div id="lista" style="margin-top:14px;"></div>
+      <!-- UPLOAD (igual referência: sem input aparente) -->
+      <div class="upload-area">
+        <button id="btnUpload" class="upload-btn" type="button">
+          <span class="upload-btn-title">Adicionar Foto</span>
+          <span class="upload-btn-sub">JPG ou PNG • até 10MB</span>
+        </button>
 
+        <!-- input escondido -->
+        <input id="arquivo" class="upload-input" type="file" accept="image/*" />
+
+        <div class="upload-hint muted" id="uploadHint">Selecione uma foto para enviar.</div>
+        <div id="msg" class="msgline muted"></div>
       </div>
-    </div>
+
+      <!-- GRID -->
+      <div id="lista" class="fotos-grid"></div>
+    </section>
   </div>
 
   <script type="module" src="js/fotos.js"></script>
+
   <!-- JS do Menu (inline) -->
   <script>
-    // Drawer Mobile (hambúrguer) - padrão Tinder
     const navToggle = document.getElementById("navToggle");
     const navDrawer = document.getElementById("navDrawer");
     const navOverlay = document.getElementById("navOverlay");
@@ -128,12 +147,10 @@
     navOverlay?.addEventListener("click", closeNav);
     navClose?.addEventListener("click", closeNav);
 
-    // Fecha com ESC
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") closeNav();
     });
 
-    // Sair: desktop + drawer
     const btnSair = document.getElementById("btnSair");
     const btnSairMobile = document.getElementById("btnSairMobile");
     if (btnSair && btnSairMobile) {

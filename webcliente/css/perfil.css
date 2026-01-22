@@ -1,0 +1,282 @@
+/* =========================================================
+   perfil.css — Perfil Premium (igual imagem do cliente)
+========================================================= */
+
+.perfil-wrap {
+    padding-top: 22px;
+}
+
+.perfil-center {
+    display: flex;
+    justify-content: center;
+}
+
+.perfil-title {
+    font-size: 34px;
+    font-weight: 950;
+    letter-spacing: .2px;
+    margin: 12px 0 14px;
+}
+
+/* Pílula “Conta Premium Ativa” */
+.premium-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    margin: 6px 0 10px;
+
+    background: rgba(0, 0, 0, .35);
+    border: 1px solid rgba(255, 255, 255, .12);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 18px 45px rgba(0, 0, 0, .35);
+}
+
+.pill-ico {
+    font-size: 16px;
+}
+
+.pill-text {
+    font-weight: 950;
+    opacity: .92;
+}
+
+/* Card principal */
+.perfil-card {
+    width: min(620px, 100%);
+    border-radius: 24px;
+    padding: 18px;
+
+    background: linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .02));
+    border: 1px solid rgba(255, 255, 255, .10);
+    box-shadow:
+        0 30px 90px rgba(0, 0, 0, .70),
+        0 0 0 1px rgba(255, 255, 255, .06),
+        0 0 70px rgba(193, 18, 31, .10);
+}
+
+.perfil-hint {
+    color: rgba(255, 255, 255, .72);
+    font-weight: 900;
+    margin-bottom: 12px;
+}
+
+/* Inputs mais “pílula” igual imagem */
+.perfil-form {
+    display: grid;
+    gap: 10px;
+}
+
+.perfil-input {
+    border-radius: 16px;
+    background: rgba(0, 0, 0, .22);
+    border: 1px solid rgba(255, 255, 255, .12);
+}
+
+.perfil-row2 {
+    display: grid;
+    grid-template-columns: 1fr 130px;
+    gap: 10px;
+}
+
+.perfil-uf {
+    text-transform: uppercase;
+    text-align: center;
+    font-weight: 950;
+    letter-spacing: .8px;
+}
+
+.perfil-field {
+    display: grid;
+    gap: 6px;
+}
+
+.perfil-label {
+    font-size: 12px;
+    color: rgba(255, 255, 255, .65);
+    font-weight: 900;
+    padding-left: 2px;
+}
+
+.perfil-bio {
+    min-height: 60px;
+    resize: none;
+}
+
+/* Botões Salvar + Fotos (igual imagem) */
+.perfil-actions {
+    display: grid;
+    grid-template-columns: 1fr 120px;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.pbtn {
+    min-height: 48px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, .12);
+    background: rgba(255, 255, 255, .06);
+    color: #fff;
+    font-weight: 950;
+    cursor: pointer;
+    transition: .12s ease;
+}
+
+.pbtn:active {
+    transform: translateY(1px);
+}
+
+.pbtn:hover {
+    background: rgba(255, 255, 255, .10);
+}
+
+.pbtn-primary {
+    border: 0;
+    background: linear-gradient(180deg, var(--red), #8f0d16);
+    box-shadow: 0 14px 32px rgba(193, 18, 31, .22);
+}
+
+.pbtn-primary:hover {
+    filter: brightness(1.06);
+}
+
+.pbtn-dark {
+    background: rgba(0, 0, 0, .35);
+    border: 1px solid rgba(255, 255, 255, .14);
+}
+
+/* Bloco Premium com 2 linhas (igual imagem) */
+.premium-block {
+    margin-top: 12px;
+    border-radius: 22px;
+    overflow: hidden;
+
+    background: rgba(0, 0, 0, .22);
+    border: 1px solid rgba(255, 255, 255, .10);
+    box-shadow: 0 22px 60px rgba(0, 0, 0, .35);
+}
+
+.premium-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: center;
+    padding: 14px 14px;
+}
+
+.premium-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, .08);
+}
+
+.premium-title {
+    font-weight: 950;
+    font-size: 16px;
+    letter-spacing: .2px;
+}
+
+.premium-sub {
+    font-size: 12px;
+    color: rgba(255, 255, 255, .68);
+    font-weight: 800;
+    margin-top: 3px;
+}
+
+.lock,
+.rocket {
+    opacity: .92;
+}
+
+/* Toggle iOS (igual imagem) */
+.toggle-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.toggle-text {
+    color: rgba(255, 255, 255, .68);
+    font-weight: 900;
+    min-width: 90px;
+    text-align: left;
+}
+
+.switch {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    display: inline-block;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .10);
+    border: 1px solid rgba(255, 255, 255, .14);
+    transition: .16s ease;
+    box-shadow: inset 0 0 0 2px rgba(0, 0, 0, .18);
+}
+
+.slider::before {
+    content: "";
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    left: 3px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .85);
+    transition: .16s ease;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, .35);
+}
+
+.switch input:checked+.slider {
+    background: rgba(193, 18, 31, .32);
+    border-color: rgba(193, 18, 31, .40);
+}
+
+.switch input:checked+.slider::before {
+    left: 23px;
+    background: #fff;
+}
+
+/* Botão “Ativar Destaque” */
+.pbtn-boost {
+    min-height: 44px;
+    border-radius: 16px;
+    padding: 10px 14px;
+    min-width: 165px;
+}
+
+/* Responsivo */
+@media (max-width: 640px) {
+    .perfil-card {
+        padding: 14px;
+    }
+
+    .perfil-title {
+        font-size: 28px;
+    }
+
+    .perfil-row2 {
+        grid-template-columns: 1fr 110px;
+    }
+
+    .perfil-actions {
+        grid-template-columns: 1fr 110px;
+    }
+
+    .pbtn-boost {
+        min-width: 150px;
+    }
+}

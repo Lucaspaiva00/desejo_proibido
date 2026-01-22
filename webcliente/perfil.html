@@ -7,17 +7,17 @@
     <title>Meu Perfil – Desejo Proibido</title>
 
     <link rel="stylesheet" href="css/dating.css" />
+    <link rel="stylesheet" href="css/perfil.css" />
 </head>
 
 <body>
-    <!-- TOPNAV: Desktop normal + Mobile com menu sanduíche -->
+    <!-- TOPNAV -->
     <nav class="topnav" role="navigation" aria-label="Navegação principal">
         <div class="brand">
             <div class="brand-badge">DP</div>
             <span class="brand-name">Desejo Proibido</span>
         </div>
 
-        <!-- Desktop links -->
         <div class="navlinks navlinks-desktop" aria-label="Links do menu">
             <a href="home.html">Feed</a>
             <a href="perfil.html" class="active">Perfil</a>
@@ -28,17 +28,14 @@
 
         <div class="spacer"></div>
 
-        <!-- Botão sair (sempre visível) -->
         <button id="btnSair" class="btn btn-ghost">Sair</button>
 
-        <!-- Botão hambúrguer (mobile) -->
         <button class="nav-toggle" id="navToggle" aria-label="Abrir menu" aria-expanded="false"
             aria-controls="navDrawer">
             <span></span><span></span><span></span>
         </button>
     </nav>
 
-    <!-- Overlay + Drawer Mobile -->
     <div class="nav-overlay" id="navOverlay" aria-hidden="true"></div>
 
     <aside class="nav-drawer" id="navDrawer" aria-hidden="true">
@@ -66,33 +63,38 @@
         </div>
     </aside>
 
-    <div class="wrap">
-        <h2 class="h-title">Meu Perfil</h2>
+    <!-- CONTEÚDO -->
+    <div class="wrap perfil-wrap">
 
-        <div class="center">
-            <div class="panel" style="width:520px; padding:16px;">
-                <div class="muted" style="margin-bottom:10px;">
-                    Preencha seu perfil para aparecer no feed.
-                </div>
+        <!-- PÍLULA PREMIUM (igual imagem) -->
+        <div class="premium-pill" id="premiumPill" style="display:none;">
+            <span class="pill-ico">🔒</span>
+            <span class="pill-text">Conta Premium Ativa</span>
+        </div>
 
-                <!-- FORM PERFIL -->
-                <div style="display:grid; gap:10px;">
-                    <input id="nome" class="input" placeholder="Seu nome" />
+        <div class="perfil-center">
+            <section class="perfil-card">
 
-                    <div style="display:grid; grid-template-columns: 1fr 120px; gap:10px;">
-                        <input id="cidade" class="input" placeholder="Cidade" />
-                        <input id="estado" class="input" placeholder="UF (ex: SP)" maxlength="2" />
+                <div class="perfil-hint">Preencha seu perfil para aparecer no feed.</div>
+
+                <!-- FORM -->
+                <div class="perfil-form">
+                    <input id="nome" class="input perfil-input" placeholder="Seu nome" />
+
+                    <div class="perfil-row2">
+                        <input id="cidade" class="input perfil-input" placeholder="Cidade" />
+                        <input id="estado" class="input perfil-input perfil-uf" placeholder="UF" maxlength="2" />
                     </div>
 
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                        <div style="display:grid; gap:6px;">
-                            <div class="muted" style="font-size:12px;">Nascimento (opcional)</div>
-                            <input id="nascimento" class="input" type="date" />
+                    <div class="perfil-row2">
+                        <div class="perfil-field">
+                            <div class="perfil-label">Nascimento (opcional)</div>
+                            <input id="nascimento" class="input perfil-input" type="date" />
                         </div>
 
-                        <div style="display:grid; gap:6px;">
-                            <div class="muted" style="font-size:12px;">Gênero (opcional)</div>
-                            <select id="genero" class="input">
+                        <div class="perfil-field">
+                            <div class="perfil-label">Gênero (opcional)</div>
+                            <select id="genero" class="input perfil-input">
                                 <option value="">Qualquer</option>
                                 <option value="MASCULINO">Masculino</option>
                                 <option value="FEMININO">Feminino</option>
@@ -101,64 +103,86 @@
                         </div>
                     </div>
 
-                    <textarea id="bio" class="input" placeholder="Bio (opcional)"></textarea>
+                    <textarea id="bio" class="input perfil-input perfil-bio"
+                        placeholder="Um livro a ser decifrado"></textarea>
                 </div>
 
-                <div style="display:flex; gap:10px; margin-top:12px;">
-                    <button id="btnSalvar" class="btn btn-primary" style="flex:1;">Salvar</button>
-                    <button id="btnIrFotos" class="btn btn-ghost">Fotos</button>
+                <!-- BOTÕES (igual imagem) -->
+                <div class="perfil-actions">
+                    <button id="btnSalvar" class="pbtn pbtn-primary">Salvar</button>
+                    <button id="btnIrFotos" class="pbtn pbtn-dark">Fotos</button>
                 </div>
 
-                <!-- PREMIUM: INVISÍVEL -->
-                <div class="panel" style="margin-top:14px; padding:14px;">
-                    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-                        <div>
-                            <div style="font-weight:900;">Modo invisível</div>
-                            <div class="muted" style="font-size:12px;">(Premium) Você não aparece no feed.</div>
+                <!-- BLOCO PREMIUM (igual imagem: 2 linhas) -->
+                <div class="premium-block">
+
+                    <!-- Linha 1: Modo invisível -->
+                    <div class="premium-row">
+                        <div class="premium-left">
+                            <div class="premium-title">Modo Invisível <span class="lock">🔒</span></div>
+                            <div class="premium-sub">Controle total da sua exposição</div>
                         </div>
 
-                        <label style="display:flex; align-items:center; gap:10px;">
-                            <input id="toggleInvisivel" type="checkbox" style="width:20px; height:20px;">
-                            <span id="txtInvisivel" class="muted">Desativado</span>
-                        </label>
-                    </div>
-
-                    <div id="msgInvisivel" class="muted" style="margin-top:10px;"></div>
-                </div>
-
-                <!-- PREMIUM: BOOST -->
-                <div class="panel" style="margin-top:14px; padding:14px;">
-                    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-                        <div>
-                            <div style="font-weight:900;">Boost de Perfil</div>
-                            <div class="muted" style="font-size:12px;">
-                                (Premium) Você aparece primeiro no feed por 6 horas.
+                        <div class="premium-right">
+                            <div class="toggle-wrap">
+                                <label class="switch">
+                                    <input id="toggleInvisivel" type="checkbox">
+                                    <span class="slider"></span>
+                                </label>
+                                <span id="txtInvisivel" class="toggle-text">Desativado</span>
                             </div>
                         </div>
-
-                        <button id="btnBoost" class="btn btn-primary" style="min-width:160px;">
-                            🚀 Dar Boost
-                        </button>
                     </div>
 
-                    <div id="msgBoost" class="muted" style="margin-top:10px;"></div>
+                    <div class="premium-divider"></div>
+
+                    <!-- Linha 2: Destaque -->
+                    <div class="premium-row">
+                        <div class="premium-left">
+                            <div class="premium-title">Destaque Prioritário <span class="rocket">🚀</span></div>
+                            <div class="premium-sub">Seu perfil no topo por 6 horas</div>
+                        </div>
+
+                        <div class="premium-right">
+                            <button id="btnBoost" class="pbtn pbtn-primary pbtn-boost">Ativar Destaque</button>
+                        </div>
+                    </div>
+
                 </div>
 
                 <div id="msg" class="msgline muted"></div>
-            </div>
+                <div id="msgInvisivel" class="muted" style="margin-top:8px;"></div>
+                <div id="msgBoost" class="muted" style="margin-top:8px;"></div>
+
+            </section>
         </div>
     </div>
 
     <script type="module" src="js/perfil.js"></script>
 
     <script type="module">
-        // botão rápido (opcional)
+        // botão Fotos
         const b = document.getElementById("btnIrFotos");
         if (b) b.onclick = () => (location.href = "fotos.html");
+
+        // texto do toggle
+        const t = document.getElementById("toggleInvisivel");
+        const txt = document.getElementById("txtInvisivel");
+        function syncToggle() {
+            txt.textContent = t.checked ? "Ativado" : "Desativado";
+        }
+        t?.addEventListener("change", syncToggle);
+        syncToggle();
+
+        // mostrar pill premium (você pode ligar isso baseado no retorno do /me no seu perfil.js)
+        // aqui deixei simples: se tiver "premium=true" no localStorage
+        const pill = document.getElementById("premiumPill");
+        const isPremium = localStorage.getItem("premium") === "true";
+        if (pill) pill.style.display = isPremium ? "inline-flex" : "none";
     </script>
 
+    <!-- Drawer Mobile -->
     <script>
-        // Drawer Mobile (hambúrguer) - padrão Tinder
         const navToggle = document.getElementById("navToggle");
         const navDrawer = document.getElementById("navDrawer");
         const navOverlay = document.getElementById("navOverlay");
@@ -192,12 +216,10 @@
         navOverlay?.addEventListener("click", closeNav);
         navClose?.addEventListener("click", closeNav);
 
-        // Fecha com ESC
         document.addEventListener("keydown", (e) => {
             if (e.key === "Escape") closeNav();
         });
 
-        // Sair: desktop + drawer
         const btnSair = document.getElementById("btnSair");
         const btnSairMobile = document.getElementById("btnSairMobile");
         if (btnSair && btnSairMobile) {

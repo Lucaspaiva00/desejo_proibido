@@ -5,19 +5,19 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Matches – Desejo Proibido</title>
+
     <link rel="stylesheet" href="css/dating.css" />
-    <link rel="stylesheet" href="css/matches.css">
+    <link rel="stylesheet" href="css/matches.css" />
 </head>
 
 <body>
-    <!-- TOPNAV: Desktop normal + Mobile com menu sanduíche -->
+    <!-- TOPNAV -->
     <nav class="topnav" role="navigation" aria-label="Navegação principal">
         <div class="brand">
             <div class="brand-badge">DP</div>
             <span class="brand-name">Desejo Proibido</span>
         </div>
 
-        <!-- Desktop links -->
         <div class="navlinks navlinks-desktop" aria-label="Links do menu">
             <a href="home.html">Feed</a>
             <a href="perfil.html">Perfil</a>
@@ -28,10 +28,8 @@
 
         <div class="spacer"></div>
 
-        <!-- Botão sair (sempre visível) -->
         <button id="btnSair" class="btn btn-ghost">Sair</button>
 
-        <!-- Botão hambúrguer (mobile) -->
         <button class="nav-toggle" id="navToggle" aria-label="Abrir menu" aria-expanded="false"
             aria-controls="navDrawer">
             <span></span><span></span><span></span>
@@ -66,35 +64,43 @@
         </div>
     </aside>
 
-    <div class="wrap">
-        <h2 class="h-title">Meus Matches</h2>
-        <div id="msg" class="msgline muted"></div>
+    <!-- CONTEÚDO -->
+    <div class="wrap matches-wrap">
+        <header class="matches-head">
+            
+            <div id="msg" class="msgline muted"></div>
+        </header>
 
-        <div class="center">
-            <div class="panel" style="width: 900px; padding: 16px;">
-                <div style="display:flex; gap:10px; align-items:center; margin-bottom:12px;">
-                    <input id="busca" class="input" placeholder="Buscar por nome ou cidade..." style="flex:1;">
-                    <button id="btnRecarregar" class="btn btn-ghost">Recarregar</button>
+        <section class="matches-shell panel">
+            <div class="matches-toolbar">
+                <div class="searchbox">
+                    <span class="search-ico">🔎</span>
+                    <input id="busca" class="search-input" placeholder="Buscar por nome ou cidade..." />
+                    <button id="btnLimpar" class="icon-btn" type="button" title="Limpar busca">✕</button>
                 </div>
 
-                <div class="matches-wrap">
-                    <div class="matches-top">
-
-                    <!-- ✅ grid -->
-                    <div id="grid" class="match-grid"></div>
-
-                    <div id="msg" class="msgline muted"></div>
-                </div>
-
-                <script type="module" src="js/matches.js"></script>
-
+                <button id="btnRecarregar" class="btn btn-ghost">Recarregar</button>
             </div>
-        </div>
+
+            <div class="matches-stats muted" id="stats"></div>
+
+            <!-- GRID -->
+            <div id="grid" class="match-grid"></div>
+
+            <!-- vazio/loading (opcional, usado pelo JS) -->
+            <div id="empty" class="empty-state" style="display:none;">
+                <div class="empty-ico">💘</div>
+                <div class="empty-title">Nenhum match por aqui</div>
+                <div class="empty-sub muted">Quando alguém curtir você de volta, vai aparecer aqui.</div>
+            </div>
+        </section>
     </div>
 
+    <!-- ✅ Importa o JS só UMA vez -->
     <script type="module" src="js/matches.js"></script>
+
+    <!-- Drawer Mobile -->
     <script>
-        // Drawer Mobile (hambúrguer) - padrão Tinder
         const navToggle = document.getElementById("navToggle");
         const navDrawer = document.getElementById("navDrawer");
         const navOverlay = document.getElementById("navOverlay");
@@ -128,12 +134,10 @@
         navOverlay?.addEventListener("click", closeNav);
         navClose?.addEventListener("click", closeNav);
 
-        // Fecha com ESC
         document.addEventListener("keydown", (e) => {
             if (e.key === "Escape") closeNav();
         });
 
-        // Sair: desktop + drawer
         const btnSair = document.getElementById("btnSair");
         const btnSairMobile = document.getElementById("btnSairMobile");
         if (btnSair && btnSairMobile) {
