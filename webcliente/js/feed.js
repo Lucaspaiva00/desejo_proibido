@@ -1,4 +1,4 @@
-import { apiFetch, API_BASE, logout } from "./api.js";
+import { apiFetch, logout } from "./api.js";
 
 const card = document.getElementById("card");
 const msg = document.getElementById("msg");
@@ -6,6 +6,7 @@ const msg = document.getElementById("msg");
 let fila = [];
 let atual = null;
 
+// sair
 document.getElementById("btnSair").onclick = logout;
 const btnSairMobile = document.getElementById("btnSairMobile");
 if (btnSairMobile) btnSairMobile.onclick = logout;
@@ -25,7 +26,7 @@ const btnAplicarFiltros = document.getElementById("btnAplicarFiltros");
 const btnSalvarPrefs = document.getElementById("btnSalvarPrefs");
 const btnLimparFiltros = document.getElementById("btnLimparFiltros");
 
-// ======== Modal filtros (NOVO) ========
+// ======== Modal filtros ========
 const filtrosOverlay = document.getElementById("filtrosOverlay");
 const btnOpenFiltros = document.getElementById("btnOpenFiltros");
 const btnCloseFiltros = document.getElementById("btnCloseFiltros");
@@ -36,8 +37,6 @@ function openFiltros() {
   filtrosOverlay.classList.add("show");
   filtrosOverlay.setAttribute("aria-hidden", "false");
   document.body.classList.add("no-scroll");
-
-  // foco no primeiro campo
   setTimeout(() => fQ?.focus(), 10);
 }
 
@@ -51,14 +50,15 @@ function closeFiltros() {
 btnOpenFiltros?.addEventListener("click", openFiltros);
 btnCloseFiltros?.addEventListener("click", closeFiltros);
 
-// fecha clicando fora
 filtrosOverlay?.addEventListener("click", (e) => {
   if (e.target === filtrosOverlay) closeFiltros();
 });
 
-// fecha ESC (sem atrapalhar teu nav drawer)
+// ESC fecha só o modal de filtros (se estiver aberto)
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && filtrosOverlay?.classList.contains("show")) closeFiltros();
+  if (e.key === "Escape" && filtrosOverlay?.classList.contains("show")) {
+    closeFiltros();
+  }
 });
 
 // ======== helpers ========
@@ -96,10 +96,8 @@ function getFiltrosAtual() {
     cidade: safe(fCidade?.value).trim(),
     estado: safe(fEstado?.value).trim(),
     genero: safe(fGenero?.value || "QUALQUER").trim(),
-
     idadeMin: Number.isFinite(idadeMin) ? idadeMin : null,
     idadeMax: Number.isFinite(idadeMax) ? idadeMax : null,
-
     somenteComFoto: !!fSomenteFoto?.checked,
     somenteVerificados: !!fSomenteVerificado?.checked,
     ordenarPor: safe(fOrdenar?.value || "recent").trim(),
@@ -120,14 +118,13 @@ function montarQuery(f) {
   return qs.toString();
 }
 
-// ======== Resumo chips (NOVO) ========
+// ======== Resumo chips ========
 function renderResumoFiltros() {
   if (!filtrosResumo) return;
 
   const f = getFiltrosAtual();
   const chips = [];
 
-  // ordenação
   chips.push(f.ordenarPor === "boost" ? "Boost" : "Recentes");
 
   if (f.q) chips.push(`Busca: ${f.q}`);
@@ -146,7 +143,6 @@ function renderResumoFiltros() {
     return;
   }
 
-  // limita visualmente
   const max = 4;
   const show = chips.slice(0, max);
   const rest = chips.length - show.length;
@@ -157,7 +153,7 @@ function renderResumoFiltros() {
   `;
 }
 
-// ======== render ========
+// ======== render card ========
 function render(u) {
   if (!u) {
     card.innerHTML = `
@@ -174,15 +170,66 @@ function render(u) {
   const cidade = safe(u.perfil?.cidade).trim();
   const estado = safe(u.perfil?.estado).trim();
   const loc = `${cidade} ${estado}`.trim();
-
-  const fotoUrl = u.fotoPrincipal ? `${u.fotoPrincipal}` : "";
   const boostAtivo = isBoostAtivo(u.boostAte);
 
-  card.innerHTML = `
-    ${fotoUrl ? `<img class="tphoto" src="${fotoUrl}" alt="Foto" />` : ""}
+  // ✅ monta lista de fotos (principal + extras), sem duplicar
+  const lista = [];
+  const pushUnique = (x) => {
+    const v = safe(x).trim();
+    if (!v) return;
+    if (!lista.includes(v)) lista.push(v);
+  };
 
-    ${fotoUrl
-      ? `<div class="toverlay"></div>`
+  // principal
+  pushUnique(u.fotoPrincipal);
+
+  // outras fotos (tenta campos comuns)
+  const extras =
+    u.fotos ||
+    u.perfil?.fotos ||
+    u.perfil?.galeria ||
+    u.perfil?.imagens ||
+    [];
+
+  if (Array.isArray(extras)) extras.forEach(pushUnique);
+
+  let idx = 0;
+
+  function renderDots() {
+    if (lista.length <= 1) return "";
+    return `
+      <div class="tdots" aria-label="Fotos do perfil">
+        ${lista
+        .map((_, i) => `<button class="tdot ${i === idx ? "active" : ""}" data-i="${i}" aria-label="Foto ${i + 1}"></button>`)
+        .join("")}
+      </div>
+    `;
+  }
+
+  function renderNav() {
+    if (lista.length <= 1) return "";
+    return `
+      <div class="tnav" aria-label="Navegação de fotos">
+        <button type="button" id="btnFotoPrev" aria-label="Foto anterior">‹</button>
+        <button type="button" id="btnFotoNext" aria-label="Próxima foto">›</button>
+      </div>
+    `;
+  }
+
+  const temFoto = lista.length > 0;
+  const fotoAtual = temFoto ? lista[idx] : "";
+
+  card.innerHTML = `
+    ${temFoto
+      ? `
+      <div class="tmedia">
+        <img class="tphoto-bg" src="${fotoAtual}" alt="" />
+        <img class="tphoto" src="${fotoAtual}" alt="Foto do perfil" />
+        <div class="toverlay"></div>
+        ${renderNav()}
+        ${renderDots()}
+      </div>
+    `
       : `
       <div class="tfallback">
         <div class="tbadgeBig">${(nome[0] || "D").toUpperCase()}</div>
@@ -206,26 +253,80 @@ function render(u) {
     </div>
   `;
 
+  // ======= helpers de navegação =======
+  function setFoto(i) {
+    if (!temFoto) return;
+    idx = (i + lista.length) % lista.length;
+
+    const bg = card.querySelector(".tphoto-bg");
+    const fg = card.querySelector(".tphoto");
+    if (bg) bg.src = lista[idx];
+    if (fg) fg.src = lista[idx];
+
+    // atualiza dots
+    card.querySelectorAll(".tdot").forEach((b, k) => {
+      b.classList.toggle("active", k === idx);
+    });
+  }
+
+  // setas
+  const prev = card.querySelector("#btnFotoPrev");
+  const next = card.querySelector("#btnFotoNext");
+
+  prev?.addEventListener("click", () => setFoto(idx - 1));
+  next?.addEventListener("click", () => setFoto(idx + 1));
+
+  // dots
+  card.querySelectorAll(".tdot").forEach((b) => {
+    b.addEventListener("click", () => setFoto(Number(b.dataset.i)));
+  });
+
+  // swipe mobile
+  let startX = null;
+  card.addEventListener("touchstart", (e) => {
+    startX = e.touches?.[0]?.clientX ?? null;
+  }, { passive: true });
+
+  card.addEventListener("touchend", (e) => {
+    if (startX == null || lista.length <= 1) return;
+    const endX = e.changedTouches?.[0]?.clientX ?? null;
+    if (endX == null) return;
+
+    const dx = endX - startX;
+    if (Math.abs(dx) < 35) return; // threshold
+    if (dx < 0) setFoto(idx + 1);
+    else setFoto(idx - 1);
+
+    startX = null;
+  }, { passive: true });
+
   // fallback se imagem quebrar
-  const img = card.querySelector(".tphoto");
-  if (img) {
-    img.onerror = () => {
-      card.innerHTML = `
-        <div class="tfallback">
-          <div class="tbadgeBig">${(nome[0] || "D").toUpperCase()}</div>
-          <div class="muted">Não foi possível carregar a foto</div>
-        </div>
-
-        ${boostAtivo ? `<div class="tboostBadge" title="Perfil em destaque">🔥 BOOST</div>` : ""}
-
-        <div class="tcontent">
-          <div class="tnameRow"><div class="tname">${nome}</div></div>
-          <div class="tchipRow">
-            ${loc ? `<span class="tchip">📍 ${loc}</span>` : ""}
+  const fg = card.querySelector(".tphoto");
+  if (fg) {
+    fg.onerror = () => {
+      // remove foto atual e tenta próxima
+      lista.splice(idx, 1);
+      if (lista.length === 0) {
+        card.innerHTML = `
+          <div class="tfallback">
+            <div class="tbadgeBig">${(nome[0] || "D").toUpperCase()}</div>
+            <div class="muted">Não foi possível carregar as fotos</div>
           </div>
-          ${bio ? `<div class="tbio">${bio}</div>` : ""}
-        </div>
-      `;
+
+          ${boostAtivo ? `<div class="tboostBadge" title="Perfil em destaque">🔥 BOOST</div>` : ""}
+
+          <div class="tcontent">
+            <div class="tnameRow"><div class="tname">${nome}</div></div>
+            <div class="tchipRow">
+              ${loc ? `<span class="tchip">📍 ${loc}</span>` : ""}
+            </div>
+            ${bio ? `<div class="tbio">${bio}</div>` : ""}
+          </div>
+        `;
+        return;
+      }
+      if (idx >= lista.length) idx = 0;
+      setFoto(idx);
     };
   }
 }
@@ -235,7 +336,7 @@ function proximo() {
   render(atual);
 }
 
-// ======== API: carregar feed ========
+// ======== API ========
 async function carregarPreferencias() {
   try {
     const pref = await apiFetch("/busca/preferencias");
@@ -263,7 +364,8 @@ async function carregarComFiltros() {
   try {
     setMsg("Carregando...");
     const r = await apiFetch(`/busca${qs ? `?${qs}` : ""}`);
-    fila = Array.isArray(r) ? r : r.data || [];
+
+    fila = Array.isArray(r) ? r : (r?.data || []);
     setMsg("");
     proximo();
 
@@ -273,7 +375,7 @@ async function carregarComFiltros() {
   }
 }
 
-// ======== Curtir/Pular/Bloquear/Denunciar ========
+// ======== ações ========
 document.getElementById("btnCurtir").onclick = async () => {
   if (!atual) return;
   await curtir(atual.id);
@@ -334,21 +436,20 @@ async function curtir(paraUsuarioId) {
   }
 }
 
-// ======== Limite Curtidas ========
+// ======== limite curtidas ========
 function mostrarLimiteCurtidas() {
   const el = document.getElementById("limiteCurtidasOverlay");
   if (!el) return;
   el.classList.remove("hidden");
 }
 
-const btnFecharLimite = document.getElementById("btnFecharLimite");
-btnFecharLimite?.addEventListener("click", () => {
+document.getElementById("btnFecharLimite")?.addEventListener("click", () => {
   const el = document.getElementById("limiteCurtidasOverlay");
   if (!el) return;
   el.classList.add("hidden");
 });
 
-// ======== Eventos filtros ========
+// ======== eventos filtros ========
 btnAplicarFiltros?.addEventListener("click", async () => {
   await carregarComFiltros();
   toast("Filtros aplicados");
@@ -394,17 +495,16 @@ btnLimparFiltros?.addEventListener("click", async () => {
 
   await carregarComFiltros();
   toast("Filtros limpos");
-  // não fecho o modal aqui de propósito (pra você mexer novamente)
 });
 
-// Enter no campo de busca aplica filtros
+// Enter na busca
 fQ?.addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
     carregarComFiltros().then(() => closeFiltros());
   }
 });
 
-// ======== Init ========
+// ======== init ========
 async function init() {
   await carregarPreferencias();
   await carregarComFiltros();

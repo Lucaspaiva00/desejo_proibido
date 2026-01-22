@@ -1,16 +1,21 @@
 /* =========================================================
-   dating.css — PREMIUM + CONVERSÃO (BLACK + RED)
+   dating.css — PREMIUM + CONVERSÃO (BLACK + WINE RED)
+   ✅ fundo premium (vinheta vinho suave)
+   ✅ sem faixas marcadas
+   ✅ sem duplicações de ::before
+   ✅ grain mínimo (anti-banding)
 ========================================================= */
 
 :root {
-    --bg1: #0B0B0B;
-    --bg2: #070707;
+    --bg0: #050407;
+    --bg1: #0A0710;
+    --bg2: #0E0A14;
 
-    --panel: #121212;
-    --panel2: #161616;
+    --panel: #121214;
+    --panel2: #17171B;
 
     --card: rgba(255, 255, 255, .06);
-    --card2: rgba(255, 255, 255, .09);
+    --card2: rgba(255, 255, 255, .10);
     --border: rgba(255, 255, 255, .12);
 
     --text: #FFFFFF;
@@ -19,12 +24,15 @@
     --red: #C1121F;
     --red-hover: #E10613;
 
+    /* vinho premium */
+    --wine: rgba(193, 18, 31, .18);
+    --wineDeep: rgba(66, 8, 16, .72);
+
     --shadow: 0 18px 60px rgba(0, 0, 0, .62);
     --shadow2: 0 10px 30px rgba(0, 0, 0, .35);
 
     --radius: 18px;
     --radius2: 14px;
-
     --tap: 44px;
 }
 
@@ -41,13 +49,43 @@ html {
 
 body {
     margin: 0;
+    min-height: 100vh;
     color: var(--text);
     font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-    min-height: 100vh;
+
+    /* ✅ base limpa premium */
     background:
-        radial-gradient(900px 600px at 50% -10%, rgba(193, 18, 31, .14), transparent 60%),
-        radial-gradient(900px 600px at 80% 20%, rgba(193, 18, 31, .08), transparent 60%),
-        linear-gradient(180deg, var(--bg2), var(--bg1));
+        radial-gradient(1200px 800px at 50% -20%, rgba(193, 18, 31, .10), transparent 60%),
+        radial-gradient(900px 700px at 12% 10%, rgba(193, 18, 31, .06), transparent 60%),
+        radial-gradient(900px 700px at 88% 15%, rgba(193, 18, 31, .06), transparent 60%),
+        linear-gradient(180deg, var(--bg2), var(--bg0));
+}
+
+/* ✅ vinheta vinho suave (sem faixa marcada) */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+        radial-gradient(55% 140% at 0% 50%, var(--wineDeep), transparent 62%),
+        radial-gradient(55% 140% at 100% 50%, var(--wineDeep), transparent 62%),
+        radial-gradient(900px 500px at 50% 110%, rgba(0, 0, 0, .55), transparent 55%);
+    opacity: .32;
+    filter: blur(14px);
+}
+
+/* ✅ grain mínimo anti-banding */
+body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E");
+    opacity: .035;
+    mix-blend-mode: soft-light;
 }
 
 a {
@@ -80,8 +118,15 @@ button {
     width: 100%;
 }
 
+/* garante conteúdo acima da vinheta */
+.topnav,
+.wrap {
+    position: relative;
+    z-index: 1;
+}
+
 /* =========================
-   TOPNAV (DESKTOP PADRÃO)
+   TOPNAV (DESKTOP)
 ========================= */
 .topnav {
     position: sticky;
@@ -91,9 +136,11 @@ button {
     align-items: center;
     gap: 12px;
     padding: 12px 14px;
-    background: rgba(10, 10, 14, .72);
+
+    /* ✅ mais premium */
+    background: rgba(10, 10, 14, .58);
     border-bottom: 1px solid rgba(255, 255, 255, .10);
-    backdrop-filter: blur(12px);
+    backdrop-filter: blur(16px);
 }
 
 .brand {
@@ -118,7 +165,7 @@ button {
     align-items: center;
     justify-content: center;
     font-weight: 950;
-    background: linear-gradient(180deg, var(--red), #8f0d16);
+    background: #8B0000;
     border: 1px solid rgba(255, 255, 255, .12);
     box-shadow: 0 14px 30px rgba(193, 18, 31, .18);
 }
@@ -143,9 +190,11 @@ button {
     opacity: 1;
 }
 
+/* ✅ active premium (corrigido) */
 .navlinks a.active {
-    background: rgba(193, 18, 31, .14);
-    border: 1px solid rgba(193, 18, 31, .22);
+    background: #8B0000;
+    border: 1px solid rgba(193, 18, 31, .30);
+    box-shadow: 0 10px 26px rgba(193, 18, 31, .14);
     opacity: 1;
 }
 
@@ -420,7 +469,7 @@ textarea {
     border-top: 1px solid rgba(255, 255, 255, .08);
 }
 
-@media (max-width: 720px) {
+@media (max-width:720px) {
     .navlinks-desktop {
         display: none;
     }
@@ -435,7 +484,7 @@ textarea {
 }
 
 /* =========================================================
-   FEED — TINDER UI (mantém sua estrutura)
+   FEED — TINDER UI
 ========================================================= */
 .feed-top {
     display: flex;
@@ -457,6 +506,12 @@ textarea {
     overflow: hidden;
     border-radius: 26px;
     position: relative;
+
+    /* ✅ sombra premium */
+    box-shadow:
+        0 30px 90px rgba(0, 0, 0, .78),
+        0 0 0 1px rgba(255, 255, 255, .08),
+        0 0 70px rgba(193, 18, 31, .10);
 }
 
 .tcard-inner {
@@ -466,13 +521,16 @@ textarea {
     background: rgba(255, 255, 255, .05);
 }
 
-@media (max-width: 520px) {
+@media (max-width:520px) {
     .tcard-inner {
         height: calc(100vh - 180px);
         min-height: 520px;
     }
 }
 
+/* =========================
+   FOTO / OVERLAY / TEXTO
+========================= */
 .tphoto {
     position: absolute;
     inset: 0;
@@ -486,12 +544,12 @@ textarea {
 .toverlay {
     position: absolute;
     inset: 0;
-    background:
-        linear-gradient(to top,
-            rgba(0, 0, 0, .86) 0%,
-            rgba(0, 0, 0, .52) 32%,
-            rgba(0, 0, 0, .12) 58%,
+    background: linear-gradient(to top,
+            rgba(0, 0, 0, .88) 0%,
+            rgba(0, 0, 0, .55) 32%,
+            rgba(0, 0, 0, .14) 58%,
             rgba(0, 0, 0, 0) 72%);
+    pointer-events: none;
 }
 
 .tcontent {
@@ -515,7 +573,7 @@ textarea {
     font-size: 24px;
     font-weight: 950;
     letter-spacing: .2px;
-    text-shadow: 0 12px 30px rgba(0, 0, 0, .7);
+    text-shadow: 0 12px 30px rgba(0, 0, 0, .70);
 }
 
 .tbio {
@@ -570,7 +628,9 @@ textarea {
     background: rgba(255, 255, 255, .08);
 }
 
-/* Botões flutuantes */
+/* =========================
+   BOTÕES FLUTUANTES
+========================= */
 .tactions {
     position: absolute;
     left: 0;
@@ -626,7 +686,7 @@ textarea {
     border: 0;
 }
 
-@media (max-width: 520px) {
+@media (max-width:520px) {
     .tbtn {
         width: 52px;
         height: 52px;
@@ -663,7 +723,7 @@ textarea {
     border-radius: 20px;
     padding: 28px 22px;
     text-align: center;
-    box-shadow: 0 30px 80px rgba(0, 0, 0, .8);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, .80);
     animation: popIn .25s ease;
 }
 
@@ -706,7 +766,7 @@ textarea {
 }
 
 .btn-secondary:hover {
-    background: rgba(255, 255, 255, .2);
+    background: rgba(255, 255, 255, .20);
 }
 
 @keyframes popIn {
@@ -763,7 +823,7 @@ textarea {
     border-color: rgba(193, 18, 31, .35);
 }
 
-@media (max-width: 720px) {
+@media (max-width:720px) {
     .toast {
         top: 70px;
     }
@@ -785,4 +845,112 @@ textarea {
     backdrop-filter: blur(10px);
     box-shadow: 0 16px 35px rgba(0, 0, 0, .45);
     z-index: 5;
+}
+
+/* =========================================================
+   GALERIA DE FOTOS NO CARD
+   - fundo blur + foto contain
+========================================================= */
+.tmedia {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+}
+
+/* fundo preenchendo com blur */
+.tphoto-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: blur(18px) brightness(.75);
+    transform: scale(1.08);
+}
+
+/* foto principal sem cortar */
+.tphoto {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
+}
+
+/* overlay já existe (acima) */
+.toverlay {
+    pointer-events: none;
+}
+
+/* setas */
+.tnav {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 10px;
+    pointer-events: none;
+    z-index: 6;
+}
+
+.tnav button {
+    pointer-events: auto;
+    width: 42px;
+    height: 42px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, .18);
+    background: rgba(0, 0, 0, .35);
+    color: #fff;
+    font-size: 18px;
+    font-weight: 900;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    transition: .12s ease;
+}
+
+.tnav button:hover {
+    filter: brightness(1.08);
+}
+
+.tnav button:active {
+    transform: translateY(1px) scale(.98);
+}
+
+/* bolinhas */
+.tdots {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 64px;
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    z-index: 6;
+    pointer-events: auto;
+}
+
+.tdot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, .30);
+    background: rgba(255, 255, 255, .18);
+    cursor: pointer;
+    transition: .12s ease;
+}
+
+.tdot.active {
+    background: rgba(255, 255, 255, .85);
+    border-color: rgba(255, 255, 255, .60);
+}
+
+/* no mobile: setas menores */
+@media (max-width:520px) {
+    .tnav button {
+        width: 38px;
+        height: 38px;
+        font-size: 16px;
+    }
 }

@@ -5,19 +5,20 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Feed</title>
+
     <link rel="stylesheet" href="css/dating.css" />
     <link rel="stylesheet" href="css/filtros.css" />
 </head>
 
 <body>
-    <!-- TOPNAV: Desktop normal + Mobile com menu sanduíche -->
+    <!-- TOPNAV -->
     <nav class="topnav" role="navigation" aria-label="Navegação principal">
         <div class="brand">
             <div class="brand-badge">DP</div>
             <span class="brand-name">Desejo Proibido</span>
         </div>
 
-        <!-- Desktop links -->
+        <!-- Links desktop -->
         <div class="navlinks navlinks-desktop" aria-label="Links do menu">
             <a href="home.html" class="active">Feed</a>
             <a href="perfil.html">Perfil</a>
@@ -28,10 +29,22 @@
 
         <div class="spacer"></div>
 
-        <!-- Botão sair (sempre visível) -->
+        <!-- ✅ FILTROS NO CABEÇALHO -->
+        <div class="nav-filtros" aria-label="Filtros do feed">
+            <!-- <div id="filtrosResumo" class="nav-chips" aria-label="Resumo dos filtros">
+                <span class="fchip">Recentes</span>
+                <span class="fchip muted">Sem filtros</span>
+            </div> -->
+
+            <button id="btnOpenFiltros" class="btn btn-ghost nav-filtros-btn" type="button" title="Abrir filtros">
+                ⚙️ <span class="nav-filtros-text">Filtros</span>
+            </button>
+        </div>
+
+        <!-- Sair -->
         <button id="btnSair" class="btn btn-ghost">Sair</button>
 
-        <!-- Botão hambúrguer (mobile) -->
+        <!-- Hambúrguer (mobile) -->
         <button class="nav-toggle" id="navToggle" aria-label="Abrir menu" aria-expanded="false"
             aria-controls="navDrawer">
             <span></span><span></span><span></span>
@@ -67,20 +80,6 @@
     </aside>
 
     <div class="wrap">
-        <div class="feed-top">
-            <!-- BAR TOP DO FEED: filtro compacto + botão modal -->
-            <div class="feedbar">
-                <button id="btnOpenFiltros" class="btn btn-ghost feedbar-btn" title="Abrir filtros">
-                    ⚙️ Filtros
-                </button>
-
-                <div class="feedbar-chips" id="filtrosResumo" aria-label="Resumo dos filtros">
-                    <span class="fchip">Recentes</span>
-                    <span class="fchip muted">Sem filtros</span>
-                </div>
-            </div>
-        </div>
-
         <div class="feed-stage">
             <!-- Card Tinder -->
             <div class="tcard panel" id="tcard">
@@ -96,7 +95,7 @@
         </div>
     </div>
 
-    <!-- ✅ MODAL FILTROS (NOVO) -->
+    <!-- ✅ MODAL FILTROS -->
     <div class="fmodal-overlay" id="filtrosOverlay" aria-hidden="true">
         <div class="fmodal" role="dialog" aria-modal="true" aria-label="Filtros do feed">
             <div class="fmodal-head">
@@ -200,7 +199,7 @@
     </div>
 
     <script>
-        // Drawer Mobile (hambúrguer) - padrão Tinder
+        // Drawer Mobile
         const navToggle = document.getElementById("navToggle");
         const navDrawer = document.getElementById("navDrawer");
         const navOverlay = document.getElementById("navOverlay");
