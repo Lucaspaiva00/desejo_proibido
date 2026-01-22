@@ -25,6 +25,42 @@ const btnAplicarFiltros = document.getElementById("btnAplicarFiltros");
 const btnSalvarPrefs = document.getElementById("btnSalvarPrefs");
 const btnLimparFiltros = document.getElementById("btnLimparFiltros");
 
+// ======== Modal filtros (NOVO) ========
+const filtrosOverlay = document.getElementById("filtrosOverlay");
+const btnOpenFiltros = document.getElementById("btnOpenFiltros");
+const btnCloseFiltros = document.getElementById("btnCloseFiltros");
+const filtrosResumo = document.getElementById("filtrosResumo");
+
+function openFiltros() {
+  if (!filtrosOverlay) return;
+  filtrosOverlay.classList.add("show");
+  filtrosOverlay.setAttribute("aria-hidden", "false");
+  document.body.classList.add("no-scroll");
+
+  // foco no primeiro campo
+  setTimeout(() => fQ?.focus(), 10);
+}
+
+function closeFiltros() {
+  if (!filtrosOverlay) return;
+  filtrosOverlay.classList.remove("show");
+  filtrosOverlay.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("no-scroll");
+}
+
+btnOpenFiltros?.addEventListener("click", openFiltros);
+btnCloseFiltros?.addEventListener("click", closeFiltros);
+
+// fecha clicando fora
+filtrosOverlay?.addEventListener("click", (e) => {
+  if (e.target === filtrosOverlay) closeFiltros();
+});
+
+// fecha ESC (sem atrapalhar teu nav drawer)
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && filtrosOverlay?.classList.contains("show")) closeFiltros();
+});
+
 // ======== helpers ========
 function safe(s) {
   return (s ?? "").toString();
@@ -84,6 +120,43 @@ function montarQuery(f) {
   return qs.toString();
 }
 
+// ======== Resumo chips (NOVO) ========
+function renderResumoFiltros() {
+  if (!filtrosResumo) return;
+
+  const f = getFiltrosAtual();
+  const chips = [];
+
+  // ordenação
+  chips.push(f.ordenarPor === "boost" ? "Boost" : "Recentes");
+
+  if (f.q) chips.push(`Busca: ${f.q}`);
+  if (f.cidade) chips.push(`Cidade: ${f.cidade}`);
+  if (f.estado) chips.push(`UF: ${f.estado}`);
+  if (f.genero && f.genero !== "QUALQUER") chips.push(`Gênero: ${f.genero}`);
+  if (f.idadeMin != null || f.idadeMax != null) chips.push(`Idade: ${f.idadeMin ?? 18}-${f.idadeMax ?? 99}`);
+  if (f.somenteComFoto) chips.push("Com foto");
+  if (f.somenteVerificados) chips.push("Verificados");
+
+  if (chips.length <= 1) {
+    filtrosResumo.innerHTML = `
+      <span class="fchip">${chips[0]}</span>
+      <span class="fchip muted">Sem filtros</span>
+    `;
+    return;
+  }
+
+  // limita visualmente
+  const max = 4;
+  const show = chips.slice(0, max);
+  const rest = chips.length - show.length;
+
+  filtrosResumo.innerHTML = `
+    ${show.map(c => `<span class="fchip">${c}</span>`).join("")}
+    ${rest > 0 ? `<span class="fchip muted">+${rest}</span>` : ""}
+  `;
+}
+
 // ======== render ========
 function render(u) {
   if (!u) {
@@ -103,16 +176,14 @@ function render(u) {
   const loc = `${cidade} ${estado}`.trim();
 
   const fotoUrl = u.fotoPrincipal ? `${u.fotoPrincipal}` : "";
-
   const boostAtivo = isBoostAtivo(u.boostAte);
 
   card.innerHTML = `
     ${fotoUrl ? `<img class="tphoto" src="${fotoUrl}" alt="Foto" />` : ""}
 
-    ${
-      fotoUrl
-        ? `<div class="toverlay"></div>`
-        : `
+    ${fotoUrl
+      ? `<div class="toverlay"></div>`
+      : `
       <div class="tfallback">
         <div class="tbadgeBig">${(nome[0] || "D").toUpperCase()}</div>
         <div class="muted">Sem foto principal</div>
@@ -120,13 +191,7 @@ function render(u) {
     `
     }
 
-    ${
-      boostAtivo
-        ? `
-      <div class="tboostBadge" title="Perfil em destaque">🔥 BOOST</div>
-    `
-        : ""
-    }
+    ${boostAtivo ? `<div class="tboostBadge" title="Perfil em destaque">🔥 BOOST</div>` : ""}
 
     <div class="tcontent">
       <div class="tnameRow">
@@ -151,13 +216,7 @@ function render(u) {
           <div class="muted">Não foi possível carregar a foto</div>
         </div>
 
-        ${
-          boostAtivo
-            ? `
-          <div class="tboostBadge" title="Perfil em destaque">🔥 BOOST</div>
-        `
-            : ""
-        }
+        ${boostAtivo ? `<div class="tboostBadge" title="Perfil em destaque">🔥 BOOST</div>` : ""}
 
         <div class="tcontent">
           <div class="tnameRow"><div class="tname">${nome}</div></div>
@@ -176,23 +235,22 @@ function proximo() {
   render(atual);
 }
 
-// ======== API: carregar feed (agora usando /busca) ========
+// ======== API: carregar feed ========
 async function carregarPreferencias() {
   try {
     const pref = await apiFetch("/busca/preferencias");
 
-    // preenche UI com preferências
     if (fCidade) fCidade.value = pref.cidade || "";
     if (fEstado) fEstado.value = pref.estado || "";
     if (fGenero) fGenero.value = pref.generoAlvo || "QUALQUER";
     if (fIdadeMin) fIdadeMin.value = pref.idadeMin ?? "";
     if (fIdadeMax) fIdadeMax.value = pref.idadeMax ?? "";
-    if (fSomenteVerificado)
-      fSomenteVerificado.checked = !!pref.somenteVerificados;
+    if (fSomenteVerificado) fSomenteVerificado.checked = !!pref.somenteVerificados;
     if (fSomenteFoto) fSomenteFoto.checked = !!pref.somenteComFoto;
     if (fOrdenar) fOrdenar.value = pref.ordenarPor || "recent";
+
+    renderResumoFiltros();
   } catch (e) {
-    // sem travar o feed
     console.warn("Não carregou preferências:", e.message);
   }
 }
@@ -208,6 +266,8 @@ async function carregarComFiltros() {
     fila = Array.isArray(r) ? r : r.data || [];
     setMsg("");
     proximo();
+
+    renderResumoFiltros();
   } catch (e) {
     setMsg(e.message || "Erro ao carregar feed");
   }
@@ -263,7 +323,6 @@ document.getElementById("btnDenunciar").onclick = async () => {
 async function curtir(paraUsuarioId) {
   try {
     const r = await apiFetch(`/curtidas/${paraUsuarioId}`, { method: "POST" });
-
     setMsg(r.matchCriado ? "✅ Deu MATCH! (conversa criada)" : "✅ Curtido");
     proximo();
   } catch (e) {
@@ -293,13 +352,13 @@ btnFecharLimite?.addEventListener("click", () => {
 btnAplicarFiltros?.addEventListener("click", async () => {
   await carregarComFiltros();
   toast("Filtros aplicados");
+  closeFiltros();
 });
 
 btnSalvarPrefs?.addEventListener("click", async () => {
   try {
     const f = getFiltrosAtual();
 
-    // salva como preferências
     await apiFetch("/busca/preferencias", {
       method: "PUT",
       body: {
@@ -315,6 +374,8 @@ btnSalvarPrefs?.addEventListener("click", async () => {
     });
 
     toast("Preferências salvas ✅");
+    renderResumoFiltros();
+    closeFiltros();
   } catch (e) {
     alert("Erro ao salvar preferências: " + (e.message || e));
   }
@@ -333,17 +394,21 @@ btnLimparFiltros?.addEventListener("click", async () => {
 
   await carregarComFiltros();
   toast("Filtros limpos");
+  // não fecho o modal aqui de propósito (pra você mexer novamente)
 });
 
 // Enter no campo de busca aplica filtros
 fQ?.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") carregarComFiltros();
+  if (e.key === "Enter") {
+    carregarComFiltros().then(() => closeFiltros());
+  }
 });
 
 // ======== Init ========
 async function init() {
   await carregarPreferencias();
   await carregarComFiltros();
+  renderResumoFiltros();
 }
 
 init();

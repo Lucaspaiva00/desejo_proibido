@@ -1,3 +1,7 @@
+/* =========================
+   perfilmatch.css (Padronizado)
+   ========================= */
+
 .headRow {
     display: flex;
     align-items: center;
@@ -26,6 +30,7 @@
     border: 1px solid rgba(255, 255, 255, .10);
     background: rgba(255, 255, 255, .04);
     min-height: 420px;
+    box-shadow: 0 18px 55px rgba(0, 0, 0, .25);
 }
 
 .heroImg {
@@ -43,7 +48,8 @@
     justify-content: center;
     flex-direction: column;
     gap: 10px;
-    background: radial-gradient(1200px 500px at 30% 10%, rgba(255, 0, 95, .18), transparent 50%),
+    background:
+        radial-gradient(1200px 500px at 30% 10%, rgba(255, 0, 95, .18), transparent 50%),
         radial-gradient(800px 400px at 80% 20%, rgba(255, 180, 0, .10), transparent 50%),
         rgba(255, 255, 255, .03);
 }
@@ -55,13 +61,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 800;
+    font-weight: 900;
     background: rgba(255, 255, 255, .08);
     border: 1px solid rgba(255, 255, 255, .12);
 }
 
 .fbText {
-    font-weight: 700;
+    font-weight: 800;
 }
 
 .fbSub {
@@ -86,7 +92,7 @@
 
 .heroName {
     font-size: 20px;
-    font-weight: 800;
+    font-weight: 900;
 }
 
 .dot {
@@ -110,12 +116,13 @@
 .sideCard {
     border-radius: 18px;
     border: 1px solid rgba(255, 255, 255, .10);
-    background: rgba(255, 255, 255, .03);
+    background: rgba(0, 0, 0, .35);
     padding: 14px;
+    box-shadow: 0 12px 34px rgba(0, 0, 0, .25);
 }
 
 .sideTitle {
-    font-weight: 800;
+    font-weight: 900;
     margin-bottom: 10px;
 }
 
@@ -134,7 +141,7 @@
 }
 
 .tipTitle {
-    font-weight: 700;
+    font-weight: 800;
     margin-bottom: 4px;
 }
 
@@ -143,7 +150,7 @@
 }
 
 .sectionTitle {
-    font-weight: 800;
+    font-weight: 900;
     margin: 10px 0 10px;
 }
 
@@ -161,7 +168,7 @@
     border: 1px solid rgba(255, 255, 255, .10);
     background: rgba(255, 255, 255, .06);
     cursor: pointer;
-    transition: transform .12s ease, border-color .12s ease;
+    transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
 }
 
 .gFoto:hover {
@@ -207,19 +214,5 @@
 
     .photoHero {
         min-height: 320px;
-    }
-}
-
-@media (max-width: 520px) {
-    .panel {
-        width: 100% !important;
-    }
-
-    textarea.input {
-        min-height: 120px;
-    }
-
-    .btn {
-        min-height: 44px;
     }
 }

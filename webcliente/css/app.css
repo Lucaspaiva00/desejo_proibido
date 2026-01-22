@@ -1,16 +1,30 @@
 :root {
-    --bg: #0b0b0f;
-    --panel: #12121a;
-    --panel2: #151522;
+    /* ===== PREMIUM + CONVERSÃO (PRETO + VERMELHO) ===== */
+    --bg: #0B0B0B;
+    --panel: #121212;
+    --panel2: #161616;
+
+    --input: #1A1A1A;
+
     --border: rgba(255, 255, 255, .10);
-    --text: #f4f4f6;
-    --muted: rgba(255, 255, 255, .70);
+    --border2: rgba(255, 255, 255, .14);
+
+    --text: #FFFFFF;
+    --muted: rgba(255, 255, 255, .72);
     --muted2: rgba(255, 255, 255, .55);
-    --accent: #ff2a6d;
-    --accent2: #ffb100;
-    --danger: #ff3b3b;
-    --ok: #2fe57c;
-    --shadow: 0 18px 55px rgba(0, 0, 0, .55);
+
+    --red: #C1121F;
+    --red-hover: #E10613;
+
+    /* Efeitos premium (discretos) */
+    --shadow: 0 22px 70px rgba(0, 0, 0, .65);
+    --shadow2: 0 10px 30px rgba(0, 0, 0, .35);
+    --glow: 0 12px 28px rgba(193, 18, 31, .22);
+    --focus: 0 0 0 3px rgba(193, 18, 31, .35);
+
+    --radius: 18px;
+    --radius2: 14px;
+    --tap: 44px;
 }
 
 * {
@@ -27,10 +41,9 @@ body {
     color: var(--text);
     font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
     background:
-        radial-gradient(1200px 800px at 50% 0%, rgba(255, 42, 109, .14), transparent 60%),
-        radial-gradient(900px 700px at 80% 20%, rgba(255, 177, 0, .10), transparent 55%),
-        radial-gradient(900px 700px at 20% 40%, rgba(120, 90, 255, .08), transparent 55%),
-        var(--bg);
+        radial-gradient(900px 520px at 50% -10%, rgba(193, 18, 31, .14), transparent 55%),
+        radial-gradient(700px 520px at 80% 25%, rgba(193, 18, 31, .08), transparent 60%),
+        linear-gradient(180deg, #090909, var(--bg));
 }
 
 a {
@@ -41,7 +54,7 @@ a {
 .link {
     color: var(--text);
     font-weight: 800;
-    opacity: .9;
+    opacity: .92;
 }
 
 .link:hover {
@@ -51,38 +64,6 @@ a {
 
 .muted {
     color: var(--muted);
-}
-
-/* ====== NAV (se você usar nas outras telas) ====== */
-.topnav {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 12px 18px;
-    background: rgba(10, 10, 14, .72);
-    border-bottom: 1px solid var(--border);
-    backdrop-filter: blur(10px);
-}
-
-.topnav a {
-    padding: 8px 10px;
-    border-radius: 10px;
-    font-weight: 800;
-    opacity: .85;
-}
-
-.topnav a:hover {
-    background: rgba(255, 255, 255, .06);
-    opacity: 1;
-}
-
-.topnav a.active {
-    background: rgba(255, 42, 109, .14);
-    border: 1px solid rgba(255, 42, 109, .25);
-    opacity: 1;
 }
 
 /* ====== AUTH LAYOUT ====== */
@@ -104,11 +85,11 @@ a {
 
 .auth-card {
     width: min(520px, 100%);
-    background: linear-gradient(180deg, rgba(255, 255, 255, .04), rgba(255, 255, 255, .02));
-    border: 1px solid var(--border);
-    border-radius: 18px;
+    background: linear-gradient(180deg, var(--panel), var(--panel2));
+    border: 1px solid rgba(255, 255, 255, .08);
+    border-radius: 20px;
     box-shadow: var(--shadow);
-    padding: 18px;
+    padding: 20px;
     overflow: hidden;
 }
 
@@ -134,17 +115,18 @@ a {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 900;
+    font-weight: 950;
     letter-spacing: .5px;
     background:
-        radial-gradient(18px 18px at 30% 30%, rgba(255, 255, 255, .25), transparent 65%),
-        linear-gradient(135deg, rgba(255, 42, 109, .95), rgba(255, 177, 0, .85));
-    box-shadow: 0 14px 30px rgba(255, 42, 109, .18);
+        radial-gradient(18px 18px at 30% 30%, rgba(255, 255, 255, .20), transparent 65%),
+        linear-gradient(180deg, rgba(193, 18, 31, 1), rgba(128, 10, 18, 1));
+    border: 1px solid rgba(255, 255, 255, .12);
+    box-shadow: 0 18px 40px rgba(193, 18, 31, .18);
 }
 
 .brand-title {
     font-size: 20px;
-    font-weight: 900;
+    font-weight: 950;
     line-height: 1.1;
 }
 
@@ -168,17 +150,19 @@ a {
 }
 
 .field-label {
-    font-size: 13px;
+    font-size: 12px;
     color: var(--muted);
-    font-weight: 700;
+    font-weight: 750;
+    letter-spacing: .2px;
 }
 
 input {
     width: 100%;
+    height: 50px;
     border-radius: 14px;
-    padding: 12px 12px;
+    padding: 0 14px;
     border: 1px solid rgba(255, 255, 255, .10);
-    background: rgba(10, 10, 14, .55);
+    background: rgba(10, 10, 14, .45);
     color: var(--text);
     outline: none;
     font-size: 14px;
@@ -189,8 +173,8 @@ input::placeholder {
 }
 
 input:focus {
-    border-color: rgba(255, 42, 109, .45);
-    box-shadow: 0 0 0 4px rgba(255, 42, 109, .12);
+    border-color: rgba(193, 18, 31, .55);
+    box-shadow: var(--focus);
 }
 
 .field-inline {
@@ -205,14 +189,14 @@ input:focus {
 
 .icon-btn {
     flex: 0 0 auto;
-    height: 44px;
-    min-width: 44px;
+    height: 50px;
+    min-width: 50px;
     border-radius: 14px;
     border: 1px solid rgba(255, 255, 255, .10);
     background: rgba(255, 255, 255, .06);
     color: var(--text);
     cursor: pointer;
-    font-weight: 900;
+    font-weight: 950;
 }
 
 .icon-btn:hover {
@@ -228,24 +212,32 @@ input:focus {
 .btn-primary {
     margin-top: 6px;
     width: 100%;
+    height: 52px;
     border: 0;
-    border-radius: 14px;
-    padding: 12px 14px;
+    border-radius: 16px;
     cursor: pointer;
-    font-weight: 900;
-    color: #0b0b0f;
-    background: linear-gradient(135deg, rgba(255, 42, 109, 1), rgba(255, 177, 0, 1));
-    box-shadow: 0 14px 40px rgba(255, 42, 109, .18);
+    font-weight: 950;
+    letter-spacing: .3px;
+    color: #fff;
+    background: linear-gradient(180deg, var(--red), #8f0d16);
+    box-shadow: var(--glow);
+    transition: .15s ease;
 }
 
 .btn-primary:hover {
-    filter: brightness(1.05);
+    background: linear-gradient(180deg, var(--red-hover), #b0121d);
+    transform: translateY(-1px);
+}
+
+.btn-primary:active {
+    transform: translateY(0px);
 }
 
 .btn-primary:disabled {
     opacity: .6;
     cursor: not-allowed;
     filter: none;
+    transform: none;
 }
 
 .auth-links {
@@ -256,7 +248,7 @@ input:focus {
 
 .alert {
     display: none;
-    margin-top: 4px;
+    margin-top: 6px;
     padding: 10px 12px;
     border-radius: 14px;
     border: 1px solid rgba(255, 255, 255, .10);
@@ -282,7 +274,7 @@ input:focus {
     opacity: .9;
 }
 
-/* ====== OUTROS COMPONENTES DO APP (caso você use) ====== */
+/* ====== OUTROS COMPONENTES DO APP ====== */
 .wrap {
     max-width: 1100px;
     margin: 0 auto;
@@ -290,10 +282,10 @@ input:focus {
 }
 
 .panel {
-    background: linear-gradient(180deg, rgba(255, 255, 255, .03), rgba(255, 255, 255, .02));
-    border: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(255, 255, 255, .05), rgba(255, 255, 255, .02));
+    border: 1px solid rgba(255, 255, 255, .10);
     border-radius: 18px;
-    box-shadow: var(--shadow);
+    box-shadow: var(--shadow2);
 }
 
 .card {
@@ -319,11 +311,38 @@ input:focus {
     margin-bottom: 10px;
 }
 
+/* ====== CHECK (termos) ====== */
+.check {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, .10);
+    background: rgba(10, 10, 14, .35);
+    color: rgba(255, 255, 255, .85);
+    font-size: 13px;
+}
+
+.check input {
+    width: auto;
+    margin-top: 3px;
+}
+
+.check a {
+    text-decoration: underline;
+    color: var(--red-hover);
+}
+
+.check a:hover {
+    color: #FF1E2D;
+}
+
 /* ====== RESPONSIVO ====== */
 @media (max-width: 420px) {
     .auth-card {
-        padding: 14px;
-        border-radius: 16px;
+        padding: 16px;
+        border-radius: 18px;
     }
 
     .brand-title {
@@ -341,31 +360,10 @@ input:focus {
     }
 
     .btn-primary {
-        border-radius: 12px;
+        border-radius: 14px;
     }
 
     .icon-btn {
         border-radius: 12px;
     }
-}
-
-.check {
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
-    padding: 10px 12px;
-    border-radius: 14px;
-    border: 1px solid rgba(255, 255, 255, .10);
-    background: rgba(10, 10, 14, .45);
-    color: rgba(255, 255, 255, .85);
-    font-size: 13px;
-}
-
-.check input {
-    width: auto;
-    margin-top: 3px;
-}
-
-.check a {
-    text-decoration: underline;
 }

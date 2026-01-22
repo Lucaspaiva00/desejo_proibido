@@ -1,30 +1,128 @@
-/* Painel filtros */
-.filtros {
-    margin-top: 12px;
-    padding: 14px;
+/* =========================
+   filtros.css — MODAL PREMIUM
+========================= */
+
+:root {
+    --f-stroke: rgba(255, 255, 255, .12);
+    --f-stroke2: rgba(255, 255, 255, .18);
+    --f-bg: rgba(255, 255, 255, .06);
+    --f-bg2: rgba(0, 0, 0, .55);
+    --f-shadow: 0 30px 90px rgba(0, 0, 0, .75);
 }
 
-.filtros-head {
+/* Barra compacta do feed */
+.feedbar {
+    width: 100%;
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
-    gap: 10px;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.feedbar-btn {
+    min-width: 132px;
+}
+
+.feedbar-chips {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
     flex-wrap: wrap;
 }
 
-.filtros-title {
-    font-weight: 800;
-    font-size: 15px;
-}
-
-.filtros-sub {
+.fchip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, .12);
+    background: rgba(255, 255, 255, .06);
     font-size: 12px;
-    opacity: .75;
+    font-weight: 900;
+    opacity: .92;
+    white-space: nowrap;
 }
 
-/* grid responsivo */
+.fchip.muted {
+    opacity: .72;
+    font-weight: 800;
+}
+
+/* Overlay do modal */
+.fmodal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .72);
+    backdrop-filter: blur(6px);
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.fmodal-overlay.show {
+    display: flex;
+}
+
+/* Caixa do modal */
+.fmodal {
+    width: min(760px, 100%);
+    max-height: min(86vh, 760px);
+    background: rgba(10, 10, 16, .90);
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: 20px;
+    box-shadow: var(--f-shadow);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Cabeçalho */
+.fmodal-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 14px 14px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, .10);
+}
+
+.fmodal-title {
+    font-weight: 950;
+    font-size: 16px;
+    letter-spacing: .2px;
+}
+
+.fmodal-sub {
+    font-size: 12px;
+    margin-top: 2px;
+    opacity: .78;
+}
+
+/* Corpo com scroll */
+.fmodal-body {
+    padding: 14px;
+    overflow: auto;
+}
+
+/* Footer fixo */
+.fmodal-foot {
+    padding: 12px 14px;
+    border-top: 1px solid rgba(255, 255, 255, .10);
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    background: rgba(0, 0, 0, .25);
+}
+
+/* Grid interno do modal */
 .filtros-grid {
-    margin-top: 12px;
     display: grid;
     grid-template-columns: repeat(12, 1fr);
     gap: 10px;
@@ -46,31 +144,59 @@
     grid-column: span 3;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 740px) {
 
     .col-6,
     .col-4,
     .col-3 {
         grid-column: span 12;
     }
+
+    .fmodal {
+        max-height: 90vh;
+    }
+
+    .fmodal-foot {
+        justify-content: stretch;
+    }
+
+    .fmodal-foot .btn {
+        flex: 1;
+    }
 }
 
-/* Inputs no padrão do teu tema */
+.flabel {
+    display: block;
+    font-size: 12px;
+    font-weight: 900;
+    opacity: .85;
+    margin: 2px 0 6px;
+}
+
+/* Inputs glass premium */
 .finput,
 .fselect {
     width: 100%;
-    padding: 10px 12px;
-    border-radius: 12px;
+    padding: 12px 12px;
+    border-radius: 14px;
     background: rgba(255, 255, 255, .06);
     border: 1px solid rgba(255, 255, 255, .12);
     color: #fff;
     outline: none;
+    transition: .12s ease;
 }
 
 .finput::placeholder {
     color: rgba(255, 255, 255, .55);
 }
 
+.finput:focus,
+.fselect:focus {
+    border-color: rgba(193, 18, 31, .40);
+    box-shadow: 0 0 0 3px rgba(193, 18, 31, .16);
+}
+
+/* Checkboxes alinhadas */
 .frow {
     display: flex;
     gap: 14px;
@@ -80,15 +206,33 @@
 
 .fcheck {
     display: flex;
-    gap: 8px;
+    gap: 10px;
     align-items: center;
     font-size: 13px;
-    opacity: .85;
+    font-weight: 900;
+    opacity: .90;
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, .10);
+    background: rgba(255, 255, 255, .03);
 }
 
-.factions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    flex-wrap: wrap;
+.fcheck input {
+    width: 18px;
+    height: 18px;
+}
+
+/* Scrollbar do modal */
+.fmodal-body::-webkit-scrollbar {
+    width: 10px;
+}
+
+.fmodal-body::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, .14);
+    border-radius: 999px;
+    border: 2px solid rgba(0, 0, 0, .35);
+}
+
+.fmodal-body::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, .20);
 }
