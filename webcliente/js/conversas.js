@@ -1,4 +1,4 @@
-import { apiFetch, logout } from "./api.js";
+import { apiFetch, logout, API_BASE } from "./api.js";
 
 const msg = document.getElementById("msg");
 
@@ -24,6 +24,14 @@ const btnGift = document.getElementById("btnGift");
 const btnCall = document.getElementById("btnCall");
 const minutosPill = document.getElementById("minutosPill");
 
+// Paywall / Premium UI
+const paywall = document.getElementById("paywall");
+const premiumBadge = document.getElementById("premiumBadge");
+const btnAssinar = document.getElementById("btnAssinar");
+const btnEntendi = document.getElementById("btnEntendi");
+const btnAssinarTopo = document.getElementById("btnAssinarTopo");
+const chatPanel = document.querySelector(".panel.right.chat");
+
 // Modal presentes
 const giftOverlay = document.getElementById("giftOverlay");
 const giftClose = document.getElementById("giftClose");
@@ -33,15 +41,10 @@ const giftList = document.getElementById("giftList");
 // ✅ Auth robusto (não depende da chave)
 // =====================================
 function safeJsonParse(v) {
-    try {
-        return JSON.parse(v);
-    } catch {
-        return null;
-    }
+    try { return JSON.parse(v); } catch { return null; }
 }
 
 function getAuth() {
-    // tenta achar token/usuário em várias chaves comuns do projeto
     const keysUser = ["usuarioLogado", "usuario", "user", "authUser"];
     const keysToken = ["token", "authToken", "dp_token", "tokenJwt"];
 
@@ -50,23 +53,16 @@ function getAuth() {
         const v = localStorage.getItem(k);
         if (v) {
             const obj = safeJsonParse(v);
-            if (obj) {
-                usuario = obj;
-                break;
-            }
+            if (obj) { usuario = obj; break; }
         }
     }
 
     let token = null;
     for (const k of keysToken) {
         const v = localStorage.getItem(k);
-        if (v) {
-            token = v;
-            break;
-        }
+        if (v) { token = v; break; }
     }
 
-    // fallback: se você guarda um objeto "auth" com { token, usuario }
     const authRaw = localStorage.getItem("auth");
     if (authRaw) {
         const a = safeJsonParse(authRaw);
@@ -76,8 +72,6 @@ function getAuth() {
         }
     }
 
-    // fallback final: se o login guardou só "usuarioLogado" e token não
-    // (nesse caso, o api.js provavelmente falha; a gente tenta puxar de "usuarioLogado.token")
     if (!token && usuario?.token) token = usuario.token;
 
     return { usuario, token };
@@ -93,6 +87,8 @@ if (auth.token && !localStorage.getItem("token")) {
 // Estado
 const state = {
     usuario: auth.usuario,
+    premiumAtivo: false,
+
     conversaId: null,
     outroUsuarioId: null,
     conversas: [],
@@ -113,6 +109,7 @@ if (!state.usuario && !localStorage.getItem("token")) {
 // Helpers
 // ==============================
 function setMsg(text, type = "muted") {
+    if (!msg) return;
     msg.className = `msgline ${type}`;
     msg.textContent = text || "";
 }
@@ -147,6 +144,46 @@ document.addEventListener("keydown", (e) => {
 });
 
 // ==============================
+// Premium UI
+// ==============================
+function setPremiumUI(isPremium) {
+    state.premiumAtivo = !!isPremium;
+
+    if (premiumBadge) {
+        premiumBadge.textContent = isPremium ? "✅ Conta Premium Ativa" : "🔒 Conta Premium Inativa";
+    }
+
+    if (btnAssinarTopo) btnAssinarTopo.style.display = isPremium ? "none" : "inline-flex";
+    if (paywall) paywall.hidden = isPremium;
+
+    const lock = !isPremium;
+
+    // só libera se existir conversa aberta
+    const hasChat = !!state.conversaId;
+
+    if (texto) texto.disabled = lock || !hasChat;
+    if (btnEnviar) btnEnviar.disabled = lock || !hasChat;
+    if (btnGift) btnGift.disabled = lock || !hasChat;
+    if (btnCall) btnCall.disabled = lock || !hasChat;
+
+    if (chatPanel) chatPanel.classList.toggle("locked", lock);
+}
+
+function openCheckout() {
+    // ✅ aqui você joga pra página real de assinatura
+    // Ex: location.href = "premium.html";
+    alert("Abrir checkout do Premium (implementar link real).");
+}
+
+btnAssinar?.addEventListener("click", openCheckout);
+btnAssinarTopo?.addEventListener("click", openCheckout);
+btnEntendi?.addEventListener("click", () => {
+    // só fecha overlay visualmente (não destrava)
+    if (paywall) paywall.hidden = true;
+    setTimeout(() => { if (!state.premiumAtivo) paywall.hidden = false; }, 900);
+});
+
+// ==============================
 // API endpoints
 // ==============================
 const API = {
@@ -160,7 +197,63 @@ const API = {
     saldoMinutos: "/ligacoes/saldo",
     iniciarLigacao: "/ligacoes/iniciar",
     finalizarLigacao: "/ligacoes/finalizar",
+
+    // ✅ Premium (se existir no backend)
+    premiumStatus: "/premium/status",
 };
+
+// ==============================
+// Checar Premium
+// - tenta endpoint /premium/status
+// - fallback: tenta ler do usuario local
+// ==============================
+async function checarPremium() {
+    // fallback local (se você já salva isso no login)
+    const local =
+        !!state.usuario?.premiumAtivo ||
+        !!state.usuario?.isPremium ||
+        !!state.usuario?.premium;
+
+    try {
+        // tenta endpoint (recomendado)
+        const r = await apiFetch(API.premiumStatus);
+        // aceita formatos diferentes
+        const ativo =
+            !!r?.premiumAtivo ||
+            !!r?.ativo ||
+            !!r?.isPremium ||
+            !!r?.premium;
+
+        setPremiumUI(ativo);
+        return;
+    } catch (e) {
+        // se endpoint não existe ainda, usa fallback local
+        setPremiumUI(local);
+    }
+}
+
+// ==============================
+// Tratamento para bloqueio 402/403
+// ==============================
+function isPremiumBlockedError(e) {
+    const st = e?.status;
+    // 402 Payment Required ou 403 Forbidden
+    if (st === 402 || st === 403) return true;
+
+    // fallback por mensagem
+    const m = (e?.message || "").toLowerCase();
+    return m.includes("premium") || m.includes("assin") || m.includes("pag");
+}
+
+function enforcePremiumFromError(e) {
+    if (isPremiumBlockedError(e)) {
+        setPremiumUI(false);
+        if (paywall) paywall.hidden = false;
+        setMsg("Função disponível apenas no Premium.", "error");
+        return true;
+    }
+    return false;
+}
 
 // ==============================
 // Carregar lista de conversas
@@ -178,7 +271,7 @@ async function carregarConversas() {
 }
 
 function renderLista() {
-    const filtro = (q.value || "").toLowerCase().trim();
+    const filtro = (q?.value || "").toLowerCase().trim();
 
     const items = state.conversas.filter((c) => {
         const nome = (c.outro?.perfil?.nome || c.outroNome || c.outroEmail || "").toLowerCase();
@@ -216,7 +309,7 @@ function renderLista() {
 q?.addEventListener("input", renderLista);
 
 // ==============================
-// Abrir conversa (lado direito)
+// Abrir conversa
 // ==============================
 async function abrirConversa(conversaId) {
     state.conversaId = conversaId;
@@ -224,7 +317,6 @@ async function abrirConversa(conversaId) {
     const c = state.conversas.find((x) => x.id === conversaId);
     if (!c) return;
 
-    // tenta descobrir "outro usuário"
     const outro = c.outro || c.usuarioB || c.usuarioA || null;
     const nome = outro?.perfil?.nome || c.outroNome || outro?.email || "Conversa";
     const sub = outro?.email ? outro.email : "";
@@ -238,7 +330,6 @@ async function abrirConversa(conversaId) {
     chatNome.textContent = nome;
     chatSub.textContent = sub;
 
-    // avatar
     const foto = outro?.fotos?.find?.((f) => f.principal)?.url || outro?.fotoPrincipal || null;
     if (foto) {
         chatAvatar.src = foto;
@@ -247,17 +338,13 @@ async function abrirConversa(conversaId) {
     } else {
         chatAvatar.removeAttribute("src");
         chatAvatar.style.display = "none";
-        chatAvatarFallback.style.display = "flex";
+        chatAvatarFallback.style.display = "grid";
         chatAvatarFallback.textContent = (nome || "DP").slice(0, 2).toUpperCase();
     }
 
-    // habilita composer e botões
-    if (texto) texto.disabled = false;
-    if (btnEnviar) btnEnviar.disabled = false;
-    if (btnGift) btnGift.disabled = false;
-    if (btnCall) btnCall.disabled = false;
+    // aplica premium (trava/destrava)
+    setPremiumUI(state.premiumAtivo);
 
-    // render lista com active
     renderLista();
 
     await atualizarSaldo();
@@ -324,6 +411,11 @@ function renderMensagens(items) {
 }
 
 async function enviarMensagem() {
+    if (!state.premiumAtivo) {
+        if (paywall) paywall.hidden = false;
+        return;
+    }
+
     const t = (texto.value || "").trim();
     if (!t || !state.conversaId) return;
 
@@ -338,6 +430,7 @@ async function enviarMensagem() {
 
         await carregarMensagens();
     } catch (e) {
+        if (enforcePremiumFromError(e)) return;
         alert("Erro ao enviar: " + e.message);
     } finally {
         btnEnviar.disabled = false;
@@ -354,10 +447,16 @@ texto?.addEventListener("keydown", (e) => {
 });
 
 // ==============================
-// Presentes (webcliente)
+// Presentes
 // ==============================
 btnGift?.addEventListener("click", async () => {
     if (!state.conversaId) return;
+
+    if (!state.premiumAtivo) {
+        if (paywall) paywall.hidden = false;
+        return;
+    }
+
     await carregarPresentes();
     openGiftModal();
 });
@@ -393,6 +492,7 @@ async function carregarPresentes() {
             });
         });
     } catch (e) {
+        if (enforcePremiumFromError(e)) return;
         giftList.innerHTML = `<div class="muted">Erro: ${escapeHtml(e.message)}</div>`;
     }
 }
@@ -408,6 +508,7 @@ async function enviarPresente(presenteId) {
         await carregarMensagens();
         await atualizarSaldo();
     } catch (e) {
+        if (enforcePremiumFromError(e)) return;
         alert("Erro ao enviar presente: " + e.message);
     }
 }
@@ -418,7 +519,7 @@ async function enviarPresente(presenteId) {
 async function atualizarSaldo() {
     try {
         const r = await apiFetch(API.saldoMinutos);
-        if (minutosPill) minutosPill.textContent = `⏱️ Minutos: ${r.minutosDisponiveis}`;
+        if (minutosPill) minutosPill.textContent = `⏱️ Minutos: ${r.minutosDisponiveis ?? "-"}`;
     } catch {
         if (minutosPill) minutosPill.textContent = "⏱️ Minutos: -";
     }
@@ -426,6 +527,11 @@ async function atualizarSaldo() {
 
 btnCall?.addEventListener("click", async () => {
     if (!state.conversaId) return;
+
+    if (!state.premiumAtivo) {
+        if (paywall) paywall.hidden = false;
+        return;
+    }
 
     if (!state.sessaoIdAtiva) {
         await iniciarLigacaoMVP();
@@ -447,9 +553,10 @@ async function iniciarLigacaoMVP() {
         state.sessaoIdAtiva = r.sessaoId;
         state.t0 = Date.now();
 
-        chatStatus.textContent = "Ligação em andamento (MVP)";
+        chatStatus.textContent = "Ligação em andamento";
         btnCall.textContent = "⛔";
     } catch (e) {
+        if (enforcePremiumFromError(e)) return;
         alert("Erro ao iniciar ligação: " + e.message);
         chatStatus.textContent = "";
     } finally {
@@ -482,6 +589,7 @@ async function finalizarLigacaoMVP() {
         await carregarMensagens();
         await atualizarSaldo();
     } catch (e) {
+        if (enforcePremiumFromError(e)) return;
         alert("Erro ao finalizar ligação: " + e.message);
         chatStatus.textContent = "";
     } finally {
@@ -492,6 +600,7 @@ async function finalizarLigacaoMVP() {
 // ==============================
 // Init
 // ==============================
+await checarPremium();
 await carregarConversas();
 
 // auto refresh se uma conversa estiver aberta

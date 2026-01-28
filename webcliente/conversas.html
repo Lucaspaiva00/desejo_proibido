@@ -213,10 +213,17 @@
   </aside>
 
   <div class="wrap">
-    <div class="headRow">
-      <div>
-        <h2 class="h-title">Chat</h2>
+    <!-- HERO PREMIUM -->
+    <div class="headRow headRow-premium">
+      <div class="hero">
+        <h2 class="heroTitle">Conversas Privadas <span class="spark">✨</span></h2>
+        <div class="heroSub">Conexões exclusivas em tempo real…</div>
         <div id="msg" class="msgline muted"></div>
+      </div>
+
+      <div class="heroRight">
+        <span class="premiumBadge" id="premiumBadge">🔒 Conta Premium Inativa</span>
+        <button class="btn btn-primary" id="btnAssinarTopo" type="button">Ativar Premium</button>
       </div>
     </div>
 
@@ -247,7 +254,7 @@
           <div class="chat-actions">
             <span class="dp-pill" id="minutosPill">⏱️ Minutos: -</span>
 
-            <!-- Ligação (MVP) -->
+            <!-- Ligação -->
             <button class="iconbtn" id="btnCall" title="Ligar" disabled>📞</button>
 
             <!-- Presentes -->
@@ -259,6 +266,25 @@
 
         <div id="msgs" class="msgs">
           <div class="empty">Escolha uma conversa à esquerda para ver as mensagens.</div>
+        </div>
+
+        <!-- PAYWALL PREMIUM -->
+        <div class="paywall" id="paywall" hidden>
+          <div class="paywallCard">
+            <div class="paywallTitle">Desbloqueie o Chat Premium 🔥</div>
+            <div class="paywallText">
+              Para enviar mensagens, fazer ligações e enviar presentes, você precisa ativar o Premium.
+            </div>
+
+            <div class="paywallActions">
+              <button class="btn btn-primary" id="btnAssinar" type="button">Ativar Premium</button>
+              <button class="btn btn-ghost" id="btnEntendi" type="button">Entendi</button>
+            </div>
+
+            <div class="paywallNote muted">
+              Após ativar, a liberação acontece automaticamente.
+            </div>
+          </div>
         </div>
 
         <div class="composer">
@@ -284,6 +310,7 @@
   </div>
 
   <script type="module" src="js/conversas.js"></script>
+
   <script>
     // Drawer Mobile (hambúrguer) - padrão Tinder
     const navToggle = document.getElementById("navToggle");

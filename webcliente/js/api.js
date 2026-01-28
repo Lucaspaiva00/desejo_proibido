@@ -43,8 +43,8 @@ export async function apiFetch(
       `Erro HTTP ${res.status}`;
 
     const err = new Error(msg);
-    err.status = res.status; // ✅ ESSENCIAL
-    err.data = data; // ✅ ESSENCIAL
+    err.status = res.status;
+    err.data = data;
     throw err;
   }
 
