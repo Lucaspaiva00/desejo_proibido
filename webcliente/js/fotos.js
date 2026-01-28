@@ -130,7 +130,7 @@ arquivo.onchange = async () => {
     formData.append("folder", "desejoproibido");
 
     const responseUpload = await fetch(
-      "https://api.cloudinary.com/v1_1/desejoproibido/image/upload",
+      "https://api.cloudinary.com/v1_1/dfdinbti3/image/upload",
       { method: "POST", body: formData }
     ).then((res) => res.json());
 
