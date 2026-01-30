@@ -1,81 +1,92 @@
 // front/js/comprar-creditos.js
-const API = (window.APP_API || "http://localhost:3333") + "/api";
-
-function getToken() {
-    return localStorage.getItem("token");
-}
+import { apiFetch } from "./api.js";
 
 function getQueryParam(name) {
     const url = new URL(window.location.href);
     return url.searchParams.get(name);
 }
 
-async function apiFetch(path, { method = "GET", body } = {}) {
-    const token = getToken();
-    const headers = { "Content-Type": "application/json" };
-    if (token) headers.Authorization = `Bearer ${token}`;
-
-    const res = await fetch(`${API}${path}`, {
-        method,
-        headers,
-        body: body ? JSON.stringify(body) : undefined,
-    });
-
-    let data = null;
-    try {
-        data = await res.json();
-    } catch { }
-
-    if (!res.ok) {
-        const err = new Error(data?.erro || data?.error || "Erro");
-        err.status = res.status;
-        err.data = data;
-        throw err;
-    }
-    return data;
-}
-
 function centsToBRL(cents) {
     return (Number(cents || 0) / 100).toFixed(2).replace(".", ",");
 }
 
+function safeReturnUrl() {
+    const ret = getQueryParam("return");
+    if (!ret) return null;
+
+    // segurança: evita open redirect maluco
+    try {
+        const decoded = decodeURIComponent(ret);
+        // só permite voltar para o mesmo domínio
+        const u = new URL(decoded, window.location.origin);
+        if (u.origin !== window.location.origin) return null;
+        return u.href;
+    } catch {
+        return null;
+    }
+}
+
 async function render() {
     const packsEl = document.querySelector("#packs");
+    if (!packsEl) return;
+
     packsEl.innerHTML = "Carregando pacotes...";
 
+    // ✅ usa o mesmo padrão do sistema (api.js)
     const packs = await apiFetch("/pagamentos/pacotes");
 
     packsEl.innerHTML = "";
+
+    if (!Array.isArray(packs) || packs.length === 0) {
+        packsEl.innerHTML = `<div style="padding:12px;color:#666">Nenhum pacote disponível.</div>`;
+        return;
+    }
+
+    const returnUrl = safeReturnUrl();
+
     packs.forEach((p) => {
         const div = document.createElement("div");
-        div.style.border = "1px solid #ddd";
-        div.style.padding = "12px";
-        div.style.marginBottom = "10px";
+        div.style.border = "1px solid #222";
+        div.style.borderRadius = "12px";
+        div.style.padding = "14px";
+        div.style.marginBottom = "12px";
+        div.style.background = "rgba(255,255,255,0.03)";
 
         div.innerHTML = `
-      <h3>${p.nome}</h3>
-      <p><b>${p.creditos}</b> créditos</p>
-      <p>R$ ${centsToBRL(p.valorCentavos)}</p>
-      <button data-pack="${p.id}">Comprar</button>
+      <h3 style="margin:0 0 6px 0">${p.nome || "Pacote"}</h3>
+      <p style="margin:0 0 6px 0"><b>${p.creditos ?? "-"}</b> créditos</p>
+      <p style="margin:0 0 12px 0">R$ ${centsToBRL(p.valorCentavos)}</p>
+      <button class="btnComprar" data-pack="${p.id}" style="padding:10px 14px;border-radius:10px;border:0;cursor:pointer">
+        Comprar
+      </button>
     `;
 
-        div.querySelector("button").addEventListener("click", async () => {
+        const btn = div.querySelector(".btnComprar");
+
+        btn.addEventListener("click", async () => {
             try {
-                div.querySelector("button").disabled = true;
-                div.querySelector("button").textContent = "Gerando checkout...";
+                btn.disabled = true;
+                btn.textContent = "Gerando checkout...";
+
+                // ✅ manda packId e opcionalmente returnUrl (se o teu backend usar)
+                const payload = { packId: p.id };
+                if (returnUrl) payload.returnUrl = returnUrl;
 
                 const resp = await apiFetch("/pagamentos/checkout", {
                     method: "POST",
-                    body: { packId: p.id },
+                    body: payload,
                 });
 
-                // abre checkout do MP
-                window.location.href = resp.initPoint;
+                // backend deve retornar { initPoint } ou { url }
+                const link = resp?.initPoint || resp?.url;
+                if (!link) throw new Error("Checkout não retornou URL.");
+
+                window.location.href = link;
             } catch (e) {
-                alert(e.data?.erro || e.message);
+                alert(e?.data?.erro || e?.message || "Erro ao gerar checkout");
             } finally {
-                div.querySelector("button").disabled = false;
-                div.querySelector("button").textContent = "Comprar";
+                btn.disabled = false;
+                btn.textContent = "Comprar";
             }
         });
 
@@ -84,11 +95,9 @@ async function render() {
 }
 
 (async function init() {
-    // se quiser, dá pra buscar saldo via /conversas/:id/status ou criar endpoint /wallet/me
-    // por enquanto, renderiza packs e segue.
     try {
         await render();
     } catch (e) {
-        alert(e.data?.erro || e.message);
+        alert(e?.data?.erro || e?.message || "Erro ao carregar pacotes");
     }
 })();
