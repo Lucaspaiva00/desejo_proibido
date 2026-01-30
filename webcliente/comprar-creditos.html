@@ -1,20 +1,103 @@
 <!doctype html>
 <html lang="pt-br">
-
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Comprar Créditos</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Comprar Créditos</title>
+
+  <!-- Se o sistema já tem um CSS base, mantenha também -->
+  <!-- <link rel="stylesheet" href="css/dating.css" /> -->
+  <link rel="stylesheet" href="css/comprar-creditos.css" />
 </head>
 
 <body>
-    <h2>Comprar créditos</h2>
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-badge">DP</div>
+      <div class="brand-meta">
+        <div class="brand-title">Desejo Proibido</div>
+        <div class="brand-sub">Comprar créditos</div>
+      </div>
+    </div>
 
-    <p>Saldo atual: <b id="saldoCreditos">0</b></p>
+    <div class="topbar-actions">
+      <a class="btn btn-ghost" href="home.html" title="Voltar">
+        <span class="icon">←</span> Voltar
+      </a>
+    </div>
+  </header>
 
-    <div id="packs"></div>
+  <main class="container">
+    <!-- HERO -->
+    <section class="hero">
+      <div class="hero-left">
+        <h1>Créditos Premium</h1>
+        <p>
+          Use créditos para liberar mensagens, ligação e presentes. Escolha um pacote e finalize com segurança.
+        </p>
 
-    <script src="js/comprar-creditos.js"></script>
+        <div class="balance-card" aria-live="polite">
+          <div class="balance-label">Saldo atual</div>
+          <div class="balance-value">
+            <span class="coin">✦</span>
+            <b id="saldoCreditos">0</b>
+            <span class="balance-suffix">créditos</span>
+          </div>
+
+          <button id="btnRecarregar" class="btn btn-ghost btn-sm" type="button">
+            Atualizar saldo
+          </button>
+        </div>
+      </div>
+
+      <div class="hero-right">
+        <div class="secure-card">
+          <div class="secure-title">Pagamento seguro</div>
+          <ul class="secure-list">
+            <li>Checkout do Mercado Pago</li>
+            <li>PIX / Cartão / Outros (conforme habilitado)</li>
+            <li>Liberação após confirmação</li>
+          </ul>
+          <div class="secure-note">
+            Dica: após pagar, aguarde alguns segundos para o saldo atualizar.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- LISTA DE PACOTES -->
+    <section class="section">
+      <div class="section-head">
+        <h2>Pacotes disponíveis</h2>
+        <div class="filters">
+          <button id="btnReloadPacks" class="btn btn-ghost btn-sm" type="button">Recarregar pacotes</button>
+        </div>
+      </div>
+
+      <!-- Skeleton -->
+      <div id="packsSkeleton" class="packs-grid" hidden>
+        <div class="pack-card skeleton"></div>
+        <div class="pack-card skeleton"></div>
+        <div class="pack-card skeleton"></div>
+      </div>
+
+      <div id="packs" class="packs-grid" aria-live="polite"></div>
+    </section>
+
+    <!-- FOOT NOTE -->
+    <section class="footer-note">
+      <div class="tip">
+        <b>Não abriu o Mercado Pago?</b>
+        Normalmente isso acontece quando o backend ainda não retornou a URL do checkout.
+        Quando estiver pronto, o botão “Comprar” vai redirecionar automaticamente.
+      </div>
+    </section>
+  </main>
+
+  <!-- TOAST -->
+  <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="js/comprar-creditos.js"></script>
 </body>
-
 </html>
