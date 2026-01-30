@@ -243,7 +243,14 @@
             btnSairMobile.addEventListener("click", () => btnSair.click());
         }
     </script>
-
+    <script>
+        function getBrowserLang() {
+            const lang = (navigator.languages && navigator.languages.length)
+                ? navigator.languages[0]
+                : navigator.language || "en";
+            return lang.toLowerCase(); // ex: "pt-br", "en-us"
+        }
+    </script>
     <script type="module" src="js/feed.js"></script>
 </body>
 

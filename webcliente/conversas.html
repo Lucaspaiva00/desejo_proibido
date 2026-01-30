@@ -153,6 +153,64 @@
       background: rgba(255, 255, 255, .10) !important;
       border: 1px solid rgba(255, 255, 255, .18);
     }
+
+    /* ✅ Paywall Créditos (liberar chat) */
+    .creditwall {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(0, 0, 0, .65);
+      z-index: 1200;
+    }
+
+    .creditwall.show {
+      display: flex;
+    }
+
+    .creditwallCard {
+      width: min(520px, 100%);
+      background: #111;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 14px;
+      box-shadow: 0 18px 60px rgba(0, 0, 0, .6);
+      padding: 14px;
+    }
+
+    .creditwallTitle {
+      font-weight: 800;
+      font-size: 18px;
+    }
+
+    .creditwallText {
+      opacity: .9;
+      margin-top: 8px;
+      line-height: 1.35;
+    }
+
+    .creditwallRow {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+      align-items: center;
+    }
+
+    .creditwallNote {
+      margin-top: 10px;
+      opacity: .7;
+      font-size: 12px;
+    }
+
+    .creditwall .btn {
+      min-width: 160px;
+    }
+
+    .pillSaldo {
+      margin-left: auto;
+    }
   </style>
 </head>
 
@@ -237,7 +295,7 @@
       </aside>
 
       <!-- RIGHT -->
-      <section class="panel right chat">
+      <section class="panel right chat" style="position: relative;">
         <div class="chat-top">
           <div class="chat-user">
             <div class="avatarWrap">
@@ -268,7 +326,35 @@
           <div class="empty">Escolha uma conversa à esquerda para ver as mensagens.</div>
         </div>
 
-        <!-- PAYWALL PREMIUM -->
+        <!-- ✅ CREDIT WALL (liberar chat por créditos) -->
+        <div class="creditwall" id="creditwall" aria-hidden="true">
+          <div class="creditwallCard">
+            <div class="creditwallTitle">🔒 Chat bloqueado</div>
+            <div class="creditwallText">
+              Para enviar mensagens nesta conversa, você precisa <b>liberar o chat</b> usando créditos.
+            </div>
+
+            <div class="creditwallRow">
+              <button class="btn btn-primary" id="btnLiberarChat" type="button">
+                Liberar por <span id="unlockCost">-</span>
+              </button>
+
+              <button class="btn btn-ghost" id="btnComprarCreditos" type="button">
+                Comprar créditos
+              </button>
+
+              <span class="dp-pill pillSaldo">
+                💰 Saldo: <b id="saldoCreditos">0</b>
+              </span>
+            </div>
+
+            <div class="creditwallNote muted">
+              * A liberação é cobrada <b>uma única vez</b> por conversa.
+            </div>
+          </div>
+        </div>
+
+        <!-- PAYWALL PREMIUM (mantido) -->
         <div class="paywall" id="paywall" hidden>
           <div class="paywallCard">
             <div class="paywallTitle">Desbloqueie o Chat Premium 🔥</div>

@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lives – Desejo Proibido</title>
+
+    <link rel="stylesheet" href="css/dating.css" />
+    <link rel="stylesheet" href="css/live.css" />
+</head>
+
+<body>
+    <!-- TOPNAV -->
+    <nav class="topnav" role="navigation" aria-label="Navegação principal">
+        <div class="brand">
+            <div class="brand-badge">DP</div>
+            <span class="brand-name">Desejo Proibido</span>
+        </div>
+
+        <div class="navlinks navlinks-desktop" aria-label="Links do menu">
+            <a href="home.html">Feed</a>
+            <a href="perfil.html">Perfil</a>
+            <a href="fotos.html">Fotos</a>
+            <a href="matches.html">Matches</a>
+            <a href="conversas.html">Chat</a>
+            <a href="lives.html" class="active">Lives</a>
+        </div>
+
+        <div class="spacer"></div>
+        <button id="btnSair" class="btn btn-ghost">Sair</button>
+
+        <button class="nav-toggle" id="navToggle" aria-label="Abrir menu" aria-expanded="false"
+            aria-controls="navDrawer">
+            <span></span><span></span><span></span>
+        </button>
+    </nav>
+
+    <div class="nav-overlay" id="navOverlay" aria-hidden="true"></div>
+
+    <aside class="nav-drawer" id="navDrawer" aria-hidden="true">
+        <div class="nav-drawer-head">
+            <div class="brand">
+                <div class="brand-badge">DP</div>
+                <span class="brand-name">Desejo Proibido</span>
+            </div>
+
+            <button class="iconbtn" id="navClose" aria-label="Fechar menu">
+                <span class="xicon"></span>
+            </button>
+        </div>
+
+        <div class="nav-drawer-links">
+            <a href="home.html">Feed</a>
+            <a href="perfil.html">Perfil</a>
+            <a href="fotos.html">Fotos</a>
+            <a href="matches.html">Matches</a>
+            <a href="conversas.html">Chat</a>
+            <a href="lives.html" class="active">Lives</a>
+        </div>
+
+        <div class="nav-drawer-foot">
+            <button id="btnSairMobile" class="btn btn-ghost w100">Sair</button>
+        </div>
+    </aside>
+
+    <div class="wrap">
+        <!-- HERO -->
+        <div class="headRow headRow-premium">
+            <div class="hero">
+                <h2 class="heroTitle">Lives ao Vivo <span class="spark">✨</span></h2>
+                <div class="heroSub">Entre, envie presentes e faça chamadas — tudo com créditos.</div>
+                <div id="msg" class="msgline muted"></div>
+            </div>
+
+            <div class="heroRight">
+                <span class="pill" id="saldoPill">💳 Créditos: -</span>
+                <span class="premiumBadge" id="premiumBadge">🔒 Premium</span>
+                <button class="btn btn-primary" id="btnAssinarTopo" type="button">Ativar Premium</button>
+            </div>
+        </div>
+
+        <div class="grid">
+            <!-- LEFT: Lista -->
+            <section class="panel">
+                <div class="panelHeader">
+                    <div class="panelTitle">Lives disponíveis</div>
+                    <div class="panelSub muted">Clique para entrar</div>
+
+                    <div class="toolbar">
+                        <input id="q" class="search" placeholder="Buscar por nome..." />
+                        <button id="btnReload" class="btn btn-ghost">Atualizar</button>
+                    </div>
+                </div>
+
+                <div id="liveList" class="list">
+                    <div class="empty">Carregando...</div>
+                </div>
+            </section>
+
+            <!-- RIGHT: Sala da Live -->
+            <section class="panel liveRoom" id="liveRoom">
+                <div class="roomTop">
+                    <div class="roomUser">
+                        <div class="avatarWrap">
+                            <img id="hostAvatar" class="avatar" alt="avatar" />
+                            <div class="avatarFallback" id="hostFallback">DP</div>
+                        </div>
+                        <div>
+                            <div class="roomTitle" id="roomTitle">Selecione uma live</div>
+                            <div class="roomSub muted" id="roomSub">Ao entrar, o sistema pode cobrar por minuto.</div>
+                        </div>
+                    </div>
+
+                    <div class="roomActions">
+                        <span class="pill" id="roomStatus">⏳ Aguardando...</span>
+                        <button class="btn btn-primary" id="btnJoin" disabled>Entrar</button>
+                        <button class="btn btn-ghost" id="btnLeave" disabled>Sair</button>
+                    </div>
+                </div>
+
+                <!-- PLAYER (MVP placeholder — depois vira LiveKit/Agora/Twilio) -->
+                <div class="player">
+                    <div class="playerInner" id="playerInner">
+                        <div class="playerTitle">🎥 Player de Live</div>
+                        <div class="muted">
+                            Aqui entra o vídeo (LiveKit/Agora/Twilio). Por enquanto, foco na experiência de live +
+                            interações.
+                        </div>
+                    </div>
+
+                    <!-- PAYWALL -->
+                    <div class="paywall" id="paywall" hidden>
+                        <div class="paywallCard">
+                            <div class="paywallTitle">Desbloqueie as Lives Premium 🔥</div>
+                            <div class="paywallText">
+                                Para entrar em lives e interagir, você precisa de Premium e créditos.
+                            </div>
+                            <div class="paywallActions">
+                                <button class="btn btn-primary" id="btnAssinar">Ativar Premium</button>
+                                <button class="btn btn-ghost" id="btnComprarCreditos">Comprar Créditos</button>
+                            </div>
+                            <div class="paywallNote muted">Após ativar/comprar, atualize a página.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BARRA DE AÇÕES (substitui "tela de conversas") -->
+                <div class="roomBottomBar">
+                    <div class="roomBottomLeft muted" id="roomHint">
+                        Entre na live para liberar interações.
+                    </div>
+
+                    <div class="roomBottomActions">
+                        <button class="btn btn-ghost" id="btnChat" type="button">💬 Chat</button>
+                        <button class="btn btn-ghost" id="btnPresentes" type="button">🎁 Presentes</button>
+                    </div>
+                </div>
+
+                <!-- START LIVE (somente mulheres) -->
+                <div class="startBox" id="startBox">
+                    <div class="panelTitle">Iniciar uma Live</div>
+                    <div class="muted">Apenas perfis femininos podem iniciar.</div>
+
+                    <div class="startRow">
+                        <input id="liveTitulo" class="search" placeholder="Título da live (opcional)" />
+                        <button id="btnStart" class="btn btn-primary">Iniciar Live</button>
+                    </div>
+                    <div class="muted" id="startHint"></div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- CHAT DRAWER (fora da grade, fixo) -->
+    <aside class="chatDrawer" id="chatDrawer" aria-hidden="true">
+        <div class="chatDrawerHead">
+            <div>
+                <div class="panelTitle">Chat da Live</div>
+                <div class="muted" id="chatInfo">Conecte-se para enviar mensagens</div>
+            </div>
+            <button class="iconbtn" id="btnChatClose" aria-label="Fechar chat">
+                <span class="xicon"></span>
+            </button>
+        </div>
+
+        <div class="msgs" id="msgs">
+            <div class="empty">Entre em uma live para ver o chat.</div>
+        </div>
+
+        <div class="composer">
+            <textarea id="texto" placeholder="Digite..." disabled></textarea>
+            <button id="btnEnviar" class="btn btn-primary" disabled>Enviar</button>
+        </div>
+    </aside>
+    <div class="chatOverlay" id="chatOverlay" aria-hidden="true"></div>
+
+    <script type="module" src="js/live.js"></script>
+
+    <script>
+        // Drawer Mobile
+        const navToggle = document.getElementById("navToggle");
+        const navDrawer = document.getElementById("navDrawer");
+        const navOverlay = document.getElementById("navOverlay");
+        const navClose = document.getElementById("navClose");
+
+        function openNav() {
+            navDrawer.classList.add("open");
+            navOverlay.classList.add("show");
+            navToggle.classList.add("open");
+            navToggle.setAttribute("aria-expanded", "true");
+            navDrawer.setAttribute("aria-hidden", "false");
+            navOverlay.setAttribute("aria-hidden", "false");
+            document.body.classList.add("no-scroll");
+        }
+
+        function closeNav() {
+            navDrawer.classList.remove("open");
+            navOverlay.classList.remove("show");
+            navToggle.classList.remove("open");
+            navToggle.setAttribute("aria-expanded", "false");
+            navDrawer.setAttribute("aria-hidden", "true");
+            navOverlay.setAttribute("aria-hidden", "true");
+            document.body.classList.remove("no-scroll");
+        }
+
+        navToggle?.addEventListener("click", () => {
+            if (navDrawer.classList.contains("open")) closeNav();
+            else openNav();
+        });
+
+        navOverlay?.addEventListener("click", closeNav);
+        navClose?.addEventListener("click", closeNav);
+
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") closeNav();
+        });
+
+        const btnSair = document.getElementById("btnSair");
+        const btnSairMobile = document.getElementById("btnSairMobile");
+        if (btnSair && btnSairMobile) btnSairMobile.addEventListener("click", () => btnSair.click());
+    </script>
+</body>
+
+</html>

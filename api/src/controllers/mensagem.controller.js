@@ -1,4 +1,6 @@
+// src/controllers/mensagem.controller.js
 import { prisma } from "../prisma.js";
+import { isChatUnlocked } from "../utils/wallet.js";
 
 export async function enviarMensagem(req, res) {
     try {
@@ -20,6 +22,22 @@ export async function enviarMensagem(req, res) {
 
         const isParte = conv.match.usuarioAId === userId || conv.match.usuarioBId === userId;
         if (!isParte) return res.status(403).json({ erro: "Sem acesso a esta conversa" });
+
+        // ✅ premium não precisa pagar
+        const me = await prisma.usuario.findUnique({
+            where: { id: userId },
+            select: { isPremium: true },
+        });
+
+        if (!me?.isPremium) {
+            const unlocked = await isChatUnlocked(conversaId);
+            if (!unlocked) {
+                return res.status(402).json({
+                    erro: "Chat bloqueado. Libere o chat com créditos para enviar mensagens.",
+                    code: "CHAT_LOCKED",
+                });
+            }
+        }
 
         const msg = await prisma.mensagem.create({
             data: {

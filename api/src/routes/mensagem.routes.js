@@ -1,3 +1,4 @@
+// src/routes/mensagem.routes.js
 import { Router } from "express";
 import { auth } from "../middlewares/auth.middleware.js";
 import { enviarMensagem } from "../controllers/mensagem.controller.js";

@@ -1,4 +1,4 @@
-import { apiFetch, logout, API_BASE } from "./api.js";
+import { apiFetch, logout } from "./api.js";
 
 const msg = document.getElementById("msg");
 
@@ -31,6 +31,13 @@ const btnAssinar = document.getElementById("btnAssinar");
 const btnEntendi = document.getElementById("btnEntendi");
 const btnAssinarTopo = document.getElementById("btnAssinarTopo");
 const chatPanel = document.querySelector(".panel.right.chat");
+
+// ✅ Credit wall (liberar chat por créditos)
+const creditwall = document.getElementById("creditwall");
+const btnLiberarChat = document.getElementById("btnLiberarChat");
+const btnComprarCreditos = document.getElementById("btnComprarCreditos");
+const unlockCost = document.getElementById("unlockCost");
+const saldoCreditosEl = document.getElementById("saldoCreditos");
 
 // Modal presentes
 const giftOverlay = document.getElementById("giftOverlay");
@@ -94,6 +101,11 @@ const state = {
     conversas: [],
     presentesCache: null,
 
+    // chat unlock
+    chatLiberado: false,
+    custoChat: 0,
+    saldoCreditos: 0,
+
     // Ligação MVP
     sessaoIdAtiva: null,
     t0: null,
@@ -144,7 +156,76 @@ document.addEventListener("keydown", (e) => {
 });
 
 // ==============================
-// Premium UI
+// ✅ CREDIT WALL helpers
+// ==============================
+function showCreditWall() {
+    if (!creditwall) return;
+    creditwall.classList.add("show");
+    creditwall.setAttribute("aria-hidden", "false");
+}
+
+function hideCreditWall() {
+    if (!creditwall) return;
+    creditwall.classList.remove("show");
+    creditwall.setAttribute("aria-hidden", "true");
+}
+
+function setCreditWallInfo({ custoCreditos, saldoCreditos }) {
+    state.custoChat = Number(custoCreditos || 0);
+    state.saldoCreditos = Number(saldoCreditos || 0);
+
+    if (unlockCost) unlockCost.textContent = `${state.custoChat} créditos`;
+    if (saldoCreditosEl) saldoCreditosEl.textContent = `${state.saldoCreditos}`;
+}
+
+function applyChatLockUI() {
+    const hasChat = !!state.conversaId;
+
+    // Premium libera tudo automaticamente (inclusive chat)
+    if (state.premiumAtivo) {
+        state.chatLiberado = true;
+        hideCreditWall();
+        if (texto) texto.disabled = !hasChat;
+        if (btnEnviar) btnEnviar.disabled = !hasChat;
+        if (btnGift) btnGift.disabled = !hasChat;
+        if (btnCall) btnCall.disabled = !hasChat;
+        return;
+    }
+
+    // sem conversa selecionada
+    if (!hasChat) {
+        hideCreditWall();
+        if (texto) texto.disabled = true;
+        if (btnEnviar) btnEnviar.disabled = true;
+        if (btnGift) btnGift.disabled = true;
+        if (btnCall) btnCall.disabled = true;
+        return;
+    }
+
+    // conversa selecionada, mas chat bloqueado
+    if (!state.chatLiberado) {
+        showCreditWall();
+        if (texto) texto.disabled = true;
+        if (btnEnviar) btnEnviar.disabled = true;
+
+        // presentes/ligação continuam “premium-only” no seu layout atual
+        if (btnGift) btnGift.disabled = true;
+        if (btnCall) btnCall.disabled = true;
+        return;
+    }
+
+    // chat liberado (por créditos)
+    hideCreditWall();
+    if (texto) texto.disabled = false;
+    if (btnEnviar) btnEnviar.disabled = false;
+
+    // presentes/ligação continuam premium-only (mantenho sua regra atual)
+    if (btnGift) btnGift.disabled = true;
+    if (btnCall) btnCall.disabled = true;
+}
+
+// ==============================
+// Premium UI (mantido)
 // ==============================
 function setPremiumUI(isPremium) {
     state.premiumAtivo = !!isPremium;
@@ -156,29 +237,19 @@ function setPremiumUI(isPremium) {
     if (btnAssinarTopo) btnAssinarTopo.style.display = isPremium ? "none" : "inline-flex";
     if (paywall) paywall.hidden = isPremium;
 
-    const lock = !isPremium;
+    if (chatPanel) chatPanel.classList.toggle("locked", !isPremium);
 
-    // só libera se existir conversa aberta
-    const hasChat = !!state.conversaId;
-
-    if (texto) texto.disabled = lock || !hasChat;
-    if (btnEnviar) btnEnviar.disabled = lock || !hasChat;
-    if (btnGift) btnGift.disabled = lock || !hasChat;
-    if (btnCall) btnCall.disabled = lock || !hasChat;
-
-    if (chatPanel) chatPanel.classList.toggle("locked", lock);
+    // ✅ agora o lock/unlock do chat (créditos) decide os inputs
+    applyChatLockUI();
 }
 
 function openCheckout() {
-    // ✅ aqui você joga pra página real de assinatura
-    // Ex: location.href = "premium.html";
     alert("Abrir checkout do Premium (implementar link real).");
 }
 
 btnAssinar?.addEventListener("click", openCheckout);
 btnAssinarTopo?.addEventListener("click", openCheckout);
 btnEntendi?.addEventListener("click", () => {
-    // só fecha overlay visualmente (não destrava)
     if (paywall) paywall.hidden = true;
     setTimeout(() => { if (!state.premiumAtivo) paywall.hidden = false; }, 900);
 });
@@ -189,6 +260,8 @@ btnEntendi?.addEventListener("click", () => {
 const API = {
     listarConversas: "/conversas",
     mensagensDaConversa: (conversaId) => `/conversas/${conversaId}/mensagens`,
+    statusChat: (conversaId) => `/conversas/${conversaId}/status`,
+    liberarChat: (conversaId) => `/conversas/${conversaId}/liberar`,
     enviarMensagem: "/mensagens",
 
     listarPresentes: "/presentes",
@@ -198,26 +271,20 @@ const API = {
     iniciarLigacao: "/ligacoes/iniciar",
     finalizarLigacao: "/ligacoes/finalizar",
 
-    // ✅ Premium (se existir no backend)
     premiumStatus: "/premium/status",
 };
 
 // ==============================
 // Checar Premium
-// - tenta endpoint /premium/status
-// - fallback: tenta ler do usuario local
 // ==============================
 async function checarPremium() {
-    // fallback local (se você já salva isso no login)
     const local =
         !!state.usuario?.premiumAtivo ||
         !!state.usuario?.isPremium ||
         !!state.usuario?.premium;
 
     try {
-        // tenta endpoint (recomendado)
         const r = await apiFetch(API.premiumStatus);
-        // aceita formatos diferentes
         const ativo =
             !!r?.premiumAtivo ||
             !!r?.ativo ||
@@ -226,8 +293,7 @@ async function checarPremium() {
 
         setPremiumUI(ativo);
         return;
-    } catch (e) {
-        // se endpoint não existe ainda, usa fallback local
+    } catch {
         setPremiumUI(local);
     }
 }
@@ -237,10 +303,7 @@ async function checarPremium() {
 // ==============================
 function isPremiumBlockedError(e) {
     const st = e?.status;
-    // 402 Payment Required ou 403 Forbidden
     if (st === 402 || st === 403) return true;
-
-    // fallback por mensagem
     const m = (e?.message || "").toLowerCase();
     return m.includes("premium") || m.includes("assin") || m.includes("pag");
 }
@@ -253,6 +316,14 @@ function enforcePremiumFromError(e) {
         return true;
     }
     return false;
+}
+
+// ✅ Detecta o bloqueio de chat por créditos
+function isChatLockedError(e) {
+    const st = e?.status;
+    if (st !== 402) return false;
+    const code = e?.data?.code;
+    return code === "CHAT_LOCKED";
 }
 
 // ==============================
@@ -287,10 +358,12 @@ function renderLista() {
         const nome = c.outro?.perfil?.nome || c.outroNome || c.outro?.email || "Usuário";
         const sub = c.ultimaMensagem?.texto || c.ultimaMensagem || "";
         const active = (state.conversaId === c.id) ? "active" : "";
+        const lock = c.chatLiberado ? "" : " 🔒";
+
         return `
       <button class="item ${active}" data-id="${c.id}">
         <div class="row1">
-          <div class="title">${escapeHtml(nome)}</div>
+          <div class="title">${escapeHtml(nome)}${lock}</div>
           <div class="time muted">${c.atualizadoEm ? new Date(c.atualizadoEm).toLocaleDateString() : ""}</div>
         </div>
         <div class="row2 muted">${escapeHtml(sub).slice(0, 60)}</div>
@@ -307,6 +380,66 @@ function renderLista() {
 }
 
 q?.addEventListener("input", renderLista);
+
+// ==============================
+// ✅ Status do chat (créditos)
+// ==============================
+async function atualizarStatusChat() {
+    if (!state.conversaId) {
+        state.chatLiberado = false;
+        setCreditWallInfo({ custoCreditos: 0, saldoCreditos: 0 });
+        applyChatLockUI();
+        return;
+    }
+
+    try {
+        const r = await apiFetch(API.statusChat(state.conversaId));
+        // { chatLiberado, custoCreditos, saldoCreditos }
+        state.chatLiberado = !!r.chatLiberado;
+        setCreditWallInfo({ custoCreditos: r.custoCreditos, saldoCreditos: r.saldoCreditos });
+        applyChatLockUI();
+    } catch (e) {
+        // se falhar, por segurança trava
+        state.chatLiberado = false;
+        applyChatLockUI();
+    }
+}
+
+btnLiberarChat?.addEventListener("click", async () => {
+    if (!state.conversaId) return;
+
+    try {
+        btnLiberarChat.disabled = true;
+        btnLiberarChat.textContent = "Liberando...";
+
+        const r = await apiFetch(API.liberarChat(state.conversaId), { method: "POST" });
+        // { chatLiberado, saldoCreditos, cobrado }
+        state.chatLiberado = true;
+
+        setCreditWallInfo({ custoCreditos: state.custoChat, saldoCreditos: r.saldoCreditos });
+        // atualiza lista (remove cadeado)
+        const idx = state.conversas.findIndex((c) => c.id === state.conversaId);
+        if (idx >= 0) state.conversas[idx].chatLiberado = true;
+
+        applyChatLockUI();
+        renderLista();
+        setMsg("Chat liberado ✅", "ok");
+        setTimeout(() => setMsg(""), 1200);
+    } catch (e) {
+        alert(e?.message || "Erro ao liberar chat");
+    } finally {
+        btnLiberarChat.disabled = false;
+        btnLiberarChat.innerHTML = `Liberar por <span id="unlockCost">${state.custoChat} créditos</span>`;
+        // re-link span
+        const span = btnLiberarChat.querySelector("#unlockCost");
+        if (span) span.textContent = `${state.custoChat} créditos`;
+    }
+});
+
+btnComprarCreditos?.addEventListener("click", () => {
+    const ret = encodeURIComponent(window.location.href);
+    window.location.href = `comprar-creditos.html?return=${ret}`;
+});
 
 // ==============================
 // Abrir conversa
@@ -342,12 +475,10 @@ async function abrirConversa(conversaId) {
         chatAvatarFallback.textContent = (nome || "DP").slice(0, 2).toUpperCase();
     }
 
-    // aplica premium (trava/destrava)
-    setPremiumUI(state.premiumAtivo);
-
     renderLista();
 
     await atualizarSaldo();
+    await atualizarStatusChat();
     await carregarMensagens();
 }
 
@@ -359,10 +490,29 @@ async function carregarMensagens() {
 
     try {
         chatStatus.textContent = "Carregando...";
+
         const data = await apiFetch(API.mensagensDaConversa(state.conversaId));
-        const items = Array.isArray(data) ? data : (data.data || []);
+
+        // ✅ agora backend pode retornar { chatLiberado, mensagens }
+        let items = [];
+        if (Array.isArray(data)) {
+            items = data;
+        } else if (data?.mensagens && Array.isArray(data.mensagens)) {
+            items = data.mensagens;
+
+            // se backend mandou chatLiberado, aplica
+            if (typeof data.chatLiberado === "boolean") {
+                state.chatLiberado = data.chatLiberado;
+            }
+        } else {
+            items = (data?.data && Array.isArray(data.data)) ? data.data : [];
+        }
+
         renderMensagens(items);
         chatStatus.textContent = "";
+
+        // atualiza lock após carregar
+        await atualizarStatusChat();
     } catch (e) {
         chatStatus.textContent = "Erro";
         msgs.innerHTML = `<div class="empty">Erro ao carregar mensagens: ${escapeHtml(e.message)}</div>`;
@@ -411,13 +561,15 @@ function renderMensagens(items) {
 }
 
 async function enviarMensagem() {
-    if (!state.premiumAtivo) {
-        if (paywall) paywall.hidden = false;
-        return;
-    }
-
     const t = (texto.value || "").trim();
     if (!t || !state.conversaId) return;
+
+    // ✅ se não premium, precisa estar liberado por créditos
+    if (!state.premiumAtivo && !state.chatLiberado) {
+        showCreditWall();
+        setMsg("Chat bloqueado. Libere com créditos.", "error");
+        return;
+    }
 
     texto.value = "";
     btnEnviar.disabled = true;
@@ -430,6 +582,14 @@ async function enviarMensagem() {
 
         await carregarMensagens();
     } catch (e) {
+        // se backend retornou CHAT_LOCKED
+        if (isChatLockedError(e)) {
+            await atualizarStatusChat();
+            showCreditWall();
+            setMsg("Chat bloqueado. Libere com créditos.", "error");
+            return;
+        }
+
         if (enforcePremiumFromError(e)) return;
         alert("Erro ao enviar: " + e.message);
     } finally {
@@ -447,7 +607,7 @@ texto?.addEventListener("keydown", (e) => {
 });
 
 // ==============================
-// Presentes
+// Presentes (mantido premium-only)
 // ==============================
 btnGift?.addEventListener("click", async () => {
     if (!state.conversaId) return;
@@ -514,7 +674,7 @@ async function enviarPresente(presenteId) {
 }
 
 // ==============================
-// Minutos + Ligações (MVP)
+// Minutos + Ligações (MVP - mantido premium-only)
 // ==============================
 async function atualizarSaldo() {
     try {

@@ -36,14 +36,16 @@ enum MensagemTipo {
 }
 
 model Usuario {
-  id           String            @id @default(cuid())
-  email        String            @unique
-  senhaHash    String
-  ativo        Boolean           @default(true)
-  isInvisivel  Boolean           @default(false)
+  id          String  @id @default(cuid())
+  email       String  @unique
+  senhaHash   String
+  ativo       Boolean @default(true)
+  isInvisivel Boolean @default(false)
+
   preferencias PreferenciaBusca?
+
   // ✅ Controle de permissões (Admin/moderação)
-  role         Role              @default(USER)
+  role Role @default(USER)
 
   // ✅ Freemium / Premium
   plano     String  @default("FREE") // FREE | PREMIUM
@@ -55,7 +57,7 @@ model Usuario {
   // ✅ Boost de perfil (destaque temporário)
   boostAte DateTime?
 
-  // ✅ Minutos disponíveis (para ligações / presentes / Woo)
+  // ✅ Minutos disponíveis (legado/compat)
   minutosDisponiveis Int @default(0)
 
   criadoEm     DateTime @default(now())
@@ -103,17 +105,25 @@ model Usuario {
   logDenunciasComoDenunciado  LogDenuncia[] @relation("LogDenunciaDenunciado")
   logDenunciasComoAdmin       LogDenuncia[] @relation("LogDenunciaAdmin")
 
-  // ✅ Minutos e compras no Woo
+  // ✅ Minutos e compras no Woo (legado)
   creditosMinutos CreditoMinuto[]
   comprasWoo      CompraWoo[]
 
-  // ✅ Ligações (evita ambiguidade com @relation)
+  // ✅ Ligações
   ligacoesIniciadas SessaoLigacao[] @relation("LigacaoIniciada")
   ligacoesRecebidas SessaoLigacao[] @relation("LigacaoRecebida")
 
   // ✅ Presentes enviados/recebidos
   presentesEnviados  PresenteEnviado[] @relation("PresenteDe")
   presentesRecebidos PresenteEnviado[] @relation("PresentePara")
+
+  // ✅ Lives
+  lives       Live[]
+  liveViewers LiveViewer[]
+
+  // ✅ Wallet (CORRIGIDO: 1 wallet por usuário)
+  wallet     Wallet?
+  walletTxes WalletTx[]
 
   @@index([ativo])
   @@index([role])
@@ -122,18 +132,21 @@ model Usuario {
 }
 
 model Perfil {
-  id           String    @id @default(cuid())
-  usuarioId    String    @unique
-  nome         String
-  bio          String?
-  cidade       String?
-  estado       String?
-  criadoEm     DateTime  @default(now())
-  atualizadoEm DateTime  @updatedAt
-  genero       String? // M | F | OUTRO (ou livre)
-  nascimento   DateTime? // pra calcular idade
-  verificado   Boolean   @default(false)
-  usuario      Usuario   @relation(fields: [usuarioId], references: [id])
+  id        String  @id @default(cuid())
+  usuarioId String  @unique
+  nome      String
+  bio       String?
+  cidade    String?
+  estado    String?
+
+  genero     String? // M | F | OUTRO (ou livre)
+  nascimento DateTime? // pra calcular idade
+  verificado Boolean   @default(false)
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
   @@index([cidade])
   @@index([estado])
@@ -146,7 +159,7 @@ model Foto {
   principal Boolean  @default(false)
   criadoEm  DateTime @default(now())
 
-  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
   @@index([usuarioId])
   @@index([principal])
@@ -158,8 +171,8 @@ model Curtida {
   paraUsuarioId String
   criadoEm      DateTime @default(now())
 
-  deUsuario   Usuario @relation("CurtidasEnviadas", fields: [deUsuarioId], references: [id])
-  paraUsuario Usuario @relation("CurtidasRecebidas", fields: [paraUsuarioId], references: [id])
+  deUsuario   Usuario @relation("CurtidasEnviadas", fields: [deUsuarioId], references: [id], onDelete: Cascade)
+  paraUsuario Usuario @relation("CurtidasRecebidas", fields: [paraUsuarioId], references: [id], onDelete: Cascade)
 
   @@unique([deUsuarioId, paraUsuarioId])
   @@index([paraUsuarioId])
@@ -172,8 +185,8 @@ model Match {
   usuarioBId String
   criadoEm   DateTime @default(now())
 
-  usuarioA Usuario   @relation("MatchesA", fields: [usuarioAId], references: [id])
-  usuarioB Usuario   @relation("MatchesB", fields: [usuarioBId], references: [id])
+  usuarioA Usuario   @relation("MatchesA", fields: [usuarioAId], references: [id], onDelete: Cascade)
+  usuarioB Usuario   @relation("MatchesB", fields: [usuarioBId], references: [id], onDelete: Cascade)
   conversa Conversa?
 
   @@unique([usuarioAId, usuarioBId])
@@ -187,7 +200,7 @@ model Conversa {
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
-  match            Match             @relation(fields: [matchId], references: [id])
+  match            Match             @relation(fields: [matchId], references: [id], onDelete: Cascade)
   mensagens        Mensagem[]
   presenteEnviados PresenteEnviado[]
 }
@@ -201,8 +214,8 @@ model Mensagem {
   metaJson   Json?
   criadoEm   DateTime     @default(now())
 
-  conversa Conversa @relation(fields: [conversaId], references: [id])
-  autor    Usuario  @relation(fields: [autorId], references: [id])
+  conversa Conversa @relation(fields: [conversaId], references: [id], onDelete: Cascade)
+  autor    Usuario  @relation(fields: [autorId], references: [id], onDelete: Cascade)
 
   @@index([conversaId])
   @@index([autorId])
@@ -215,8 +228,8 @@ model Skip {
   paraUsuarioId String
   criadoEm      DateTime @default(now())
 
-  deUsuario   Usuario @relation("SkipsEnviados", fields: [deUsuarioId], references: [id])
-  paraUsuario Usuario @relation("SkipsRecebidos", fields: [paraUsuarioId], references: [id])
+  deUsuario   Usuario @relation("SkipsEnviados", fields: [deUsuarioId], references: [id], onDelete: Cascade)
+  paraUsuario Usuario @relation("SkipsRecebidos", fields: [paraUsuarioId], references: [id], onDelete: Cascade)
 
   @@unique([deUsuarioId, paraUsuarioId])
   @@index([paraUsuarioId])
@@ -229,8 +242,8 @@ model Bloqueio {
   paraUsuarioId String
   criadoEm      DateTime @default(now())
 
-  deUsuario   Usuario @relation("BloqueiosEnviados", fields: [deUsuarioId], references: [id])
-  paraUsuario Usuario @relation("BloqueiosRecebidos", fields: [paraUsuarioId], references: [id])
+  deUsuario   Usuario @relation("BloqueiosEnviados", fields: [deUsuarioId], references: [id], onDelete: Cascade)
+  paraUsuario Usuario @relation("BloqueiosRecebidos", fields: [paraUsuarioId], references: [id], onDelete: Cascade)
 
   @@unique([deUsuarioId, paraUsuarioId])
   @@index([paraUsuarioId])
@@ -247,8 +260,8 @@ model Denuncia {
   criadoEm      DateTime       @default(now())
   atualizadoEm  DateTime       @updatedAt
 
-  denunciante  Usuario       @relation("DenunciasFeitas", fields: [denuncianteId], references: [id])
-  denunciado   Usuario       @relation("DenunciasRecebidas", fields: [denunciadoId], references: [id])
+  denunciante  Usuario       @relation("DenunciasFeitas", fields: [denuncianteId], references: [id], onDelete: Cascade)
+  denunciado   Usuario       @relation("DenunciasRecebidas", fields: [denunciadoId], references: [id], onDelete: Cascade)
   logDenuncias LogDenuncia[]
 
   @@index([denunciadoId])
@@ -280,8 +293,8 @@ model AceiteTermos {
   userAgent String?
   aceitoEm  DateTime     @default(now())
 
-  usuario Usuario @relation(fields: [usuarioId], references: [id])
-  termo   Termo   @relation(fields: [termoId], references: [id])
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  termo   Termo   @relation(fields: [termoId], references: [id], onDelete: Cascade)
 
   @@unique([usuarioId, termoId])
   @@index([usuarioId, aceitoEm])
@@ -297,8 +310,8 @@ model AcaoAdmin {
   detalhes String?
   criadoEm DateTime @default(now())
 
-  admin Usuario  @relation("AcoesAdminFeitas", fields: [adminId], references: [id])
-  alvo  Usuario? @relation("AcoesAdminAlvo", fields: [alvoId], references: [id])
+  admin Usuario  @relation("AcoesAdminFeitas", fields: [adminId], references: [id], onDelete: Cascade)
+  alvo  Usuario? @relation("AcoesAdminAlvo", fields: [alvoId], references: [id], onDelete: SetNull)
 
   @@index([adminId, criadoEm])
   @@index([alvoId, criadoEm])
@@ -313,7 +326,7 @@ model BanGlobal {
   ativo     Boolean   @default(true)
   criadoEm  DateTime  @default(now())
 
-  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
   @@index([ativo])
   @@index([ate])
@@ -329,14 +342,14 @@ model Pagamento {
   valorCentavos Int
   moeda         String  @default("BRL")
 
-  // ✅ novos (opcionais)
-  tipo     String? // "MINUTOS" | "PREMIUM"
-  pacoteId String? // "MIN_10" | "MIN_30" etc
+  // ✅ opcionais
+  tipo     String? // "CREDITOS" | "MINUTOS" | "PREMIUM" | etc
+  pacoteId String? // ex: "PEQUENO_TOQUE_10"
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
-  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
   @@index([usuarioId])
   @@index([status])
@@ -434,8 +447,14 @@ model SessaoLigacao {
   alvoId String
   alvo   Usuario @relation("LigacaoRecebida", fields: [alvoId], references: [id], onDelete: Cascade)
 
-  status             String
+  tipo        String  @default("VIDEO") // VIDEO | AUDIO
+  roomId      String?
+  tokenCaller String?
+  tokenCallee String?
+
+  status             String // PENDENTE | TOCANDO | ATIVA | RECUSADA | FINALIZADA | EXPIRADA
   iniciadoEm         DateTime  @default(now())
+  aceitouEm          DateTime?
   finalizadoEm       DateTime?
   segundosConsumidos Int       @default(0)
   minutosCobrados    Int       @default(0)
@@ -443,6 +462,7 @@ model SessaoLigacao {
   @@index([usuarioId])
   @@index([alvoId])
   @@index([status])
+  @@index([tipo])
 }
 
 model Presente {
@@ -481,20 +501,16 @@ model PreferenciaBusca {
   id        String @id @default(cuid())
   usuarioId String @unique
 
-  // preferências básicas
   idadeMin Int? @default(18)
   idadeMax Int? @default(99)
 
-  // filtros por localização
   cidade String?
   estado String?
 
-  // filtros por "preferência"
-  generoAlvo         String? // M | F | OUTRO | QUALQUER
+  generoAlvo         String?
   somenteVerificados Boolean @default(false)
   somenteComFoto     Boolean @default(false)
 
-  // ordenação
   ordenarPor String @default("recent") // recent | boost
 
   criadoEm     DateTime @default(now())
@@ -504,4 +520,59 @@ model PreferenciaBusca {
 
   @@index([cidade])
   @@index([estado])
+}
+
+model Live {
+  id          String    @id @default(cuid())
+  hostId      String
+  titulo      String?
+  status      String    @default("ATIVA")
+  criadaEm    DateTime  @default(now())
+  encerradaEm DateTime?
+
+  host        Usuario      @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  liveViewers LiveViewer[]
+
+  @@index([hostId])
+  @@index([status])
+}
+
+model LiveViewer {
+  id              String    @id @default(cuid())
+  liveId          String
+  viewerId        String
+  entrouEm        DateTime  @default(now())
+  saiuEm          DateTime?
+  minutosCobrados Int       @default(0)
+
+  live   Live    @relation(fields: [liveId], references: [id], onDelete: Cascade)
+  viewer Usuario @relation(fields: [viewerId], references: [id], onDelete: Cascade)
+
+  @@unique([liveId, viewerId])
+  @@index([liveId])
+  @@index([viewerId])
+}
+
+model Wallet {
+  userId        String   @id
+  saldoCreditos Int      @default(0)
+  updatedAt     DateTime @updatedAt
+
+  user Usuario @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model WalletTx {
+  id       String   @id @default(cuid())
+  userId   String
+  tipo     String // "CREDIT" | "DEBIT" | etc
+  origem   String // "MERCADO_PAGO" | "SISTEMA" | "WOO" | etc
+  valor    Int
+  refId    String?
+  criadoEm DateTime @default(now())
+
+  user Usuario @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([origem])
+  @@index([criadoEm])
 }
