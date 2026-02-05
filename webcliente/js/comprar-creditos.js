@@ -2,15 +2,9 @@
 // AJUSTE AQUI CONFORME SEU BACKEND
 // ===============================
 const API = {
-    // saldo da carteira
-    saldo: "/api/carteira", // ou "/api/wallet" ou "/api/creditos/saldo"
-
-    // pacotes disponíveis
-    pacotes: "/api/creditos/pacotes", // deve retornar lista de pacotes
-
-    // criar pagamento no Mercado Pago (backend retorna checkoutUrl/init_point)
-    criarCheckout: "/api/pagamentos/mercadopago/checkout"
-    // exemplo esperado: POST { packId } -> { checkoutUrl: "https://..." }
+    saldo: "/api/pagamentos/saldo",           // vamos criar esse endpoint (mais abaixo)
+    pacotes: "/api/pagamentos/pacotes",       // ✅ já existe
+    criarCheckout: "/api/pagamentos/checkout" // ✅ já existe (POST com auth)
 };
 
 const elSaldo = document.getElementById("saldoCreditos");
@@ -35,14 +29,16 @@ function moneyBRL(value) {
 }
 
 async function apiFetch(url, opts = {}) {
-    // Se seu sistema usa auth via token, você pode adicionar aqui
-    // const token = localStorage.getItem("token");
-    // opts.headers = { ...(opts.headers||{}), Authorization: `Bearer ${token}` };
+    const token =
+        localStorage.getItem("token") ||
+        localStorage.getItem("jwt") ||
+        localStorage.getItem("accessToken");
 
     const res = await fetch(url, {
         ...opts,
         headers: {
             "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
             ...(opts.headers || {}),
         },
     });
@@ -187,8 +183,8 @@ async function iniciarCheckout(packId, btn) {
             data?.checkoutUrl ||
             data?.init_point ||
             data?.sandbox_init_point ||
-            data?.url ||
-            data?.link;
+            data?.initPoint ||           // ✅ seu back
+            data?.sandboxInitPoint;
 
         if (!url) {
             throw new Error("Backend não retornou a URL do Mercado Pago (checkoutUrl/init_point).");

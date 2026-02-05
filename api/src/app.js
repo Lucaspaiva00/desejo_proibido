@@ -28,7 +28,8 @@ import buscaRoutes from "./routes/busca.routes.js";
 import ligacaoVideoRoutes from "./routes/ligacaoVideo.routes.js";
 import livesRoutes from "./routes/lives.routes.js";
 import pagamentosRoutes from "./routes/pagamentos.routes.js"; // ✅ CORRETO
-
+import carteiraRoutes from "./routes/carteira.routes.js";
+import creditosRoutes from "./routes/creditos.routes.js";
 export const app = express();
 
 app.use(helmet());
@@ -67,7 +68,8 @@ v1.use("/ligacoes", ligacaoRoutes);
 v1.use("/busca", buscaRoutes);
 v1.use("/ligacoes/video", ligacaoVideoRoutes);
 v1.use("/lives", livesRoutes);
-
+v1.use("/carteira", carteiraRoutes);
+v1.use("/creditos", creditosRoutes);
 // ✅ PAGAMENTOS
 v1.use("/pagamentos", pagamentosRoutes);
 
