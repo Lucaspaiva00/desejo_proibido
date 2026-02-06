@@ -82,3 +82,49 @@ export async function getPremiumStatus(userId) {
     premiumEfetivo,
   };
 }
+
+/**
+ * Debita créditos da wallet + registra transação
+ */
+export async function debitWallet(userId, amount, meta = {}) {
+  const valor = Number(amount || 0);
+  if (!userId) throw new Error("debitWallet: userId inválido");
+  if (!Number.isFinite(valor) || valor <= 0) throw new Error("debitWallet: amount inválido");
+
+  await ensureWallet(userId);
+
+  return prisma.$transaction(async (tx) => {
+    const w = await tx.wallet.findUnique({
+      where: { userId },
+      select: { saldoCreditos: true },
+    });
+
+    const saldoAtual = w?.saldoCreditos ?? 0;
+    if (saldoAtual < valor) {
+      const err = new Error("Saldo insuficiente");
+      err.code = "SALDO_INSUFICIENTE";
+      throw err;
+    }
+
+    const saldoDepois = saldoAtual - valor;
+
+    await tx.wallet.update({
+      where: { userId },
+      data: { saldoCreditos: saldoDepois },
+    });
+
+    // auditoria (exige tabela WalletTx no banco)
+    await tx.walletTx.create({
+      data: {
+        userId,
+        tipo: "DEBIT",
+        valorCreditos: valor,
+        origem: meta.origem || "OUTRO",
+        refId: meta.refId || null,
+        metaJson: meta || {},
+      },
+    });
+
+    return { ok: true, saldoAntes: saldoAtual, saldoDepois };
+  });
+}
