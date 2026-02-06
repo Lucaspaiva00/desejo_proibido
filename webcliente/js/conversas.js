@@ -271,7 +271,7 @@ const API = {
     iniciarLigacao: "/ligacoes/iniciar",
     finalizarLigacao: "/ligacoes/finalizar",
 
-    premiumStatus: "/premium/status",
+    premiumStatus: "/premium/me",
 };
 
 // ✅ Atualiza localStorage(usuario) quando o backend confirmar premium
