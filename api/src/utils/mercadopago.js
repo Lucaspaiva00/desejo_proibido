@@ -10,12 +10,12 @@ function env(name) {
 export function getCreditPacks() {
     // ✅ Ajuste aqui quando quiser
     return [
-        { id: "MINI_TOQUE_5", nome: "Mini Toque", creditos: 5, valorCentavos: 0 },
-        { id: "PEQUENO_TOQUE_10", nome: "Pequeno Toque", creditos: 10, valorCentavos: 1700 },
-        { id: "SEDUCAO_25", nome: "Sedução", creditos: 25, valorCentavos: 3900 },
-        { id: "LUXO_50", nome: "Luxo", creditos: 50, valorCentavos: 7400 },
-        { id: "OBSESSAO_100", nome: "Obsessão", creditos: 100, valorCentavos: 13300 },
-        { id: "PACOTE_ELITE_250", nome: "Pacote Elite", creditos: 250, valorCentavos: 29900 },
+        { id: "MINI_TOQUE_5", nome: "Mini Toque", creditos: 5, valorCentavos: 50 },
+        { id: "PEQUENO_TOQUE_10", nome: "Pequeno Toque", creditos: 10, valorCentavos: 50 },
+        { id: "SEDUCAO_25", nome: "Sedução", creditos: 25, valorCentavos: 50 },
+        { id: "LUXO_50", nome: "Luxo", creditos: 50, valorCentavos: 50 },
+        { id: "OBSESSAO_100", nome: "Obsessão", creditos: 100, valorCentavos: 50 },
+        { id: "PACOTE_ELITE_250", nome: "Pacote Elite", creditos: 250, valorCentavos: 50 },
     ];
 }
 
