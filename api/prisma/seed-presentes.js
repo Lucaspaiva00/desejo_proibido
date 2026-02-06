@@ -1,7 +1,3 @@
-cd / usr / app / desejo_proibido / api
-mkdir - p prisma
-
-cat > prisma / seed - presentes.js << 'EOF'
 import { prisma } from "../src/prisma.js";
 
 const presentes = [
@@ -15,21 +11,27 @@ const presentes = [
 ];
 
 async function main() {
-    for (const p of presentes) {
+    for (const presente of presentes) {
         await prisma.presente.upsert({
-            where: { nome: p.nome },
-            update: p,
-            create: p,
+            where: { nome: presente.nome },
+            update: {
+                emoji: presente.emoji,
+                custoCreditos: presente.custoCreditos,
+                minutos: presente.minutos,
+                ativo: presente.ativo,
+            },
+            create: presente,
         });
     }
-    console.log("✅ Presentes seed ok:", presentes.length);
+
+    console.log(`✅ Seed de presentes executado (${presentes.length} registros)`);
 }
 
 main()
-    .then(() => prisma.$disconnect())
-    .catch(async (e) => {
-        console.error(e);
-        await prisma.$disconnect();
+    .catch((e) => {
+        console.error("❌ Erro no seed de presentes:", e);
         process.exit(1);
+    })
+    .finally(async () => {
+        await prisma.$disconnect();
     });
-EOF
