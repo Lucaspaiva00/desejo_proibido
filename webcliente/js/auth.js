@@ -42,7 +42,9 @@ form?.addEventListener("submit", async (ev) => {
 
         setToken(r.token);
         localStorage.setItem("usuario", JSON.stringify(r.usuario));
-        location.href = "home.html";
+        const params = new URLSearchParams(location.search);
+        const returnUrl = params.get("return") || "home.html";
+        location.href = returnUrl;
     } catch (e) {
         setAlert(e.message || "Não foi possível entrar.");
     } finally {

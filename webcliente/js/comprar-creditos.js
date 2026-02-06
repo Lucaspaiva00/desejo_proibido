@@ -1,10 +1,10 @@
-// ===============================
-// AJUSTE AQUI CONFORME SEU BACKEND
-// ===============================
+// app/js/comprar-creditos.js
+import { apiFetch, getToken } from "./api.js";
+
 const API = {
-    saldo: "/api/carteira",        // vamos criar esse endpoint (mais abaixo)
-    pacotes: "/api/pagamentos/pacotes",       // ✅ já existe
-    criarCheckout: "/api/pagamentos/checkout" // ✅ já existe (POST com auth)
+    saldo: "/carteira",
+    pacotes: "/pagamentos/pacotes",
+    criarCheckout: "/pagamentos/checkout",
 };
 
 const elSaldo = document.getElementById("saldoCreditos");
@@ -14,7 +14,7 @@ const btnRecarregar = document.getElementById("btnRecarregar");
 const btnReloadPacks = document.getElementById("btnReloadPacks");
 const toast = document.getElementById("toast");
 
-function showToast(title, detail = "", type = "info") {
+function showToast(title, detail = "") {
     toast.innerHTML = `${title}${detail ? `<small>${detail}</small>` : ""}`;
     toast.classList.add("show");
     clearTimeout(showToast._t);
@@ -22,36 +22,19 @@ function showToast(title, detail = "", type = "info") {
 }
 
 function moneyBRL(value) {
-    // aceita "19.90" ou 19.9
     const n = Number(value);
     if (Number.isNaN(n)) return String(value);
     return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-async function apiFetch(url, opts = {}) {
-    const token =
-        localStorage.getItem("token") ||
-        localStorage.getItem("jwt") ||
-        localStorage.getItem("accessToken");
-
-    const res = await fetch(url, {
-        ...opts,
-        headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            ...(opts.headers || {}),
-        },
-    });
-
-    let data = null;
-    const isJson = (res.headers.get("content-type") || "").includes("application/json");
-    if (isJson) data = await res.json().catch(() => null);
-
-    if (!res.ok) {
-        const msg = (data && (data.message || data.error)) ? (data.message || data.error) : `Erro HTTP ${res.status}`;
-        throw new Error(msg);
+function requireAuthOrRedirect() {
+    const token = getToken();
+    if (!token) {
+        const next = encodeURIComponent(location.href);
+        location.href = `index.html?return=${next}`;
+        return false;
     }
-    return data;
+    return true;
 }
 
 // -------------------
@@ -59,15 +42,12 @@ async function apiFetch(url, opts = {}) {
 // -------------------
 async function carregarSaldo() {
     try {
+        if (!requireAuthOrRedirect()) return;
+
         btnRecarregar.disabled = true;
-        const data = await apiFetch(API.saldo);
 
-        // Aceita diferentes formatos:
-        // { saldoCreditos: 10 } OU { saldo: 10 } OU { credits: 10 }
-        const saldo =
-            data?.saldoCreditos ?? data?.saldo ?? data?.credits ?? data?.creditos ?? 0;
-
-        elSaldo.textContent = String(saldo);
+        const data = await apiFetch(API.saldo); // GET /api/carteira
+        elSaldo.textContent = String(data?.saldoCreditos ?? 0);
     } catch (err) {
         showToast("Não foi possível carregar o saldo.", err.message);
     } finally {
@@ -83,28 +63,25 @@ function renderPacotes(pacotes) {
         elPacks.innerHTML = `
       <div class="pack-card">
         <h3 class="pack-name">Nenhum pacote encontrado</h3>
-        <div class="pack-price">Verifique o endpoint de pacotes no backend.</div>
-        <div class="pack-hint">Se quiser, me manda a resposta JSON que o backend devolve que eu adapto 100%.</div>
       </div>
     `;
         return;
     }
 
-    elPacks.innerHTML = pacotes.map((p, idx) => {
-        const id = p.id ?? p.packId ?? p.codigo ?? idx;
-        const nome = p.nome ?? p.name ?? `Pacote ${idx + 1}`;
-        const creditos = p.creditos ?? p.credits ?? p.qtdCreditos ?? 0;
-        const preco = p.preco ?? p.price ?? p.valor ?? null;
-        const destaque = p.destaque ?? p.featured ?? false;
+    elPacks.innerHTML = pacotes.map((p) => {
+        const id = p.id;
+        const nome = p.nome;
+        const creditos = p.creditos;
+        const preco = (p.valorCentavos / 100);
 
         return `
       <article class="pack-card">
         <div class="pack-top">
           <div>
             <h3 class="pack-name">${nome}</h3>
-            <div class="pack-price">${preco !== null ? moneyBRL(preco) : "Preço a definir"}</div>
+            <div class="pack-price">${moneyBRL(preco)}</div>
           </div>
-          <div class="pack-badge">${destaque ? "Mais vendido" : "Premium"}</div>
+          <div class="pack-badge">Premium</div>
         </div>
 
         <div class="pack-credits">${creditos}<span>créditos</span></div>
@@ -117,23 +94,16 @@ function renderPacotes(pacotes) {
             Detalhes
           </button>
         </div>
-
-        <div class="pack-hint">
-          Após o pagamento, o saldo será atualizado assim que a confirmação chegar.
-        </div>
       </article>
     `;
     }).join("");
 
-    // listeners
-    elPacks.querySelectorAll("button[data-pack]").forEach(btn => {
+    elPacks.querySelectorAll("button[data-pack]").forEach((btn) => {
         btn.addEventListener("click", () => iniciarCheckout(btn.getAttribute("data-pack"), btn));
     });
 
-    elPacks.querySelectorAll("button[data-detalhe]").forEach(btn => {
-        btn.addEventListener("click", () => {
-            showToast("Pacote selecionado", "Finalize a compra para liberar os créditos.");
-        });
+    elPacks.querySelectorAll("button[data-detalhe]").forEach((btn) => {
+        btn.addEventListener("click", () => showToast("Pacote", "Clique em comprar para abrir o checkout."));
     });
 }
 
@@ -143,17 +113,13 @@ async function carregarPacotes() {
         elPacks.innerHTML = "";
         elSkel.hidden = false;
 
-        const data = await apiFetch(API.pacotes);
-
-        // Aceita: [ ... ] OU { packs: [...] } OU { data: [...] }
-        const pacotes = Array.isArray(data) ? data : (data?.packs || data?.data || data?.pacotes || []);
-        renderPacotes(pacotes);
+        const data = await apiFetch(API.pacotes); // GET /api/pagamentos/pacotes
+        renderPacotes(data);
     } catch (err) {
         elPacks.innerHTML = `
       <div class="pack-card">
         <h3 class="pack-name">Erro ao carregar pacotes</h3>
         <div class="pack-price">${err.message}</div>
-        <div class="pack-hint">Confira se o endpoint <b>${API.pacotes}</b> está retornando JSON corretamente.</div>
       </div>
     `;
         showToast("Erro ao carregar pacotes.", err.message);
@@ -164,39 +130,27 @@ async function carregarPacotes() {
 }
 
 // -------------------
-// MERCADO PAGO CHECKOUT
+// CHECKOUT MP
 // -------------------
 async function iniciarCheckout(packId, btn) {
     const originalText = btn.textContent;
+
     try {
+        if (!requireAuthOrRedirect()) return;
+
         btn.disabled = true;
         btn.textContent = "Gerando checkout...";
 
-        // Backend deve criar a preferência/pagamento e devolver URL de checkout.
         const data = await apiFetch(API.criarCheckout, {
             method: "POST",
-            body: JSON.stringify({ packId })
+            body: { packId },
         });
 
-        // Aceita nomes diferentes vindos do backend:
-        const url =
-            data?.checkoutUrl ||
-            data?.init_point ||
-            data?.sandbox_init_point ||
-            data?.initPoint ||           // ✅ seu back
-            data?.sandboxInitPoint;
+        const url = data?.initPoint || data?.sandboxInitPoint || data?.init_point || data?.sandbox_init_point;
+        if (!url) throw new Error("Backend não retornou a URL do checkout.");
 
-        if (!url) {
-            throw new Error("Backend não retornou a URL do Mercado Pago (checkoutUrl/init_point).");
-        }
-
-        showToast("Redirecionando para o Mercado Pago…", "Se não abrir, verifique bloqueio de pop-up.");
-        // Melhor prática: redirecionar na mesma aba
+        showToast("Redirecionando...", "Abrindo Mercado Pago.");
         window.location.href = url;
-
-        // ou se quiser nova aba:
-        // window.open(url, "_blank", "noopener,noreferrer");
-
     } catch (err) {
         showToast("Não foi possível iniciar a compra.", err.message);
     } finally {
@@ -211,5 +165,5 @@ async function iniciarCheckout(packId, btn) {
 btnRecarregar?.addEventListener("click", carregarSaldo);
 btnReloadPacks?.addEventListener("click", carregarPacotes);
 
-carregarSaldo();
 carregarPacotes();
+carregarSaldo();
