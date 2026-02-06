@@ -27,32 +27,31 @@ function assertParteDaConversa(conv, userId) {
 export async function listarConversas(req, res) {
     const userId = req.usuario.id;
 
-    // busca conversas onde o match envolve o user
     const conversas = await prisma.conversa.findMany({
         where: {
-            match: {
-                OR: [{ usuarioAId: userId }, { usuarioBId: userId }],
-            },
+            match: { OR: [{ usuarioAId: userId }, { usuarioBId: userId }] },
         },
         orderBy: { atualizadoEm: "desc" },
-        include: {
-            match: true,
-        },
+        include: { match: true },
     });
 
-    // Para montar "outro usuário" e última mensagem, fazemos queries auxiliares
     const conversaIds = conversas.map((c) => c.id);
 
+    // ✅ se não tem conversa, retorna rápido (evita queries inúteis)
+    if (conversaIds.length === 0) return res.json([]);
+
+    // ✅ últimas mensagens (como você já faz)
     const ultimas = await prisma.mensagem.findMany({
         where: { conversaId: { in: conversaIds } },
         orderBy: { criadoEm: "desc" },
         distinct: ["conversaId"],
+        select: { conversaId: true, texto: true, criadoEm: true },
     });
 
     const lastByConversa = new Map();
     for (const m of ultimas) lastByConversa.set(m.conversaId, m);
 
-    // pega ids do "outro" pra buscar perfil/fotos (se existir no seu schema)
+    // ✅ pega ids do outro usuário
     const outroIds = conversas.map((c) => {
         const a = c.match.usuarioAId;
         const b = c.match.usuarioBId;
@@ -61,37 +60,45 @@ export async function listarConversas(req, res) {
 
     const outros = await prisma.usuario.findMany({
         where: { id: { in: outroIds } },
-        include: {
-            perfil: true,
-            fotos: true,
-        },
+        include: { perfil: true, fotos: true },
     });
 
     const outroById = new Map();
     for (const u of outros) outroById.set(u.id, u);
 
-    // monta resposta no formato que seu front espera
-    const data = [];
-    for (const c of conversas) {
-        const outroId = c.match.usuarioAId === userId ? c.match.usuarioBId : c.match.usuarioAId;
+    // ✅ pega TODOS os unlocks do usuário para essas conversas de uma vez
+    const unlocks = await prisma.walletTx.findMany({
+        where: {
+            userId,
+            origem: "CHAT_UNLOCK",
+            refId: { in: conversaIds },
+        },
+        select: { refId: true },
+    });
+
+    const liberadasSet = new Set(unlocks.map((u) => u.refId));
+
+    // ✅ monta resposta sem await dentro de loop
+    const data = conversas.map((c) => {
+        const outroId =
+            c.match.usuarioAId === userId ? c.match.usuarioBId : c.match.usuarioAId;
+
         const outro = outroById.get(outroId) || null;
-
-        // "chatLiberado" precisa ser por usuário -> calculamos aqui
-        const chatLiberado = await isChatLiberadoParaUsuario(c.id, userId);
-
         const ultima = lastByConversa.get(c.id);
-        data.push({
+
+        return {
             id: c.id,
             atualizadoEm: c.atualizadoEm,
-            chatLiberado,
+            chatLiberado: liberadasSet.has(c.id),
             outroUsuarioId: outroId,
             outro,
             ultimaMensagem: ultima ? { texto: ultima.texto, criadoEm: ultima.criadoEm } : null,
-        });
-    }
+        };
+    });
 
     return res.json(data);
 }
+
 
 // ==============================
 // ✅ MENSAGENS DA CONVERSA
