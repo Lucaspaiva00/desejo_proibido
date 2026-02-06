@@ -728,9 +728,9 @@ async function enviarPresente(presenteId) {
 async function atualizarSaldo() {
     try {
         const r = await apiFetch(API.saldoMinutos);
-        if (minutosPill) minutosPill.textContent = `⏱️ Minutos: ${r.minutosDisponiveis ?? "-"}`;
+        if (minutosPill) minutosPill.textContent = `💰 Créditos: ${r.minutosDisponiveis ?? "-"}`;
     } catch {
-        if (minutosPill) minutosPill.textContent = "⏱️ Minutos: -";
+        if (minutosPill) minutosPill.textContent = "💰 Créditos: -";
     }
 }
 
