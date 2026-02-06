@@ -1,60 +1,74 @@
-// src/controllers/premium.controller.js
 import { prisma } from "../prisma.js";
-import { getPremiumStatus } from "../utils/wallet.js";
 
 /**
- * GET /premium/me
- * Retorna status premium efetivo do usuário logado (Opção B)
+ * PREMIUM EFETIVO:
+ * - plano === "PREMIUM" (assinatura)
+ * OU
+ * - wallet.saldoCreditos > 0 (comprou créditos)
  */
 export async function premiumMe(req, res) {
-    const userId = req.usuario.id;
+    try {
+        const userId = req.usuario.id;
 
-    const { usuario, saldoCreditos, premiumEfetivo } = await getPremiumStatus(userId);
+        const u = await prisma.usuario.findUnique({
+            where: { id: userId },
+            select: { id: true, email: true, plano: true, role: true, isPremium: true },
+        });
 
-    if (!usuario) return res.status(401).json({ erro: "Usuário inválido" });
+        if (!u) return res.status(401).json({ erro: "Usuário inválido" });
 
-    return res.json({
-        id: usuario.id,
-        email: usuario.email,
-        isPremium: premiumEfetivo, // ✅ calculado
-        plano: usuario.plano,
-        role: usuario.role,
-        saldoCreditos,
-    });
+        const wallet = await prisma.wallet.findUnique({
+            where: { userId },
+            select: { saldoCreditos: true },
+        });
+
+        const saldoCreditos = wallet?.saldoCreditos ?? 0;
+
+        const premiumEfetivo =
+            u.plano === "PREMIUM" || saldoCreditos > 0;
+
+        return res.json({
+            id: u.id,
+            email: u.email,
+            role: u.role,
+
+            // ✅ o front deve usar isso
+            isPremium: premiumEfetivo,
+
+            // opcional
+            plano: u.plano,
+            saldoCreditos,
+        });
+    } catch (e) {
+        return res.status(500).json({ erro: "Erro ao consultar premium", detalhe: e.message });
+    }
 }
 
-/**
- * POST /premium/ativar
- * Ativa assinatura premium (não depende de créditos)
- */
+// Mantive suas rotas de ativar/cancelar (assinatura manual) se quiser continuar usando:
 export async function ativarPremium(req, res) {
     const u = await prisma.usuario.update({
         where: { id: req.usuario.id },
-        data: { plano: "PREMIUM", isPremium: true }, // pode manter por compat
-        select: { id: true, email: true, plano: true, isPremium: true },
+        data: { isPremium: true, plano: "PREMIUM" },
+        select: { id: true, email: true, isPremium: true, plano: true },
     });
 
     return res.json({
         ok: true,
-        msg: "✅ Premium (assinatura) ativado com sucesso",
+        msg: "✅ Premium ativado com sucesso",
         usuario: u,
     });
 }
 
-/**
- * POST /premium/cancelar
- * Volta para FREE (mas se ainda tiver créditos, premiumEfetivo continua true no /premium/me)
- */
 export async function cancelarPremium(req, res) {
     const u = await prisma.usuario.update({
         where: { id: req.usuario.id },
-        data: { plano: "FREE", isPremium: false }, // compat
-        select: { id: true, email: true, plano: true, isPremium: true },
+        data: { isPremium: false, plano: "FREE" },
+        select: { id: true, email: true, isPremium: true, plano: true },
     });
 
     return res.json({
         ok: true,
-        msg: "✅ Assinatura Premium cancelada. (Se ainda houver créditos, você continua com Premium efetivo.)",
+        msg: "✅ Premium cancelado. Você voltou ao plano FREE.",
         usuario: u,
     });
 }
