@@ -2,7 +2,7 @@
 // AJUSTE AQUI CONFORME SEU BACKEND
 // ===============================
 const API = {
-    saldo: "/api/pagamentos/saldo",           // vamos criar esse endpoint (mais abaixo)
+    saldo: "/api/carteira",        // vamos criar esse endpoint (mais abaixo)
     pacotes: "/api/pagamentos/pacotes",       // ✅ já existe
     criarCheckout: "/api/pagamentos/checkout" // ✅ já existe (POST com auth)
 };
