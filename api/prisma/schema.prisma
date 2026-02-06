@@ -564,15 +564,14 @@ model Wallet {
 model WalletTx {
   id       String   @id @default(cuid())
   userId   String
-  tipo     String // "CREDIT" | "DEBIT" | etc
-  origem   String // "MERCADO_PAGO" | "SISTEMA" | "WOO" | etc
+  tipo     String // "DEBIT" | "CREDIT"
+  origem   String // "CHAT_UNLOCK" | etc
   valor    Int
   refId    String?
   criadoEm DateTime @default(now())
 
   user Usuario @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
-  @@index([origem])
+  @@index([userId, origem, refId])
   @@index([criadoEm])
 }
