@@ -1,6 +1,6 @@
 // src/controllers/mensagem.controller.js
 import { prisma } from "../prisma.js";
-import { isChatUnlocked } from "../utils/wallet.js";
+import { isChatUnlocked, isPremiumEfetivo } from "../utils/wallet.js";
 
 export async function enviarMensagem(req, res) {
     try {
@@ -8,9 +8,9 @@ export async function enviarMensagem(req, res) {
         const { conversaId, texto } = req.body;
 
         if (!conversaId) return res.status(400).json({ erro: "conversaId é obrigatório" });
-        if (!texto || !String(texto).trim()) return res.status(400).json({ erro: "texto é obrigatório" });
+        if (!texto || !String(texto).trim())
+            return res.status(400).json({ erro: "texto é obrigatório" });
 
-        // valida acesso
         const conv = await prisma.conversa.findUnique({
             where: { id: conversaId },
             include: {
@@ -23,14 +23,12 @@ export async function enviarMensagem(req, res) {
         const isParte = conv.match.usuarioAId === userId || conv.match.usuarioBId === userId;
         if (!isParte) return res.status(403).json({ erro: "Sem acesso a esta conversa" });
 
-        // ✅ premium não precisa pagar
-        const me = await prisma.usuario.findUnique({
-            where: { id: userId },
-            select: { isPremium: true },
-        });
+        // ✅ Opção B: premium efetivo = plano premium OU saldoCreditos>0
+        const premiumEfetivo = await isPremiumEfetivo(userId);
 
-        if (!me?.isPremium) {
-            const unlocked = await isChatUnlocked(conversaId);
+        // Se NÃO for premium efetivo, exige unlock por conversa
+        if (!premiumEfetivo) {
+            const unlocked = await isChatUnlocked(conversaId, userId);
             if (!unlocked) {
                 return res.status(402).json({
                     erro: "Chat bloqueado. Libere o chat com créditos para enviar mensagens.",
@@ -47,7 +45,6 @@ export async function enviarMensagem(req, res) {
             },
         });
 
-        // atualiza "atualizadoEm" da conversa pra ordenar na lista
         await prisma.conversa.update({
             where: { id: conversaId },
             data: { atualizadoEm: new Date() },

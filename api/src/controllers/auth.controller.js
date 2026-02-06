@@ -1,7 +1,9 @@
+// src/controllers/auth.controller.js
 import bcrypt from "bcrypt";
 import { prisma } from "../prisma.js";
 import { assinarToken } from "../utils/jwt.js";
 import { logAcesso } from "../utils/auditoria.js";
+import { getPremiumStatus, ensureWallet } from "../utils/wallet.js";
 
 export async function registrar(req, res) {
     try {
@@ -20,7 +22,7 @@ export async function registrar(req, res) {
         const existe = await prisma.usuario.findUnique({ where: { email } });
         if (existe) return res.status(409).json({ erro: "Email já cadastrado" });
 
-        // ✅ Busca termos ativos (Termos de Uso + Política)
+        // ✅ Busca termos ativos
         const termosAtivos = await prisma.termo.findMany({
             where: {
                 ativo: true,
@@ -38,7 +40,6 @@ export async function registrar(req, res) {
 
         const senhaHash = await bcrypt.hash(senha, 10);
 
-        // ✅ Cria usuário e registra os aceites no mesmo create
         const usuario = await prisma.usuario.create({
             data: {
                 email,
@@ -54,6 +55,9 @@ export async function registrar(req, res) {
             },
             select: { id: true, email: true, criadoEm: true },
         });
+
+        // cria wallet imediatamente (opcional, mas ajuda)
+        await ensureWallet(usuario.id);
 
         const token = assinarToken({ id: usuario.id, email: usuario.email });
         return res.status(201).json({ usuario, token });
@@ -99,7 +103,6 @@ export async function login(req, res) {
             return res.status(401).json({ erro: "Credenciais inválidas" });
         }
 
-        // Bloqueia login se estiver desativado (opcional, mas recomendado)
         if (!usuario.ativo) {
             await logAcesso(req, {
                 evento: "LOGIN_BLOQUEADO",
@@ -111,7 +114,6 @@ export async function login(req, res) {
             return res.status(403).json({ erro: "Usuário desativado" });
         }
 
-        // Se ban global ativo, bloqueia login também (recomendado)
         const ban = await prisma.banGlobal.findUnique({ where: { usuarioId: usuario.id } });
         if (ban?.ativo) {
             const agora = new Date();
@@ -128,6 +130,8 @@ export async function login(req, res) {
             }
         }
 
+        await ensureWallet(usuario.id);
+
         const token = assinarToken({ id: usuario.id, email: usuario.email });
 
         await logAcesso(req, {
@@ -137,8 +141,17 @@ export async function login(req, res) {
             email: usuario.email,
         });
 
+        // ✅ devolve status premium efetivo já no login (opcional, mas ajuda no front)
+        const { saldoCreditos, premiumEfetivo } = await getPremiumStatus(usuario.id);
+
         return res.json({
-            usuario: { id: usuario.id, email: usuario.email },
+            usuario: {
+                id: usuario.id,
+                email: usuario.email,
+                isPremium: premiumEfetivo,
+                plano: usuario.plano,
+                saldoCreditos,
+            },
             token,
         });
     } catch (e) {
@@ -149,12 +162,21 @@ export async function login(req, res) {
 
 export async function me(req, res) {
     try {
-        const usuario = await prisma.usuario.findUnique({
-            where: { id: req.usuario.id },
-            select: { id: true, email: true, ativo: true, role: true, criadoEm: true },
-        });
+        const userId = req.usuario.id;
+        const { usuario, saldoCreditos, premiumEfetivo } = await getPremiumStatus(userId);
 
-        return res.json(usuario);
+        if (!usuario) return res.status(401).json({ erro: "Usuário inválido" });
+
+        return res.json({
+            id: usuario.id,
+            email: usuario.email,
+            ativo: usuario.ativo,
+            role: usuario.role,
+            criadoEm: usuario.criadoEm,
+            plano: usuario.plano,
+            isPremium: premiumEfetivo, // ✅ calculado
+            saldoCreditos,
+        });
     } catch (e) {
         return res.status(500).json({ erro: "Erro ao buscar usuário", detalhe: e.message });
     }

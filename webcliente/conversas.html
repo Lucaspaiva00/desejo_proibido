@@ -338,20 +338,22 @@
           </div>
         </div>
 
+        <!-- ✅ Paywall agora é só para recursos premium (presentes/ligação) -->
         <div class="paywall" id="paywall" hidden>
           <div class="paywallCard">
-            <div class="paywallTitle">Desbloqueie o Chat Premium 🔥</div>
+            <div class="paywallTitle">Desbloqueie recursos Premium 🔥</div>
             <div class="paywallText">
-              Para enviar mensagens, fazer ligações e enviar presentes, você precisa ativar o Premium.
+              Para <b>ligações</b> e <b>presentes</b>, você precisa estar Premium.
+              Comprando créditos, sua conta ativa o Premium automaticamente enquanto houver saldo.
             </div>
 
             <div class="paywallActions">
-              <button class="btn btn-primary" id="btnAssinar" type="button">Ativar Premium</button>
+              <button class="btn btn-primary" id="btnAssinar" type="button">Comprar créditos</button>
               <button class="btn btn-ghost" id="btnEntendi" type="button">Entendi</button>
             </div>
 
             <div class="paywallNote muted">
-              Após ativar, a liberação acontece automaticamente.
+              Após comprar, a liberação acontece automaticamente.
             </div>
           </div>
         </div>
@@ -378,7 +380,7 @@
   </div>
 
   <!-- ✅ cache-bust -->
-  <script type="module" src="js/conversas.js?v=20260205-1"></script>
+  <script type="module" src="js/conversas.js?v=20260206-1"></script>
 
   <script>
     const navToggle = document.getElementById("navToggle");
