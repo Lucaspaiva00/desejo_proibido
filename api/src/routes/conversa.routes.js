@@ -15,12 +15,14 @@ router.use(auth);
 router.get("/", listarConversas);
 router.get("/minhas", listarConversas);
 
-// abrir conversa via matchId
 router.post("/abrir", abrirConversaPorMatch);
 
-// ✅ PAYWALL CHAT (CRÉDITOS)
 router.get("/:id/status", statusConversa);
 router.post("/:id/liberar", liberarChat);
+
+// compat (front antigo)
+router.get("/:id", statusConversa);
+router.post("/:id", liberarChat);
 
 router.get("/:id/mensagens", mensagensDaConversa);
 

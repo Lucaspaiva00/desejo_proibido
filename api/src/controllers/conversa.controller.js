@@ -2,7 +2,6 @@ import { prisma } from "../prisma.js";
 
 const CHAT_CUSTO_CREDITOS = Number(process.env.CHAT_CUSTO_CREDITOS || 10);
 
-// Helpers
 async function getSaldoCreditos(userId) {
     const w = await prisma.wallet.findUnique({ where: { userId } });
     return w?.saldoCreditos ?? 0;
@@ -10,318 +9,250 @@ async function getSaldoCreditos(userId) {
 
 async function isChatLiberadoParaUsuario(conversaId, userId) {
     const tx = await prisma.walletTx.findFirst({
-        where: {
-            userId,
-            origem: "CHAT_UNLOCK",
-            refId: conversaId,
-        },
+        where: { userId, origem: "CHAT_UNLOCK", refId: conversaId },
         select: { id: true },
     });
     return !!tx;
 }
 
-/**
- * GET /conversas
- * Lista as conversas do usuário logado a partir dos matches.
- * Se o match ainda não tem conversa, cria automaticamente.
- */
+function assertParteDaConversa(conv, userId) {
+    const match = conv?.match;
+    if (!match) return false;
+    return match.usuarioAId === userId || match.usuarioBId === userId;
+}
+
+// ==============================
+// ✅ LISTAR CONVERSAS
+// ==============================
 export async function listarConversas(req, res) {
-    try {
-        const userId = req.usuario.id;
+    const userId = req.usuario.id;
 
-        const matches = await prisma.match.findMany({
-            where: { OR: [{ usuarioAId: userId }, { usuarioBId: userId }] },
-            orderBy: { criadoEm: "desc" },
-            include: {
-                conversa: true,
-                usuarioA: {
-                    select: {
-                        id: true,
-                        email: true,
-                        perfil: true,
-                        fotos: { orderBy: { principal: "desc" } },
-                    },
-                },
-                usuarioB: {
-                    select: {
-                        id: true,
-                        email: true,
-                        perfil: true,
-                        fotos: { orderBy: { principal: "desc" } },
-                    },
-                },
+    // busca conversas onde o match envolve o user
+    const conversas = await prisma.conversa.findMany({
+        where: {
+            match: {
+                OR: [{ usuarioAId: userId }, { usuarioBId: userId }],
             },
-        });
+        },
+        orderBy: { atualizadoEm: "desc" },
+        include: {
+            match: true,
+        },
+    });
 
-        const convIds = [];
-        for (const m of matches) {
-            if (m.conversa?.id) {
-                convIds.push(m.conversa.id);
-                continue;
-            }
-            const conv = await prisma.conversa.create({ data: { matchId: m.id } });
-            convIds.push(conv.id);
-        }
+    // Para montar "outro usuário" e última mensagem, fazemos queries auxiliares
+    const conversaIds = conversas.map((c) => c.id);
 
-        const conversas = await prisma.conversa.findMany({
-            where: { id: { in: convIds } },
-            orderBy: { atualizadoEm: "desc" },
-            include: {
-                match: {
-                    include: {
-                        usuarioA: {
-                            select: {
-                                id: true,
-                                email: true,
-                                perfil: true,
-                                fotos: { orderBy: { principal: "desc" } },
-                            },
-                        },
-                        usuarioB: {
-                            select: {
-                                id: true,
-                                email: true,
-                                perfil: true,
-                                fotos: { orderBy: { principal: "desc" } },
-                            },
-                        },
-                    },
-                },
-                mensagens: {
-                    orderBy: { criadoEm: "desc" },
-                    take: 1,
-                    select: { id: true, texto: true, criadoEm: true },
-                },
-            },
-        });
+    const ultimas = await prisma.mensagem.findMany({
+        where: { conversaId: { in: conversaIds } },
+        orderBy: { criadoEm: "desc" },
+        distinct: ["conversaId"],
+    });
 
-        const out = conversas.map((c) => {
-            const a = c.match.usuarioA;
-            const b = c.match.usuarioB;
-            const outro = a.id === userId ? b : a;
+    const lastByConversa = new Map();
+    for (const m of ultimas) lastByConversa.set(m.conversaId, m);
 
-            return {
-                id: c.id,
-                matchId: c.matchId,
-                atualizadoEm: c.atualizadoEm,
-                outroUsuarioId: outro.id,
-                outro,
-                ultimaMensagem: c.mensagens?.[0] ? c.mensagens[0] : null,
-            };
-        });
+    // pega ids do "outro" pra buscar perfil/fotos (se existir no seu schema)
+    const outroIds = conversas.map((c) => {
+        const a = c.match.usuarioAId;
+        const b = c.match.usuarioBId;
+        return a === userId ? b : a;
+    });
 
-        return res.json(out);
-    } catch (e) {
-        return res.status(500).json({ erro: "Erro ao listar conversas", detalhe: e.message });
-    }
-}
+    const outros = await prisma.usuario.findMany({
+        where: { id: { in: outroIds } },
+        include: {
+            perfil: true,
+            fotos: true,
+        },
+    });
 
-/**
- * GET /conversas/:id/mensagens
- */
-export async function mensagensDaConversa(req, res) {
-    try {
-        const userId = req.usuario.id;
-        const { id } = req.params;
+    const outroById = new Map();
+    for (const u of outros) outroById.set(u.id, u);
 
-        const conv = await prisma.conversa.findUnique({
-            where: { id },
-            include: { match: { select: { usuarioAId: true, usuarioBId: true } } },
-        });
+    // monta resposta no formato que seu front espera
+    const data = [];
+    for (const c of conversas) {
+        const outroId = c.match.usuarioAId === userId ? c.match.usuarioBId : c.match.usuarioAId;
+        const outro = outroById.get(outroId) || null;
 
-        if (!conv) return res.status(404).json({ erro: "Conversa não encontrada" });
+        // "chatLiberado" precisa ser por usuário -> calculamos aqui
+        const chatLiberado = await isChatLiberadoParaUsuario(c.id, userId);
 
-        const isParte = conv.match.usuarioAId === userId || conv.match.usuarioBId === userId;
-        if (!isParte) return res.status(403).json({ erro: "Sem acesso a esta conversa" });
-
-        const msgs = await prisma.mensagem.findMany({
-            where: { conversaId: id },
-            orderBy: { criadoEm: "asc" },
-            include: { autor: { select: { id: true, email: true } } },
-        });
-
-        return res.json(msgs);
-    } catch (e) {
-        return res.status(500).json({ erro: "Erro ao buscar mensagens", detalhe: e.message });
-    }
-}
-
-/**
- * POST /conversas/abrir
- * body: { matchId }
- */
-export async function abrirConversaPorMatch(req, res) {
-    try {
-        const userId = req.usuario.id;
-        const { matchId } = req.body;
-
-        if (!matchId) return res.status(400).json({ erro: "matchId é obrigatório" });
-
-        const match = await prisma.match.findUnique({
-            where: { id: matchId },
-            include: { conversa: true },
-        });
-
-        if (!match) return res.status(404).json({ erro: "Match não encontrado" });
-
-        const isParte = match.usuarioAId === userId || match.usuarioBId === userId;
-        if (!isParte) return res.status(403).json({ erro: "Sem acesso a este match" });
-
-        if (match.conversa?.id) {
-            return res.json({ conversaId: match.conversa.id });
-        }
-
-        const conversa = await prisma.conversa.create({
-            data: { matchId: match.id },
-        });
-
-        return res.json({ conversaId: conversa.id });
-    } catch (e) {
-        return res.status(500).json({ erro: "Erro ao abrir conversa", detalhe: e.message });
-    }
-}
-
-/**
- * ✅ GET /conversas/:id/status
- * Retorna custo do chat, saldo e se já liberou (por usuário)
- */
-export async function statusConversa(req, res) {
-    try {
-        const userId = req.usuario.id;
-        const { id: conversaId } = req.params;
-
-        const conv = await prisma.conversa.findUnique({
-            where: { id: conversaId },
-            include: { match: { select: { usuarioAId: true, usuarioBId: true } } },
-        });
-
-        if (!conv) return res.status(404).json({ erro: "Conversa não encontrada" });
-
-        const isParte = conv.match.usuarioAId === userId || conv.match.usuarioBId === userId;
-        if (!isParte) return res.status(403).json({ erro: "Sem acesso a esta conversa" });
-
-        const chatLiberado = await isChatLiberadoParaUsuario(conversaId, userId);
-        const saldoCreditos = await getSaldoCreditos(userId);
-
-        return res.json({
-            conversaId,
+        const ultima = lastByConversa.get(c.id);
+        data.push({
+            id: c.id,
+            atualizadoEm: c.atualizadoEm,
             chatLiberado,
-            custoCreditos: CHAT_CUSTO_CREDITOS,
-            saldoCreditos,
+            outroUsuarioId: outroId,
+            outro,
+            ultimaMensagem: ultima ? { texto: ultima.texto, criadoEm: ultima.criadoEm } : null,
         });
-    } catch (e) {
-        return res.status(500).json({ erro: "Erro ao buscar status", detalhe: e.message });
     }
+
+    return res.json(data);
 }
 
-/**
- * ✅ POST /conversas/:id/liberar
- * Debita créditos 1x e registra no WalletTx
- */
+// ==============================
+// ✅ MENSAGENS DA CONVERSA
+// ==============================
+export async function mensagensDaConversa(req, res) {
+    const userId = req.usuario.id;
+    const { id: conversaId } = req.params;
+
+    const conv = await prisma.conversa.findUnique({
+        where: { id: conversaId },
+        include: { match: true },
+    });
+
+    if (!conv) return res.status(404).json({ erro: "Conversa não encontrada" });
+    if (!assertParteDaConversa(conv, userId)) return res.status(403).json({ erro: "Sem acesso" });
+
+    const mensagens = await prisma.mensagem.findMany({
+        where: { conversaId },
+        orderBy: { criadoEm: "asc" },
+        take: 200,
+    });
+
+    return res.json({ mensagens });
+}
+
+// ==============================
+// ✅ ABRIR/CRIAR CONVERSA POR MATCH
+// ==============================
+export async function abrirConversaPorMatch(req, res) {
+    const userId = req.usuario.id;
+    const { matchId } = req.body || {};
+
+    if (!matchId) return res.status(400).json({ erro: "matchId é obrigatório" });
+
+    const match = await prisma.match.findUnique({ where: { id: matchId } });
+    if (!match) return res.status(404).json({ erro: "Match não encontrado" });
+
+    if (match.usuarioAId !== userId && match.usuarioBId !== userId) {
+        return res.status(403).json({ erro: "Sem acesso" });
+    }
+
+    let conversa = await prisma.conversa.findFirst({ where: { matchId } });
+
+    if (!conversa) {
+        conversa = await prisma.conversa.create({
+            data: { matchId },
+        });
+    }
+
+    return res.json(conversa);
+}
+
+// ==============================
+// ✅ STATUS (CRÉDITOS)
+// ==============================
+export async function statusConversa(req, res) {
+    const userId = req.usuario.id;
+    const { id: conversaId } = req.params;
+
+    const conv = await prisma.conversa.findUnique({
+        where: { id: conversaId },
+        include: { match: true },
+    });
+
+    if (!conv) return res.status(404).json({ erro: "Conversa não encontrada" });
+    if (!assertParteDaConversa(conv, userId)) return res.status(403).json({ erro: "Sem acesso" });
+
+    const chatLiberado = await isChatLiberadoParaUsuario(conversaId, userId);
+    const saldoCreditos = await getSaldoCreditos(userId);
+
+    return res.json({
+        chatLiberado,
+        custoCreditos: CHAT_CUSTO_CREDITOS,
+        saldoCreditos,
+    });
+}
+
+// ==============================
+// ✅ LIBERAR CHAT (CRÉDITOS)
+// ==============================
 export async function liberarChat(req, res) {
-    try {
-        const userId = req.usuario.id;
-        const { id: conversaId } = req.params;
+    const userId = req.usuario.id;
+    const { id: conversaId } = req.params;
 
-        const conv = await prisma.conversa.findUnique({
-            where: { id: conversaId },
-            include: { match: { select: { usuarioAId: true, usuarioBId: true } } },
-        });
+    const conv = await prisma.conversa.findUnique({
+        where: { id: conversaId },
+        include: { match: true },
+    });
 
-        if (!conv) return res.status(404).json({ erro: "Conversa não encontrada" });
+    if (!conv) return res.status(404).json({ erro: "Conversa não encontrada" });
+    if (!assertParteDaConversa(conv, userId)) return res.status(403).json({ erro: "Sem acesso" });
 
-        const isParte = conv.match.usuarioAId === userId || conv.match.usuarioBId === userId;
-        if (!isParte) return res.status(403).json({ erro: "Sem acesso a esta conversa" });
+    const jaLiberado = await isChatLiberadoParaUsuario(conversaId, userId);
+    const saldo = await getSaldoCreditos(userId);
 
-        // se custo 0 -> libera sem debitar
-        if (CHAT_CUSTO_CREDITOS <= 0) {
-            await prisma.walletTx.create({
-                data: {
-                    userId,
-                    tipo: "DEBITO",
-                    origem: "CHAT_UNLOCK",
-                    valor: 0,
-                    refId: conversaId,
-                },
-            });
-
-            return res.json({
-                ok: true,
-                chatLiberado: true,
-                custoCreditos: 0,
-                saldoCreditos: await getSaldoCreditos(userId),
-            });
-        }
-
-        const result = await prisma.$transaction(async (tx) => {
-            const ja = await tx.walletTx.findFirst({
-                where: { userId, origem: "CHAT_UNLOCK", refId: conversaId },
-                select: { id: true },
-            });
-
-            if (ja) {
-                const saldo = (await tx.wallet.findUnique({ where: { userId } }))?.saldoCreditos ?? 0;
-                return { already: true, saldo };
-            }
-
-            const wallet = await tx.wallet.upsert({
-                where: { userId },
-                create: { userId, saldoCreditos: 0 },
-                update: {},
-            });
-
-            if (wallet.saldoCreditos < CHAT_CUSTO_CREDITOS) {
-                return { insuficiente: true, saldo: wallet.saldoCreditos };
-            }
-
-            const w2 = await tx.wallet.update({
-                where: { userId },
-                data: { saldoCreditos: { decrement: CHAT_CUSTO_CREDITOS } },
-            });
-
-            await tx.walletTx.create({
-                data: {
-                    userId,
-                    tipo: "DEBITO",
-                    origem: "CHAT_UNLOCK",
-                    valor: CHAT_CUSTO_CREDITOS,
-                    refId: conversaId,
-                },
-            });
-
-            // opcional: mensagem de sistema no chat
-            await tx.mensagem.create({
-                data: {
-                    conversaId,
-                    autorId: userId,
-                    tipo: "SISTEMA",
-                    texto: "🔓 Chat liberado com créditos.",
-                },
-            });
-
-            await tx.conversa.update({
-                where: { id: conversaId },
-                data: { atualizadoEm: new Date() },
-            });
-
-            return { ok: true, saldo: w2.saldoCreditos };
-        });
-
-        if (result.insuficiente) {
-            return res.status(402).json({
-                erro: "Saldo insuficiente",
-                custoCreditos: CHAT_CUSTO_CREDITOS,
-                saldoCreditos: result.saldo,
-            });
-        }
-
+    if (jaLiberado) {
         return res.json({
-            ok: true,
             chatLiberado: true,
             custoCreditos: CHAT_CUSTO_CREDITOS,
-            saldoCreditos: result.saldo,
+            saldoCreditos: saldo,
         });
-    } catch (e) {
-        return res.status(500).json({ erro: "Erro ao liberar chat", detalhe: e.message });
     }
+
+    if (CHAT_CUSTO_CREDITOS === 0) {
+        await prisma.walletTx.create({
+            data: {
+                userId,
+                tipo: "DEBITO",
+                origem: "CHAT_UNLOCK",
+                valor: 0,
+                refId: conversaId,
+            },
+        });
+
+        return res.json({
+            chatLiberado: true,
+            custoCreditos: 0,
+            saldoCreditos: saldo,
+        });
+    }
+
+    if (saldo < CHAT_CUSTO_CREDITOS) {
+        return res.status(402).json({
+            chatLiberado: false,
+            erro: "Saldo insuficiente",
+            custoCreditos: CHAT_CUSTO_CREDITOS,
+            saldoCreditos: saldo,
+        });
+    }
+
+    await prisma.$transaction(async (tx) => {
+        await tx.wallet.update({
+            where: { userId },
+            data: { saldoCreditos: { decrement: CHAT_CUSTO_CREDITOS } },
+        });
+
+        await tx.walletTx.create({
+            data: {
+                userId,
+                tipo: "DEBITO",
+                origem: "CHAT_UNLOCK",
+                valor: CHAT_CUSTO_CREDITOS,
+                refId: conversaId,
+            },
+        });
+
+        await tx.mensagem.create({
+            data: {
+                conversaId,
+                autorId: userId,
+                tipo: "SISTEMA",
+                texto: "🔓 Chat liberado com créditos.",
+            },
+        });
+    });
+
+    const novoSaldo = await getSaldoCreditos(userId);
+
+    return res.json({
+        chatLiberado: true,
+        custoCreditos: CHAT_CUSTO_CREDITOS,
+        saldoCreditos: novoSaldo,
+    });
 }
