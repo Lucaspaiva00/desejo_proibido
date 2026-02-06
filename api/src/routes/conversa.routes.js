@@ -3,7 +3,7 @@ import { auth } from "../middlewares/auth.middleware.js";
 import {
     listarConversas,
     mensagensDaConversa,
-    abrirConversaPorMatch,
+    // abrirConversaPorMatch,
     statusConversa,
     liberarChat,
 } from "../controllers/conversa.controller.js";
