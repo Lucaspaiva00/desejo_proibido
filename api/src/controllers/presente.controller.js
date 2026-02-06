@@ -55,6 +55,7 @@ export async function enviarPresente(req, res) {
         deUsuarioId: userId,
         paraUsuarioId,
         minutos: presente.minutos || 0,
+        custoCreditos: custo,
       },
     });
 
@@ -77,6 +78,7 @@ export async function enviarPresente(req, res) {
 
     return res.json({ ok: true, enviado });
   } catch (e) {
+    console.error("❌ enviarPresente:", e);
     return res.status(500).json({ erro: "Erro ao enviar presente", detalhe: e.message });
   }
 }
