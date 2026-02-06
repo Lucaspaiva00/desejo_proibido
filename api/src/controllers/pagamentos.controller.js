@@ -170,12 +170,12 @@ export async function webhookMercadoPago(req, res) {
                 const current = await tx.pagamento.findUnique({ where: { id: pag.id } });
                 if (!current || current.status === "PAID") return; // double-check
 
-                await tx.pagamento.update({
-                    where: { id: pag.id },
+                await tx.usuario.update({
+                    where: { id: pag.usuarioId },
                     data: {
-                        status: "PAID",
-                        mpPaymentId: String(mpPaymentId),
-                    },
+                        isPremium: true,
+                        plano: "CREDITOS"
+                    }
                 });
 
                 // wallet

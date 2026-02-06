@@ -86,7 +86,7 @@ function getAuth() {
 
 const auth = getAuth();
 
-// garante token na chave "token" (muitos api.js usam essa)
+// garante token na chave "token"
 if (auth.token && !localStorage.getItem("token")) {
     localStorage.setItem("token", auth.token);
 }
@@ -181,14 +181,18 @@ function setCreditWallInfo({ custoCreditos, saldoCreditos }) {
 function applyChatLockUI() {
     const hasChat = !!state.conversaId;
 
-    // Premium libera tudo automaticamente (inclusive chat)
+    // ✅ Premium libera tudo automaticamente
     if (state.premiumAtivo) {
         state.chatLiberado = true;
         hideCreditWall();
+
         if (texto) texto.disabled = !hasChat;
         if (btnEnviar) btnEnviar.disabled = !hasChat;
+
+        // ✅ COMO VOCÊ QUER: comprou créditos => premium => presentes e ligação liberados
         if (btnGift) btnGift.disabled = !hasChat;
         if (btnCall) btnCall.disabled = !hasChat;
+
         return;
     }
 
@@ -207,8 +211,6 @@ function applyChatLockUI() {
         showCreditWall();
         if (texto) texto.disabled = true;
         if (btnEnviar) btnEnviar.disabled = true;
-
-        // presentes/ligação continuam “premium-only” no seu layout atual
         if (btnGift) btnGift.disabled = true;
         if (btnCall) btnCall.disabled = true;
         return;
@@ -219,13 +221,13 @@ function applyChatLockUI() {
     if (texto) texto.disabled = false;
     if (btnEnviar) btnEnviar.disabled = false;
 
-    // presentes/ligação continuam premium-only (mantenho sua regra atual)
+    // ainda não premium => mantém presentes/ligação bloqueados
     if (btnGift) btnGift.disabled = true;
     if (btnCall) btnCall.disabled = true;
 }
 
 // ==============================
-// Premium UI (mantido)
+// Premium UI
 // ==============================
 function setPremiumUI(isPremium) {
     state.premiumAtivo = !!isPremium;
@@ -236,10 +238,8 @@ function setPremiumUI(isPremium) {
 
     if (btnAssinarTopo) btnAssinarTopo.style.display = isPremium ? "none" : "inline-flex";
     if (paywall) paywall.hidden = isPremium;
-
     if (chatPanel) chatPanel.classList.toggle("locked", !isPremium);
 
-    // ✅ agora o lock/unlock do chat (créditos) decide os inputs
     applyChatLockUI();
 }
 
@@ -274,8 +274,24 @@ const API = {
     premiumStatus: "/premium/status",
 };
 
+// ✅ Atualiza localStorage(usuario) quando o backend confirmar premium
+function syncUsuarioPremium(isPremium) {
+    try {
+        const raw = localStorage.getItem("usuario");
+        const u = raw ? JSON.parse(raw) : (state.usuario || {});
+        if (!u) return;
+
+        u.isPremium = !!isPremium;
+        u.premiumAtivo = !!isPremium;
+        u.premium = !!isPremium;
+
+        localStorage.setItem("usuario", JSON.stringify(u));
+        state.usuario = u;
+    } catch { }
+}
+
 // ==============================
-// Checar Premium
+// Checar Premium (REFORÇADO)
 // ==============================
 async function checarPremium() {
     const local =
@@ -292,9 +308,12 @@ async function checarPremium() {
             !!r?.premium;
 
         setPremiumUI(ativo);
-        return;
+        syncUsuarioPremium(ativo);
+        return ativo;
     } catch {
         setPremiumUI(local);
+        syncUsuarioPremium(local);
+        return local;
     }
 }
 
@@ -392,14 +411,19 @@ async function atualizarStatusChat() {
         return;
     }
 
+    // ✅ se virou premium, nem precisa buscar lock
+    if (state.premiumAtivo) {
+        state.chatLiberado = true;
+        applyChatLockUI();
+        return;
+    }
+
     try {
         const r = await apiFetch(API.statusChat(state.conversaId));
-        // { chatLiberado, custoCreditos, saldoCreditos }
         state.chatLiberado = !!r.chatLiberado;
         setCreditWallInfo({ custoCreditos: r.custoCreditos, saldoCreditos: r.saldoCreditos });
         applyChatLockUI();
-    } catch (e) {
-        // se falhar, por segurança trava
+    } catch {
         state.chatLiberado = false;
         applyChatLockUI();
     }
@@ -413,11 +437,10 @@ btnLiberarChat?.addEventListener("click", async () => {
         btnLiberarChat.textContent = "Liberando...";
 
         const r = await apiFetch(API.liberarChat(state.conversaId), { method: "POST" });
-        // { chatLiberado, saldoCreditos, cobrado }
-        state.chatLiberado = true;
 
+        state.chatLiberado = true;
         setCreditWallInfo({ custoCreditos: state.custoChat, saldoCreditos: r.saldoCreditos });
-        // atualiza lista (remove cadeado)
+
         const idx = state.conversas.findIndex((c) => c.id === state.conversaId);
         if (idx >= 0) state.conversas[idx].chatLiberado = true;
 
@@ -430,7 +453,6 @@ btnLiberarChat?.addEventListener("click", async () => {
     } finally {
         btnLiberarChat.disabled = false;
         btnLiberarChat.innerHTML = `Liberar por <span id="unlockCost">${state.custoChat} créditos</span>`;
-        // re-link span
         const span = btnLiberarChat.querySelector("#unlockCost");
         if (span) span.textContent = `${state.custoChat} créditos`;
     }
@@ -477,6 +499,9 @@ async function abrirConversa(conversaId) {
 
     renderLista();
 
+    // ✅ RECHECA PREMIUM sempre ao abrir conversa (porque compra foi em outra tela)
+    await checarPremium();
+
     await atualizarSaldo();
     await atualizarStatusChat();
     await carregarMensagens();
@@ -493,14 +518,11 @@ async function carregarMensagens() {
 
         const data = await apiFetch(API.mensagensDaConversa(state.conversaId));
 
-        // ✅ agora backend pode retornar { chatLiberado, mensagens }
         let items = [];
         if (Array.isArray(data)) {
             items = data;
         } else if (data?.mensagens && Array.isArray(data.mensagens)) {
             items = data.mensagens;
-
-            // se backend mandou chatLiberado, aplica
             if (typeof data.chatLiberado === "boolean") {
                 state.chatLiberado = data.chatLiberado;
             }
@@ -511,7 +533,6 @@ async function carregarMensagens() {
         renderMensagens(items);
         chatStatus.textContent = "";
 
-        // atualiza lock após carregar
         await atualizarStatusChat();
     } catch (e) {
         chatStatus.textContent = "Erro";
@@ -582,7 +603,6 @@ async function enviarMensagem() {
 
         await carregarMensagens();
     } catch (e) {
-        // se backend retornou CHAT_LOCKED
         if (isChatLockedError(e)) {
             await atualizarStatusChat();
             showCreditWall();
@@ -607,11 +627,12 @@ texto?.addEventListener("keydown", (e) => {
 });
 
 // ==============================
-// Presentes (mantido premium-only)
+// Presentes (AGORA PREMIUM VIA CRÉDITOS)
 // ==============================
 btnGift?.addEventListener("click", async () => {
     if (!state.conversaId) return;
 
+    // ✅ se não é premium, trava
     if (!state.premiumAtivo) {
         if (paywall) paywall.hidden = false;
         return;
@@ -674,7 +695,7 @@ async function enviarPresente(presenteId) {
 }
 
 // ==============================
-// Minutos + Ligações (MVP - mantido premium-only)
+// Minutos + Ligações (AGORA PREMIUM VIA CRÉDITOS)
 // ==============================
 async function atualizarSaldo() {
     try {
@@ -688,6 +709,7 @@ async function atualizarSaldo() {
 btnCall?.addEventListener("click", async () => {
     if (!state.conversaId) return;
 
+    // ✅ se não é premium, trava
     if (!state.premiumAtivo) {
         if (paywall) paywall.hidden = false;
         return;
@@ -762,6 +784,20 @@ async function finalizarLigacaoMVP() {
 // ==============================
 await checarPremium();
 await carregarConversas();
+
+// ✅ quando voltar do Mercado Pago / trocar aba, revalida premium
+document.addEventListener("visibilitychange", async () => {
+    if (!document.hidden) {
+        await checarPremium();
+        await atualizarSaldo();
+        await atualizarStatusChat();
+    }
+});
+
+// ✅ reforço: revalida premium a cada 10s (seguro)
+setInterval(async () => {
+    await checarPremium();
+}, 10000);
 
 // auto refresh se uma conversa estiver aberta
 setInterval(() => {
