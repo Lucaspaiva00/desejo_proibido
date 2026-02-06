@@ -237,11 +237,19 @@ function setPremiumUI(isPremium) {
     }
 
     if (btnAssinarTopo) btnAssinarTopo.style.display = isPremium ? "none" : "inline-flex";
-    if (paywall) paywall.hidden = isPremium;
+
+    // 🔥 FORÇA esconder visualmente (protege contra CSS .locked .paywall)
+    if (paywall) {
+        const hide = !!isPremium;
+        paywall.hidden = hide;
+        paywall.style.display = hide ? "none" : "flex";
+    }
+
     if (chatPanel) chatPanel.classList.toggle("locked", !isPremium);
 
     applyChatLockUI();
 }
+
 
 function openCheckout() {
     alert("Abrir checkout do Premium (implementar link real).");
@@ -300,11 +308,12 @@ async function checarPremium() {
         !!state.usuario?.premium;
 
     try {
-        const r = await apiFetch(API.premiumStatus);
+        const r = await apiFetch(API.premiumStatus); // /premium/me
+
         const ativo =
+            !!r?.isPremium ||
             !!r?.premiumAtivo ||
             !!r?.ativo ||
-            !!r?.isPremium ||
             !!r?.premium;
 
         setPremiumUI(ativo);
