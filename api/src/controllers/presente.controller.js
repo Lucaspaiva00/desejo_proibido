@@ -1,23 +1,7 @@
+// presente.controller.js
 import { prisma } from "../prisma.js";
 import { creditarMinutos } from "../utils/minutos.js";
 
-/**
- * GET /presentes
- * Lista catálogo de presentes
- */
-export async function listarPresentes(req, res) {
-  const itens = await prisma.presente.findMany({
-    where: { ativo: true },
-    orderBy: { minutos: "asc" },
-  });
-  return res.json(itens);
-}
-
-/**
- * POST /presentes/enviar
- * body: { conversaId, presenteId }
- * O backend descobre quem é o outro usuário na conversa e credita nele
- */
 export async function enviarPresente(req, res) {
   try {
     const deUsuarioId = req.usuario.id;
@@ -40,12 +24,51 @@ export async function enviarPresente(req, res) {
       return res.status(403).json({ erro: "Você não pertence a esta conversa" });
     }
 
-    const paraUsuarioId = (deUsuarioId === a) ? b : a;
+    const paraUsuarioId = deUsuarioId === a ? b : a;
 
     const presente = await prisma.presente.findUnique({ where: { id: presenteId } });
-    if (!presente || !presente.ativo) return res.status(404).json({ erro: "Presente inválido" });
+    if (!presente || !presente.ativo) {
+      return res.status(404).json({ erro: "Presente inválido" });
+    }
+
+    const custo = Number(presente.custoCreditos || 0);
+
+    // ✅ garante wallet do usuário (pra não dar erro no update)
+    await prisma.wallet.upsert({
+      where: { userId: deUsuarioId },
+      update: {},
+      create: { userId: deUsuarioId, saldoCreditos: 0 },
+    });
 
     const envio = await prisma.$transaction(async (tx) => {
+      // ✅ 1) valida saldo e debita
+      if (custo > 0) {
+        const w = await tx.wallet.findUnique({ where: { userId: deUsuarioId } });
+        const saldo = w?.saldoCreditos ?? 0;
+
+        if (saldo < custo) {
+          const err = new Error("SALDO_INSUFICIENTE");
+          err.code = "SALDO_INSUFICIENTE";
+          throw err;
+        }
+
+        await tx.wallet.update({
+          where: { userId: deUsuarioId },
+          data: { saldoCreditos: { decrement: custo } },
+        });
+
+        await tx.walletTx.create({
+          data: {
+            userId: deUsuarioId,
+            tipo: "DEBIT",
+            origem: "PRESENTE",
+            valor: custo,
+            refId: conversaId, // ou envio.id depois; aqui usamos conversaId
+          },
+        });
+      }
+
+      // ✅ 2) registra envio
       const enviado = await tx.presenteEnviado.create({
         data: {
           presenteId,
@@ -53,10 +76,11 @@ export async function enviarPresente(req, res) {
           deUsuarioId,
           paraUsuarioId,
           minutos: presente.minutos,
+          custoCreditos: custo, // se você adicionou o campo
         },
       });
 
-      // mensagem no chat
+      // ✅ 3) mensagem no chat
       await tx.mensagem.create({
         data: {
           conversaId,
@@ -69,6 +93,7 @@ export async function enviarPresente(req, res) {
             minutos: presente.minutos,
             imagemUrl: presente.imagemUrl,
             paraUsuarioId,
+            custoCreditos: custo,
           },
         },
       });
@@ -76,6 +101,7 @@ export async function enviarPresente(req, res) {
       return enviado;
     });
 
+    // ✅ 4) credita minutos no outro (fora ou dentro da tx; você já fazia fora)
     if (presente.minutos > 0) {
       await creditarMinutos({
         usuarioId: paraUsuarioId,
@@ -87,8 +113,20 @@ export async function enviarPresente(req, res) {
       });
     }
 
-    return res.json({ ok: true });
+    // ✅ devolve saldo atualizado pro front (melhor UX)
+    const w2 = await prisma.wallet.findUnique({ where: { userId: deUsuarioId } });
+
+    return res.json({
+      ok: true,
+      saldoCreditos: w2?.saldoCreditos ?? 0,
+    });
   } catch (e) {
+    if (e?.code === "SALDO_INSUFICIENTE" || e?.message === "SALDO_INSUFICIENTE") {
+      return res.status(402).json({
+        code: "SALDO_INSUFICIENTE",
+        erro: "Saldo insuficiente para enviar este presente.",
+      });
+    }
     return res.status(500).json({ erro: e.message });
   }
 }

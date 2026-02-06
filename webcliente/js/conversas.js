@@ -693,19 +693,28 @@ async function carregarPresentes() {
             return;
         }
 
-        giftList.innerHTML = itens.map((p) => `
-      <button class="dp-gift" data-id="${p.id}">
-        <div>
-          <span class="name">${escapeHtml(p.nome)}</span>
-          <span class="sub">Crédita ${p.minutos} minuto(s)</span>
-        </div>
-        <span class="dp-pill">${p.minutos} min</span>
-      </button>
-    `).join("");
+        giftList.innerHTML = itens.map((p) => {
+            const custo = Number(p.custoCreditos || 0);
+            const saldo = Number(state.saldoCreditos || 0);
+            const disabled = custo > saldo;
+
+            return `
+    <button class="dp-gift" data-id="${p.id}" ${disabled ? "disabled" : ""}>
+      <div>
+        <span class="name">${escapeHtml(p.nome)}</span>
+        <span class="sub">
+          Crédita ${Number(p.minutos || 0)} minuto(s) • Custa ${custo} crédito(s)
+        </span>
+      </div>
+      <span class="dp-pill">💰 ${custo}</span>
+    </button>
+  `;
+        }).join("");
 
         [...giftList.querySelectorAll("button[data-id]")].forEach((btn) => {
             btn.addEventListener("click", async () => {
                 const presenteId = btn.getAttribute("data-id");
+                if (btn.disabled) return;
                 await enviarPresente(presenteId);
             });
         });
@@ -717,19 +726,31 @@ async function carregarPresentes() {
 
 async function enviarPresente(presenteId) {
     try {
-        await apiFetch(API.enviarPresente, {
+        const r = await apiFetch(API.enviarPresente, {
             method: "POST",
             body: { conversaId: state.conversaId, presenteId },
         });
 
+        // ✅ atualiza saldo imediatamente (sem esperar /carteira)
+        if (typeof r?.saldoCreditos === "number") {
+            state.saldoCreditos = r.saldoCreditos;
+            if (minutosPill) minutosPill.textContent = `💰 Créditos: ${r.saldoCreditos}`;
+            if (saldoCreditosEl) saldoCreditosEl.textContent = `${r.saldoCreditos}`;
+        }
+
         closeGiftModal();
         await carregarMensagens();
-        await atualizarSaldo();
     } catch (e) {
-        if (enforcePremiumFromError(e)) return;
+        if (e?.status === 402 && e?.data?.code === "SALDO_INSUFICIENTE") {
+            alert("Saldo insuficiente pra enviar esse presente.");
+            await atualizarSaldo();
+            await carregarPresentes();
+            return;
+        }
         alert("Erro ao enviar presente: " + e.message);
     }
 }
+
 
 // ==============================
 // Minutos + Ligações (Premium efetivo via créditos)
