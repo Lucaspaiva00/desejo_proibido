@@ -16,8 +16,8 @@ async function main() {
     let atualizados = 0;
 
     for (const p of presentes) {
-        const existente = await prisma.presente.findUnique({
-            where: { nome: p.nome }, // nome é @unique no seu schema
+        const existente = await prisma.presente.findFirst({
+            where: { nome: p.nome },
             select: { id: true },
         });
 
@@ -32,12 +32,14 @@ async function main() {
             });
             atualizados++;
         } else {
-            await prisma.presente.create({ data: p });
+            await prisma.presente.create({
+                data: p,
+            });
             criados++;
         }
     }
 
-    console.log(`✅ Seed presentes OK | criados=${criados} | atualizados=${atualizados}`);
+    console.log(`✅ Seed de presentes OK | criados=${criados} | atualizados=${atualizados}`);
 }
 
 main()
