@@ -535,17 +535,18 @@ async function abrirConversa(conversaId) {
     await checarPremium();
     await atualizarSaldo();
     await atualizarStatusChat();
-    await carregarMensagens();
+    await carregarMensagens(); // mantém chamada original
 }
 
 // ==============================
 // Mensagens
 // ==============================
-async function carregarMensagens() {
+// ✅✅✅ AJUSTE AQUI: agora tem { silent } e não pisca no polling
+async function carregarMensagens({ silent = false } = {}) {
     if (!state.conversaId) return;
 
     try {
-        chatStatus.textContent = "Carregando...";
+        if (!silent) chatStatus.textContent = "Carregando...";
 
         const data = await apiFetch(API.mensagensDaConversa(state.conversaId));
 
@@ -562,12 +563,15 @@ async function carregarMensagens() {
         }
 
         renderMensagens(items);
-        chatStatus.textContent = "";
+
+        if (!silent) chatStatus.textContent = "";
 
         await atualizarStatusChat();
     } catch (e) {
-        chatStatus.textContent = "Erro";
-        msgs.innerHTML = `<div class="empty">Erro ao carregar mensagens: ${escapeHtml(e.message)}</div>`;
+        if (!silent) {
+            chatStatus.textContent = "Erro";
+            msgs.innerHTML = `<div class="empty">Erro ao carregar mensagens: ${escapeHtml(e.message)}</div>`;
+        }
     }
 }
 
@@ -848,7 +852,7 @@ setInterval(async () => {
     await checarPremium();
 }, 10000);
 
-// auto refresh se uma conversa estiver aberta
+// ✅✅✅ AJUSTE AQUI: polling agora é silencioso (não pisca "Carregando...")
 setInterval(() => {
-    if (state.conversaId) carregarMensagens();
+    if (state.conversaId) carregarMensagens({ silent: true });
 }, 4000);
