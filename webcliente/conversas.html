@@ -113,7 +113,6 @@
       white-space: nowrap;
     }
 
-    /* Botões extras */
     .chat-actions {
       display: flex;
       align-items: center;
@@ -143,7 +142,6 @@
       cursor: not-allowed;
     }
 
-    /* Mensagem de sistema/presente */
     .bubble.system {
       background: rgba(255, 255, 255, .08) !important;
       border: 1px dashed rgba(255, 255, 255, .18);
@@ -215,14 +213,12 @@
 </head>
 
 <body>
-  <!-- TOPNAV: Desktop normal + Mobile com menu sanduíche -->
   <nav class="topnav" role="navigation" aria-label="Navegação principal">
     <div class="brand">
       <div class="brand-badge">DP</div>
       <span class="brand-name">Desejo Proibido</span>
     </div>
 
-    <!-- Desktop links -->
     <div class="navlinks navlinks-desktop" aria-label="Links do menu">
       <a href="home.html">Feed</a>
       <a href="perfil.html">Perfil</a>
@@ -233,16 +229,13 @@
 
     <div class="spacer"></div>
 
-    <!-- Botão sair (sempre visível) -->
     <button id="btnSair" class="btn btn-ghost">Sair</button>
 
-    <!-- Botão hambúrguer (mobile) -->
     <button class="nav-toggle" id="navToggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="navDrawer">
       <span></span><span></span><span></span>
     </button>
   </nav>
 
-  <!-- Overlay + Drawer Mobile -->
   <div class="nav-overlay" id="navOverlay" aria-hidden="true"></div>
 
   <aside class="nav-drawer" id="navDrawer" aria-hidden="true">
@@ -271,7 +264,6 @@
   </aside>
 
   <div class="wrap">
-    <!-- HERO PREMIUM -->
     <div class="headRow headRow-premium">
       <div class="hero">
         <h2 class="heroTitle">Conversas Privadas <span class="spark">✨</span></h2>
@@ -286,7 +278,6 @@
     </div>
 
     <div class="chat-layout">
-      <!-- LEFT -->
       <aside class="panel left">
         <div class="panel-header">
           <input id="q" class="search" placeholder="Buscar conversa..." />
@@ -294,7 +285,6 @@
         <div id="lista" class="list"></div>
       </aside>
 
-      <!-- RIGHT -->
       <section class="panel right chat" style="position: relative;">
         <div class="chat-top">
           <div class="chat-user">
@@ -311,13 +301,8 @@
 
           <div class="chat-actions">
             <span class="dp-pill" id="minutosPill">⏱️ Minutos: -</span>
-
-            <!-- Ligação -->
             <button class="iconbtn" id="btnCall" title="Ligar" disabled>📞</button>
-
-            <!-- Presentes -->
             <button class="iconbtn" id="btnGift" title="Enviar presente" disabled>🎁</button>
-
             <div class="muted" id="chatStatus"></div>
           </div>
         </div>
@@ -326,7 +311,6 @@
           <div class="empty">Escolha uma conversa à esquerda para ver as mensagens.</div>
         </div>
 
-        <!-- ✅ CREDIT WALL (liberar chat por créditos) -->
         <div class="creditwall" id="creditwall" aria-hidden="true">
           <div class="creditwallCard">
             <div class="creditwallTitle">🔒 Chat bloqueado</div>
@@ -354,7 +338,6 @@
           </div>
         </div>
 
-        <!-- PAYWALL PREMIUM (mantido) -->
         <div class="paywall" id="paywall" hidden>
           <div class="paywallCard">
             <div class="paywallTitle">Desbloqueie o Chat Premium 🔥</div>
@@ -381,7 +364,6 @@
     </div>
   </div>
 
-  <!-- MODAL PRESENTES -->
   <div class="dp-modal-overlay" id="giftOverlay" aria-hidden="true">
     <div class="dp-modal" role="dialog" aria-modal="true" aria-label="Enviar presente">
       <div class="dp-modal-head">
@@ -395,10 +377,10 @@
     </div>
   </div>
 
-  <script type="module" src="js/conversas.js"></script>
+  <!-- ✅ cache-bust -->
+  <script type="module" src="js/conversas.js?v=20260205-3"></script>
 
   <script>
-    // Drawer Mobile (hambúrguer) - padrão Tinder
     const navToggle = document.getElementById("navToggle");
     const navDrawer = document.getElementById("navDrawer");
     const navOverlay = document.getElementById("navOverlay");
@@ -432,12 +414,10 @@
     navOverlay?.addEventListener("click", closeNav);
     navClose?.addEventListener("click", closeNav);
 
-    // Fecha com ESC
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") closeNav();
     });
 
-    // Sair: desktop + drawer
     const btnSair = document.getElementById("btnSair");
     const btnSairMobile = document.getElementById("btnSairMobile");
     if (btnSair && btnSairMobile) {

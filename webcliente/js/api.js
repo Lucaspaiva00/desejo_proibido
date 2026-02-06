@@ -1,46 +1,98 @@
-export const API_BASE = "https://desejoproibido.app/api";
-// export const API_BASE = "http://localhost:5000";
+const API_BASE = "https://desejoproibido.app/api";
+// const API_BASE = "http://localhost:5000";
 
-export function getToken() {
+function getToken() {
   return localStorage.getItem("token") || "";
 }
 
-export function setToken(token) {
+function setToken(token) {
   localStorage.setItem("token", token);
 }
 
-export function logout() {
+function logout() {
   localStorage.removeItem("token");
   localStorage.removeItem("usuario");
+  localStorage.removeItem("usuarioLogado");
+  localStorage.removeItem("auth");
   location.href = "index.html";
 }
 
-export async function apiFetch(
-  path,
-  { method = "GET", body, headers = {} } = {}
-) {
-  const token = getToken();
-  const url = path.startsWith("http") ? path : `${API_BASE}${path}`;
+// ✅ Compat/normalize: evita chamar rota inexistente
+function normalizePath(path) {
+  if (!path || typeof path !== "string") return path;
 
-  const res = await fetch(url, {
+  // Se vier /conversas/:id (rota que NÃO existe no backend),
+  // converte para /conversas/:id/status (rota que existe)
+  if (path.startsWith("/conversas/")) {
+    const parts = path.split("/").filter(Boolean); // ["conversas", ":id"]
+    if (parts.length === 2) {
+      const id = parts[1];
+      return `/conversas/${id}/status`;
+    }
+  }
+
+  return path;
+}
+
+async function apiFetch(path, options = {}) {
+  if (!path || typeof path !== "string") {
+    throw new Error("apiFetch: path inválido");
+  }
+
+  if (path.indexOf("undefined") !== -1 || path.indexOf("null") !== -1) {
+    throw new Error("apiFetch: path inválido → " + path);
+  }
+
+  path = normalizePath(path);
+
+  const method = options.method || "GET";
+  const body = options.body;
+  const headers = options.headers || {};
+
+  const token = getToken();
+  const url = path.indexOf("http") === 0 ? path : API_BASE + path;
+
+  const fetchOptions = {
     method,
-    headers: {
-      ...(body ? { "Content-Type": "application/json" } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...headers,
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
+    headers: {},
+  };
+
+  if (body) {
+    fetchOptions.headers["Content-Type"] = "application/json";
+    fetchOptions.body = JSON.stringify(body);
+  }
+
+  if (token) {
+    fetchOptions.headers["Authorization"] = "Bearer " + token;
+  }
+
+  for (const h in headers) {
+    fetchOptions.headers[h] = headers[h];
+  }
+
+  const res = await fetch(url, fetchOptions);
 
   const ct = res.headers.get("content-type") || "";
-  const data = ct.includes("application/json")
-    ? await res.json().catch(() => null)
-    : await res.text().catch(() => null);
+  let data = null;
+
+  if (ct.indexOf("application/json") !== -1) {
+    try {
+      data = await res.json();
+    } catch {
+      data = null;
+    }
+  } else {
+    try {
+      data = await res.text();
+    } catch {
+      data = null;
+    }
+  }
 
   if (!res.ok) {
     const msg =
       (data && (data.erro || data.error || data.message)) ||
-      `Erro HTTP ${res.status}`;
+      "Erro HTTP " + res.status;
 
     const err = new Error(msg);
     err.status = res.status;
@@ -50,3 +102,5 @@ export async function apiFetch(
 
   return data;
 }
+
+export { API_BASE, getToken, setToken, logout, apiFetch };
