@@ -1,6 +1,6 @@
 // API/src/routes/pagamentos.routes.js
 import { Router } from "express";
-import { auth } from "../middlewares/auth.js";
+import { auth } from "../middlewares/auth.middleware.js";
 import {
     listarPacotes,
     checkoutCreditos,
