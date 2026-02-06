@@ -2,7 +2,7 @@ import { Router } from "express";
 import { auth } from "../middlewares/auth.middleware.js";
 import {
     // listarConversas,
-    mensagensDaConversa,
+    // mensagensDaConversa,
     // abrirConversaPorMatch,
     statusConversa,
     liberarChat,
@@ -12,11 +12,11 @@ const router = Router();
 
 router.use(auth);
 
-router.get("/", listarConversas);
-router.get("/minhas", listarConversas);
+// router.get("/", listarConversas);
+// router.get("/minhas", listarConversas);
 
 // abrir conversa via matchId
-router.post("/abrir", abrirConversaPorMatch);
+// router.post("/abrir", abrirConversaPorMatch);
 
 // ✅ PAYWALL CHAT (CRÉDITOS)
 router.get("/:id/status", statusConversa);
@@ -27,6 +27,6 @@ router.get("/:id", statusConversa);
 // ✅ COMPAT: front antigo chamando POST /conversas/:id pra liberar
 router.post("/:id", liberarChat);
 
-router.get("/:id/mensagens", mensagensDaConversa);
+// router.get("/:id/mensagens", mensagensDaConversa);
 
 export default router;
