@@ -1,4 +1,4 @@
-// api/prisma/seed-presentes.js
+// prisma/seed-presentes.js
 import { prisma } from "../src/prisma.js";
 
 const presentes = [
@@ -12,8 +12,7 @@ const presentes = [
 ];
 
 async function main() {
-    let criados = 0;
-    let atualizados = 0;
+    let criados = 0, atualizados = 0;
 
     for (const p of presentes) {
         const existente = await prisma.presente.findFirst({
@@ -32,21 +31,12 @@ async function main() {
             });
             atualizados++;
         } else {
-            await prisma.presente.create({
-                data: p,
-            });
+            await prisma.presente.create({ data: p });
             criados++;
         }
     }
 
-    console.log(`✅ Seed de presentes OK | criados=${criados} | atualizados=${atualizados}`);
+    console.log(`✅ Seed OK | criados=${criados} | atualizados=${atualizados}`);
 }
 
-main()
-    .catch((e) => {
-        console.error("❌ Erro no seed de presentes:", e);
-        process.exit(1);
-    })
-    .finally(async () => {
-        await prisma.$disconnect();
-    });
+main().catch(console.error).finally(() => prisma.$disconnect());
