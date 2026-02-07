@@ -1,3 +1,4 @@
+// app/js/api.js
 const API_BASE = "https://desejoproibido.app/api";
 // const API_BASE = "http://localhost:5000";
 
@@ -45,7 +46,7 @@ async function apiFetch(path, options = {}) {
 
   path = normalizePath(path);
 
-  const method = options.method || "GET";
+  const method = (options.method || "GET").toUpperCase();
   const body = options.body;
   const headers = options.headers || {};
 
@@ -54,12 +55,15 @@ async function apiFetch(path, options = {}) {
 
   const fetchOptions = {
     method,
-    headers: {},
+    headers: {
+      Accept: "application/json",
+    },
   };
 
-  if (body) {
+  // body em JSON se não for GET/HEAD
+  if (method !== "GET" && method !== "HEAD") {
     fetchOptions.headers["Content-Type"] = "application/json";
-    fetchOptions.body = JSON.stringify(body);
+    fetchOptions.body = JSON.stringify(body ?? {});
   }
 
   if (token) {
