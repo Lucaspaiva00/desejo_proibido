@@ -598,7 +598,7 @@ function renderMensagens(items) {
         if (tipo === "PRESENTE") {
             const nome = meta.nome || (m.texto || "🎁 Presente");
             const min = meta.minutos ?? 0;
-            conteudo = `<div><b> ${escapeHtml(nome)}</b> <span class="dp-pill">${min} min</span></div>`;
+            conteudo = `<div><b> ${escapeHtml}</b> </div>`;
         } else {
             conteudo = `<div>${escapeHtml(m.texto || "")}</div>`;
         }
