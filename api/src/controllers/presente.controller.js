@@ -28,15 +28,7 @@ export async function enviarPresente(req, res) {
       return res.status(404).json({ erro: "Presente inválido" });
     }
 
-    await ensureWallet(userId);
-
-    // debita créditos (se custoCreditos > 0)
-    const custo = presente.custoCreditos || 0;
-    if (custo > 0) {
-      await debitWallet(userId, custo, { origem: "PRESENTE", refId: presenteId });
-    }
-
-    // Descobre o outro participante pela conversa
+    // ✅ valida conversa + match + participação ANTES de debitar
     const conversa = await prisma.conversa.findUnique({
       where: { id: conversaId },
       select: {
@@ -45,8 +37,24 @@ export async function enviarPresente(req, res) {
     });
     if (!conversa?.match) return res.status(404).json({ erro: "Conversa inválida" });
 
+    const isParte =
+      conversa.match.usuarioAId === userId || conversa.match.usuarioBId === userId;
+    if (!isParte) return res.status(403).json({ erro: "Sem acesso a esta conversa" });
+
     const paraUsuarioId =
       conversa.match.usuarioAId === userId ? conversa.match.usuarioBId : conversa.match.usuarioAId;
+
+    await ensureWallet(userId);
+
+    // debita créditos (se custoCreditos > 0)
+    const custo = Number(presente.custoCreditos || 0);
+
+    let saldoDepois = null;
+    if (custo > 0) {
+      const r = await debitWallet(userId, custo, { origem: "PRESENTE", refId: presenteId });
+      // seu wallet.js retorna { ok, saldoAntes, saldoDepois }
+      saldoDepois = r?.saldoDepois ?? null;
+    }
 
     const enviado = await prisma.presenteEnviado.create({
       data: {
@@ -59,7 +67,7 @@ export async function enviarPresente(req, res) {
       },
     });
 
-    // opcional: criar mensagem do tipo PRESENTE
+    // cria mensagem do tipo PRESENTE
     await prisma.mensagem.create({
       data: {
         conversaId,
@@ -76,8 +84,28 @@ export async function enviarPresente(req, res) {
       },
     });
 
-    return res.json({ ok: true, enviado });
+    // opcional mas recomendado: atualiza o "atualizadoEm" da conversa
+    await prisma.conversa.update({
+      where: { id: conversaId },
+      data: { atualizadoEm: new Date() },
+    });
+
+    // ✅ devolve saldo pro front (se teve débito)
+    return res.json({
+      ok: true,
+      enviado,
+      saldoCreditos: saldoDepois, // pode vir null se custo=0
+    });
   } catch (e) {
+    // ✅ saldo insuficiente não é 500
+    if (e?.code === "SALDO_INSUFICIENTE") {
+      return res.status(402).json({
+        code: "SALDO_INSUFICIENTE",
+        erro: "Saldo insuficiente para enviar este presente",
+        saldoCreditos: e?.saldoCreditos ?? 0,
+      });
+    }
+
     console.error("❌ enviarPresente:", e);
     return res.status(500).json({ erro: "Erro ao enviar presente", detalhe: e.message });
   }

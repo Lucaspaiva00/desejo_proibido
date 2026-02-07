@@ -100,31 +100,33 @@ export async function debitWallet(userId, amount, meta = {}) {
     });
 
     const saldoAtual = w?.saldoCreditos ?? 0;
+
     if (saldoAtual < valor) {
       const err = new Error("Saldo insuficiente");
       err.code = "SALDO_INSUFICIENTE";
+      err.status = 402;
+      err.saldoCreditos = saldoAtual;
       throw err;
     }
 
-    const saldoDepois = saldoAtual - valor;
-
-    await tx.wallet.update({
+    // ✅ decrement seguro
+    const updated = await tx.wallet.update({
       where: { userId },
-      data: { saldoCreditos: saldoDepois },
+      data: { saldoCreditos: { decrement: valor } },
+      select: { saldoCreditos: true },
     });
 
-    // auditoria (exige tabela WalletTx no banco)
+    // ✅ WalletTx conforme schema
     await tx.walletTx.create({
       data: {
         userId,
         tipo: "DEBIT",
-        valorCreditos: valor,
         origem: meta.origem || "OUTRO",
+        valor: valor,                 // ✅ campo certo
         refId: meta.refId || null,
-        metaJson: meta || {},
       },
     });
 
-    return { ok: true, saldoAntes: saldoAtual, saldoDepois };
+    return { ok: true, saldoAntes: saldoAtual, saldoDepois: updated.saldoCreditos };
   });
 }
