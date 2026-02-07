@@ -418,7 +418,7 @@ function renderLista() {
       <button class="item ${active}" data-id="${c.id}">
         <div class="row1">
           <div class="title">${escapeHtml(nome)}${lock}</div>
-          <div class="time muted">${c.atualizadoEm ? new Date(c.atualizadoEm).toLocaleDateString() : ""}</div>
+        
         </div>
         <div class="row2 muted">${escapeHtml(sub).slice(0, 60)}</div>
       </button>
