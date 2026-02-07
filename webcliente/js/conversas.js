@@ -375,6 +375,11 @@ function isChatLockedError(e) {
     return code === "CHAT_LOCKED";
 }
 
+function isContatoBloqueadoError(e) {
+    const st = e?.status;
+    if (st !== 422) return false;
+    return e?.data?.code === "CONTATO_BLOQUEADO";
+}
 // ==============================
 // Carregar lista de conversas
 // ==============================
@@ -638,6 +643,17 @@ async function enviarMensagem() {
 
         await carregarMensagens();
     } catch (e) {
+
+        // 🚫 CONTATO BLOQUEADO (Whats/Instagram/links)
+        if (isContatoBloqueadoError(e)) {
+            setMsg(
+                "Por segurança, não é permitido enviar WhatsApp, Instagram, links ou e-mail no chat.",
+                "error"
+            );
+            return;
+        }
+
+        // 🔒 CHAT BLOQUEADO POR CRÉDITOS
         if (isChatLockedError(e)) {
             await atualizarStatusChat();
             showCreditWall();
@@ -645,13 +661,16 @@ async function enviarMensagem() {
             return;
         }
 
+        // 💎 PREMIUM
         if (enforcePremiumFromError(e)) return;
-        alert("Erro ao enviar: " + e.message);
+
+        alert("Erro ao enviar: " + (e?.message || "Erro desconhecido"));
     } finally {
         btnEnviar.disabled = false;
         texto.focus();
     }
 }
+
 
 btnEnviar?.addEventListener("click", enviarMensagem);
 texto?.addEventListener("keydown", (e) => {
