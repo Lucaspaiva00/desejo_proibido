@@ -47,7 +47,7 @@ const giftOverlay = document.getElementById("giftOverlay");
 const giftClose = document.getElementById("giftClose");
 const giftList = document.getElementById("giftList");
 
-// ✅ Video overlay
+// ✅ Video overlay (precisa existir no HTML)
 const callOverlay = document.getElementById("callOverlay");
 const callTitle = document.getElementById("callTitle");
 const callSub = document.getElementById("callSub");
@@ -126,7 +126,6 @@ const state = {
     callActive: false,
     pc: null,
     localStream: null,
-    remoteStream: null,
     micOn: true,
     camOn: true,
 };
@@ -140,13 +139,26 @@ if (!state.usuario && !localStorage.getItem("token")) {
 // ==============================
 // Socket.IO
 // ==============================
+// ⚠️ precisa carregar socket.io client no HTML:
+// <script src="/socket.io/socket.io.js"></script>
 const token = localStorage.getItem("token") || "";
+
+if (!window.io) {
+    console.error("socket.io client não carregou. Verifique /socket.io/socket.io.js");
+}
+
 const socket = window.io({
     auth: { token },
     transports: ["websocket"],
 });
 
-socket.on("connect", () => { /* ok */ });
+socket.on("connect", () => {
+    // ok
+});
+
+socket.on("connect_error", (err) => {
+    console.error("Socket connect_error:", err?.message || err);
+});
 
 socket.on("wallet:update", (p) => {
     const saldo = Number(p?.saldoCreditos ?? 0);
@@ -158,7 +170,6 @@ socket.on("wallet:update", (p) => {
 socket.on("call:incoming", async (p) => {
     // p: {sessaoId, roomId, conversaId, de:{id,nome}}
     try {
-        // se não estiver na conversa, só ignora (ou pode navegar)
         const nome = p?.de?.nome || "Usuário";
         const ok = confirm(`📹 ${nome} está te ligando por vídeo. Aceitar?`);
         if (!ok) {
@@ -178,9 +189,9 @@ socket.on("call:incoming", async (p) => {
 
         socket.emit("joinRoom", { roomId: state.roomId });
 
-        // callee: espera offer do caller
         callSub.textContent = "Aguardando conexão…";
         state.callActive = true;
+
     } catch (e) {
         alert("Erro ao aceitar chamada: " + (e?.message || "erro"));
         await endCallLocal();
@@ -193,7 +204,9 @@ socket.on("call:accepted", async (p) => {
     callSub.textContent = "Aceita ✅ conectando…";
     try {
         await createOffer();
-    } catch { }
+    } catch (e) {
+        console.error("Erro createOffer:", e);
+    }
 });
 
 socket.on("call:declined", async () => {
@@ -211,20 +224,29 @@ socket.on("call:ended", async (p) => {
 
 // WebRTC signaling
 socket.on("call:offer", async ({ sdp, sessaoId }) => {
-    if (!state.pc) await createPeerIfNeeded();
-    if (sessaoId && state.sessaoId && sessaoId !== state.sessaoId) return;
+    try {
+        if (sessaoId && state.sessaoId && sessaoId !== state.sessaoId) return;
 
-    await state.pc.setRemoteDescription(new RTCSessionDescription(sdp));
-    const ans = await state.pc.createAnswer();
-    await state.pc.setLocalDescription(ans);
+        if (!state.pc) await createPeerIfNeeded();
 
-    socket.emit("call:answer", { roomId: state.roomId, sdp: ans, sessaoId: state.sessaoId });
+        await state.pc.setRemoteDescription(new RTCSessionDescription(sdp));
+        const ans = await state.pc.createAnswer();
+        await state.pc.setLocalDescription(ans);
+
+        socket.emit("call:answer", { roomId: state.roomId, sdp: ans, sessaoId: state.sessaoId });
+    } catch (e) {
+        console.error("Erro ao receber offer:", e);
+    }
 });
 
 socket.on("call:answer", async ({ sdp, sessaoId }) => {
-    if (!state.pc) return;
-    if (sessaoId && state.sessaoId && sessaoId !== state.sessaoId) return;
-    await state.pc.setRemoteDescription(new RTCSessionDescription(sdp));
+    try {
+        if (!state.pc) return;
+        if (sessaoId && state.sessaoId && sessaoId !== state.sessaoId) return;
+        await state.pc.setRemoteDescription(new RTCSessionDescription(sdp));
+    } catch (e) {
+        console.error("Erro ao receber answer:", e);
+    }
 });
 
 socket.on("call:ice", async ({ candidate, sessaoId }) => {
@@ -232,7 +254,9 @@ socket.on("call:ice", async ({ candidate, sessaoId }) => {
         if (!state.pc) return;
         if (sessaoId && state.sessaoId && sessaoId !== state.sessaoId) return;
         await state.pc.addIceCandidate(new RTCIceCandidate(candidate));
-    } catch { }
+    } catch (e) {
+        console.warn("Falha addIceCandidate (normal às vezes):", e?.message || e);
+    }
 });
 
 // ==============================
@@ -860,17 +884,36 @@ async function startMedia() {
         audio: true,
     });
 
-    if (localVideo) localVideo.srcObject = state.localStream;
+    if (localVideo) {
+        localVideo.srcObject = state.localStream;
+        localVideo.muted = true; // evita eco local
+        localVideo.playsInline = true;
+        await localVideo.play?.().catch(() => { });
+    }
+}
 
-    state.remoteStream = new MediaStream();
-    if (remoteVideo) remoteVideo.srcObject = state.remoteStream;
+function getIceServers() {
+    // ✅ usando TURN do seu servidor (coturn)
+    // você pode trocar user/pass depois
+    const turn = {
+        urls: [
+            "turn:desejoproibido.app:3478?transport=udp",
+            "turn:desejoproibido.app:3478?transport=tcp",
+        ],
+        username: "dpturn",
+        credential: "dpturn123",
+    };
+
+    const stun = { urls: "stun:stun.l.google.com:19302" };
+
+    return [stun, turn];
 }
 
 async function createPeerIfNeeded() {
     if (state.pc) return;
 
     const pc = new RTCPeerConnection({
-        iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+        iceServers: getIceServers(),
     });
 
     state.pc = pc;
@@ -882,10 +925,15 @@ async function createPeerIfNeeded() {
         });
     }
 
+    // ✅ MAIS ESTÁVEL: usa o stream que vem do ontrack
     pc.ontrack = (event) => {
-        event.streams[0].getTracks().forEach((t) => {
-            state.remoteStream.addTrack(t);
-        });
+        const stream = event.streams && event.streams[0] ? event.streams[0] : null;
+        if (stream && remoteVideo) {
+            remoteVideo.srcObject = stream;
+            remoteVideo.playsInline = true;
+            remoteVideo.muted = false;
+            remoteVideo.play?.().catch(() => { });
+        }
     };
 
     pc.onicecandidate = (event) => {
@@ -898,12 +946,17 @@ async function createPeerIfNeeded() {
         }
     };
 
+    pc.oniceconnectionstatechange = () => {
+        console.log("ICE state:", pc.iceConnectionState);
+    };
+
     pc.onconnectionstatechange = () => {
         const st = pc.connectionState;
+        console.log("PC connectionState:", st);
+
         if (st === "connected") callSub.textContent = "Conectado ✅";
-        if (st === "failed" || st === "disconnected") {
-            callSub.textContent = "Conexão instável…";
-        }
+        if (st === "failed") callSub.textContent = "Falhou ❌ (TURN resolve isso)";
+        if (st === "disconnected") callSub.textContent = "Desconectado…";
     };
 }
 
@@ -936,7 +989,6 @@ async function endCallLocal() {
         }
         state.localStream = null;
 
-        state.remoteStream = null;
         if (localVideo) localVideo.srcObject = null;
         if (remoteVideo) remoteVideo.srcObject = null;
 
@@ -954,7 +1006,6 @@ async function hangup() {
     try {
         if (state.sessaoId) {
             socket.emit("call:hangup", { sessaoId: state.sessaoId });
-            // também tenta finalizar via API (idempotente)
             try { await apiFetch(`/ligacoes/video/${state.sessaoId}/finalizar`, { method: "POST" }); } catch { }
         }
     } finally {
@@ -976,18 +1027,15 @@ btnCall?.addEventListener("click", async () => {
         return;
     }
 
-    // se já está em chamada, encerra
     if (state.sessaoId) {
         await hangup();
         return;
     }
 
-    // iniciar chamada
     try {
         btnCall.disabled = true;
         chatStatus.textContent = "Iniciando chamada…";
 
-        // ✅ inicia por conversa (backend valida chat unlock + saldo)
         const r = await apiFetch(`/ligacoes/video/iniciar`, {
             method: "POST",
             body: { conversaId: state.conversaId },
@@ -1002,7 +1050,6 @@ btnCall?.addEventListener("click", async () => {
 
         socket.emit("joinRoom", { roomId: state.roomId });
 
-        // caller: espera accept (evento socket call:accepted)
         state.callActive = true;
 
         btnCall.textContent = "⛔";
