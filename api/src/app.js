@@ -1,3 +1,4 @@
+// src/app.js
 import express, { Router } from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -23,13 +24,13 @@ import termosRoutes from "./routes/termos.routes.js";
 import premiumRoutes from "./routes/premium.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import presenteRoutes from "./routes/presente.routes.js";
-import ligacaoRoutes from "./routes/ligacao.routes.js";
 import buscaRoutes from "./routes/busca.routes.js";
 import ligacaoVideoRoutes from "./routes/ligacaoVideo.routes.js";
 import livesRoutes from "./routes/lives.routes.js";
-import pagamentosRoutes from "./routes/pagamentos.routes.js"; // ✅ CORRETO
+import pagamentosRoutes from "./routes/pagamentos.routes.js";
 import carteiraRoutes from "./routes/carteira.routes.js";
 import creditosRoutes from "./routes/creditos.routes.js";
+
 export const app = express();
 
 app.use(helmet());
@@ -64,12 +65,15 @@ v1.use("/termos", termosRoutes);
 v1.use("/premium", premiumRoutes);
 v1.use("/admin", adminRoutes);
 v1.use("/presentes", presenteRoutes);
-v1.use("/ligacoes", ligacaoRoutes);
 v1.use("/busca", buscaRoutes);
+
+// ✅ SOMENTE VIDEO
 v1.use("/ligacoes/video", ligacaoVideoRoutes);
+
 v1.use("/lives", livesRoutes);
 v1.use("/carteira", carteiraRoutes);
 v1.use("/creditos", creditosRoutes);
+
 // ✅ PAGAMENTOS
 v1.use("/pagamentos", pagamentosRoutes);
 

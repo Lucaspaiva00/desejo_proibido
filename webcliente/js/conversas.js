@@ -1,3 +1,4 @@
+// public/js/conversas.js
 import { apiFetch, logout } from "./api.js";
 
 const msg = document.getElementById("msg");
@@ -45,6 +46,17 @@ const saldoCreditosEl = document.getElementById("saldoCreditos");
 const giftOverlay = document.getElementById("giftOverlay");
 const giftClose = document.getElementById("giftClose");
 const giftList = document.getElementById("giftList");
+
+// ✅ Video overlay
+const callOverlay = document.getElementById("callOverlay");
+const callTitle = document.getElementById("callTitle");
+const callSub = document.getElementById("callSub");
+const btnCallClose = document.getElementById("btnCallClose");
+const localVideo = document.getElementById("localVideo");
+const remoteVideo = document.getElementById("remoteVideo");
+const btnHangup = document.getElementById("btnHangup");
+const btnMute = document.getElementById("btnMute");
+const btnCam = document.getElementById("btnCam");
 
 // =====================================
 // ✅ Auth robusto (não depende da chave)
@@ -108,9 +120,15 @@ const state = {
     custoChat: 0,
     saldoCreditos: 0,
 
-    // Ligação MVP
-    sessaoIdAtiva: null,
-    t0: null,
+    // Video
+    sessaoId: null,
+    roomId: null,
+    callActive: false,
+    pc: null,
+    localStream: null,
+    remoteStream: null,
+    micOn: true,
+    camOn: true,
 };
 
 // se não achou nada, manda pro login
@@ -118,6 +136,104 @@ if (!state.usuario && !localStorage.getItem("token")) {
     alert("Sessão expirada. Faça login.");
     location.href = "login.html";
 }
+
+// ==============================
+// Socket.IO
+// ==============================
+const token = localStorage.getItem("token") || "";
+const socket = window.io({
+    auth: { token },
+    transports: ["websocket"],
+});
+
+socket.on("connect", () => { /* ok */ });
+
+socket.on("wallet:update", (p) => {
+    const saldo = Number(p?.saldoCreditos ?? 0);
+    state.saldoCreditos = saldo;
+    if (minutosPill) minutosPill.textContent = `💰 Créditos: ${saldo}`;
+    if (saldoCreditosEl) saldoCreditosEl.textContent = `${saldo}`;
+});
+
+socket.on("call:incoming", async (p) => {
+    // p: {sessaoId, roomId, conversaId, de:{id,nome}}
+    try {
+        // se não estiver na conversa, só ignora (ou pode navegar)
+        const nome = p?.de?.nome || "Usuário";
+        const ok = confirm(`📹 ${nome} está te ligando por vídeo. Aceitar?`);
+        if (!ok) {
+            await apiFetch(`/ligacoes/video/${p.sessaoId}/recusar`, { method: "POST" });
+            return;
+        }
+
+        // aceita
+        const r = await apiFetch(`/ligacoes/video/${p.sessaoId}/aceitar`, { method: "POST" });
+
+        state.sessaoId = r.sessaoId;
+        state.roomId = r.roomId;
+
+        openCallOverlay(`📹 Chamada com ${nome}`, "Conectando…");
+        await startMedia();
+        await createPeerIfNeeded();
+
+        socket.emit("joinRoom", { roomId: state.roomId });
+
+        // callee: espera offer do caller
+        callSub.textContent = "Aguardando conexão…";
+        state.callActive = true;
+    } catch (e) {
+        alert("Erro ao aceitar chamada: " + (e?.message || "erro"));
+        await endCallLocal();
+    }
+});
+
+socket.on("call:accepted", async (p) => {
+    // caller recebe: pode começar offer
+    if (!state.roomId || p.roomId !== state.roomId) return;
+    callSub.textContent = "Aceita ✅ conectando…";
+    try {
+        await createOffer();
+    } catch { }
+});
+
+socket.on("call:declined", async () => {
+    alert("Chamada recusada.");
+    await endCallLocal();
+});
+
+socket.on("call:ended", async (p) => {
+    const motivo = p?.motivo || "FINALIZADA";
+    if (motivo === "SALDO_INSUFICIENTE") {
+        alert("Chamada encerrada: saldo insuficiente.");
+    }
+    await endCallLocal();
+});
+
+// WebRTC signaling
+socket.on("call:offer", async ({ sdp, sessaoId }) => {
+    if (!state.pc) await createPeerIfNeeded();
+    if (sessaoId && state.sessaoId && sessaoId !== state.sessaoId) return;
+
+    await state.pc.setRemoteDescription(new RTCSessionDescription(sdp));
+    const ans = await state.pc.createAnswer();
+    await state.pc.setLocalDescription(ans);
+
+    socket.emit("call:answer", { roomId: state.roomId, sdp: ans, sessaoId: state.sessaoId });
+});
+
+socket.on("call:answer", async ({ sdp, sessaoId }) => {
+    if (!state.pc) return;
+    if (sessaoId && state.sessaoId && sessaoId !== state.sessaoId) return;
+    await state.pc.setRemoteDescription(new RTCSessionDescription(sdp));
+});
+
+socket.on("call:ice", async ({ candidate, sessaoId }) => {
+    try {
+        if (!state.pc) return;
+        if (sessaoId && state.sessaoId && sessaoId !== state.sessaoId) return;
+        await state.pc.addIceCandidate(new RTCIceCandidate(candidate));
+    } catch { }
+});
 
 // ==============================
 // Helpers
@@ -195,7 +311,6 @@ function applyChatLockUI() {
         return;
     }
 
-    // ✅ pode enviar msg se premium OU chatLiberado
     const podeMensagens = !!state.premiumAtivo || !!state.chatLiberado;
 
     if (!podeMensagens) {
@@ -208,37 +323,14 @@ function applyChatLockUI() {
         if (btnEnviar) btnEnviar.disabled = false;
     }
 
-    // ✅ presentes/ligação: liberados quando premiumAtivo
     const podePremiumAcoes = !!state.premiumAtivo;
     if (btnGift) btnGift.disabled = !podePremiumAcoes;
     if (btnCall) btnCall.disabled = !podePremiumAcoes;
 }
 
 // ==============================
-// Premium UI (NÃO trava o chat inteiro!)
+// Premium UI
 // ==============================
-function setPremiumUI(isPremium, saldoCreditos = null) {
-    state.premiumAtivo = !!isPremium;
-
-    if (saldoCreditos !== null && saldoCreditos !== undefined) {
-        state.saldoCreditos = Number(saldoCreditos || 0);
-        if (saldoCreditosEl) saldoCreditosEl.textContent = `${state.saldoCreditos}`;
-    }
-
-    if (premiumBadge) {
-        premiumBadge.textContent = isPremium ? "✅ Conta Premium Ativa" : "🔒 Conta Premium Inativa";
-    }
-
-    if (btnAssinarTopo) btnAssinarTopo.style.display = isPremium ? "none" : "inline-flex";
-
-    if (paywall) {
-        paywall.hidden = true;
-        paywall.style.display = "none";
-    }
-
-    applyChatLockUI();
-}
-
 function openCheckout() {
     const ret = encodeURIComponent(window.location.href);
     window.location.href = `comprar-creditos.html?return=${ret}`;
@@ -247,8 +339,6 @@ function openCheckout() {
 btnAssinar?.addEventListener("click", openCheckout);
 btnAssinarTopo?.addEventListener("click", openCheckout);
 btnComprarCreditos?.addEventListener("click", openCheckout);
-
-// ✅ NOVO: botão topo sempre visível
 btnComprarCreditosTopo?.addEventListener("click", openCheckout);
 
 btnEntendi?.addEventListener("click", () => {
@@ -258,9 +348,6 @@ btnEntendi?.addEventListener("click", () => {
     }
 });
 
-// ==============================
-// API endpoints
-// ==============================
 const API = {
     listarConversas: "/conversas",
     mensagensDaConversa: (conversaId) => `/conversas/${conversaId}/mensagens`,
@@ -271,14 +358,9 @@ const API = {
     listarPresentes: "/presentes",
     enviarPresente: "/presentes/enviar",
 
-    saldoMinutos: "/ligacoes/saldo",
-    iniciarLigacao: "/ligacoes/iniciar",
-    finalizarLigacao: "/ligacoes/finalizar",
-
     premiumStatus: "/premium/me",
 };
 
-// ✅ Atualiza localStorage(usuario) quando o backend confirmar premium
 function syncUsuarioPremium(isPremium, saldoCreditos = null) {
     try {
         const raw = localStorage.getItem("usuario");
@@ -298,23 +380,16 @@ function syncUsuarioPremium(isPremium, saldoCreditos = null) {
     } catch { }
 }
 
-// ==============================
-// Checar Premium (REFORÇADO)
-// ==============================
 async function checarPremium() {
     try {
         const r = await apiFetch(API.premiumStatus);
-
         const ativo = !!r?.isPremium;
         const saldo = Number(r?.saldoCreditos ?? 0);
 
         state.premiumAtivo = ativo;
         state.saldoCreditos = saldo;
 
-        if (premiumBadge) {
-            premiumBadge.textContent = ativo ? "✅ Conta Premium Ativa" : "🔒 Conta Premium Inativa";
-        }
-
+        if (premiumBadge) premiumBadge.textContent = ativo ? "✅ Conta Premium Ativa" : "🔒 Conta Premium Inativa";
         if (btnAssinarTopo) btnAssinarTopo.style.display = ativo ? "none" : "inline-flex";
 
         if (minutosPill) minutosPill.textContent = `💰 Créditos: ${saldo}`;
@@ -330,11 +405,9 @@ async function checarPremium() {
         return ativo;
     } catch {
         state.premiumAtivo = false;
-
         if (premiumBadge) premiumBadge.textContent = "🔒 Conta Premium Inativa";
         if (btnAssinarTopo) btnAssinarTopo.style.display = "inline-flex";
         if (minutosPill) minutosPill.textContent = "💰 Créditos: -";
-
         applyChatLockUI();
         return false;
     }
@@ -352,7 +425,6 @@ function isPremiumBlockedError(e) {
 
 function enforcePremiumFromError(e) {
     if (isPremiumBlockedError(e)) {
-        setPremiumUI(false);
         if (paywall) {
             paywall.hidden = false;
             paywall.style.display = "flex";
@@ -496,20 +568,16 @@ async function abrirConversa(conversaId) {
     const c = state.conversas.find((x) => x.id === conversaId);
     if (!c) return;
 
-    const outro = c.outro || c.usuarioB || c.usuarioA || null;
+    const outro = c.outro || null;
     const nome = outro?.perfil?.nome || c.outroNome || outro?.email || "Conversa";
     const sub = outro?.email ? outro.email : "";
 
-    state.outroUsuarioId =
-        c.outroUsuarioId ||
-        outro?.id ||
-        c.outroId ||
-        null;
+    state.outroUsuarioId = c.outroUsuarioId || outro?.id || null;
 
     chatNome.textContent = nome;
     chatSub.textContent = sub;
 
-    const foto = outro?.fotos?.find?.((f) => f.principal)?.url || outro?.fotoPrincipal || null;
+    const foto = outro?.fotos?.find?.((f) => f.principal)?.url || null;
     if (foto) {
         chatAvatar.src = foto;
         chatAvatar.style.display = "block";
@@ -524,7 +592,6 @@ async function abrirConversa(conversaId) {
     renderLista();
 
     await checarPremium();
-    await atualizarSaldo();
     await atualizarStatusChat();
     await carregarMensagens();
 }
@@ -736,8 +803,6 @@ async function enviarPresente(presenteId) {
     } catch (e) {
         if (e?.status === 402 && e?.data?.code === "SALDO_INSUFICIENTE") {
             alert("Saldo insuficiente pra enviar esse presente.");
-            await atualizarSaldo();
-            await carregarPresentes();
             return;
         }
         alert("Erro ao enviar presente: " + e.message);
@@ -745,25 +810,160 @@ async function enviarPresente(presenteId) {
 }
 
 // ==============================
-// Saldo (wallet)
+// Video Call UI
 // ==============================
-async function atualizarSaldo() {
+function openCallOverlay(title, sub) {
+    if (!callOverlay) return;
+    callOverlay.classList.add("show");
+    callOverlay.setAttribute("aria-hidden", "false");
+    document.body.classList.add("no-scroll");
+    if (callTitle) callTitle.textContent = title || "📹 Videochamada";
+    if (callSub) callSub.textContent = sub || "Conectando…";
+}
+
+function closeCallOverlay() {
+    if (!callOverlay) return;
+    callOverlay.classList.remove("show");
+    callOverlay.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("no-scroll");
+}
+
+btnCallClose?.addEventListener("click", async () => {
+    await hangup();
+});
+
+btnHangup?.addEventListener("click", async () => {
+    await hangup();
+});
+
+btnMute?.addEventListener("click", () => {
+    state.micOn = !state.micOn;
+    if (state.localStream) {
+        state.localStream.getAudioTracks().forEach(t => t.enabled = state.micOn);
+    }
+    btnMute.textContent = state.micOn ? "🎙️ Mudo" : "🔇 Sem mic";
+});
+
+btnCam?.addEventListener("click", () => {
+    state.camOn = !state.camOn;
+    if (state.localStream) {
+        state.localStream.getVideoTracks().forEach(t => t.enabled = state.camOn);
+    }
+    btnCam.textContent = state.camOn ? "📷 Câmera" : "🚫 Sem cam";
+});
+
+async function startMedia() {
+    if (state.localStream) return;
+
+    state.localStream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+    });
+
+    if (localVideo) localVideo.srcObject = state.localStream;
+
+    state.remoteStream = new MediaStream();
+    if (remoteVideo) remoteVideo.srcObject = state.remoteStream;
+}
+
+async function createPeerIfNeeded() {
+    if (state.pc) return;
+
+    const pc = new RTCPeerConnection({
+        iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+    });
+
+    state.pc = pc;
+
+    // tracks locais
+    if (state.localStream) {
+        state.localStream.getTracks().forEach(track => {
+            pc.addTrack(track, state.localStream);
+        });
+    }
+
+    pc.ontrack = (event) => {
+        event.streams[0].getTracks().forEach((t) => {
+            state.remoteStream.addTrack(t);
+        });
+    };
+
+    pc.onicecandidate = (event) => {
+        if (event.candidate) {
+            socket.emit("call:ice", {
+                roomId: state.roomId,
+                candidate: event.candidate,
+                sessaoId: state.sessaoId,
+            });
+        }
+    };
+
+    pc.onconnectionstatechange = () => {
+        const st = pc.connectionState;
+        if (st === "connected") callSub.textContent = "Conectado ✅";
+        if (st === "failed" || st === "disconnected") {
+            callSub.textContent = "Conexão instável…";
+        }
+    };
+}
+
+async function createOffer() {
+    if (!state.pc) await createPeerIfNeeded();
+
+    const offer = await state.pc.createOffer();
+    await state.pc.setLocalDescription(offer);
+
+    socket.emit("call:offer", {
+        roomId: state.roomId,
+        sdp: offer,
+        sessaoId: state.sessaoId,
+    });
+}
+
+async function endCallLocal() {
     try {
-        const r = await apiFetch("/carteira"); // { saldoCreditos }
-        const saldo = Number(r?.saldoCreditos ?? 0);
-        state.saldoCreditos = saldo;
+        state.callActive = false;
 
-        if (minutosPill) minutosPill.textContent = `💰 Créditos: ${saldo}`;
-        if (saldoCreditosEl) saldoCreditosEl.textContent = `${saldo}`;
+        if (state.pc) {
+            try { state.pc.ontrack = null; } catch { }
+            try { state.pc.onicecandidate = null; } catch { }
+            try { state.pc.close(); } catch { }
+        }
+        state.pc = null;
 
-        applyChatLockUI();
-    } catch {
-        if (minutosPill) minutosPill.textContent = "💰 Créditos: -";
+        if (state.localStream) {
+            state.localStream.getTracks().forEach(t => t.stop());
+        }
+        state.localStream = null;
+
+        state.remoteStream = null;
+        if (localVideo) localVideo.srcObject = null;
+        if (remoteVideo) remoteVideo.srcObject = null;
+
+        state.sessaoId = null;
+        state.roomId = null;
+
+        closeCallOverlay();
+
+        btnCall.textContent = "📞";
+        chatStatus.textContent = "";
+    } catch { }
+}
+
+async function hangup() {
+    try {
+        if (state.sessaoId) {
+            socket.emit("call:hangup", { sessaoId: state.sessaoId });
+            // também tenta finalizar via API (idempotente)
+            try { await apiFetch(`/ligacoes/video/${state.sessaoId}/finalizar`, { method: "POST" }); } catch { }
+        }
+    } finally {
+        await endCallLocal();
     }
 }
 
 // ==============================
-// Ligações MVP
+// Video Call - botão
 // ==============================
 btnCall?.addEventListener("click", async () => {
     if (!state.conversaId) return;
@@ -776,69 +976,59 @@ btnCall?.addEventListener("click", async () => {
         return;
     }
 
-    if (!state.sessaoIdAtiva) {
-        await iniciarLigacaoMVP();
-    } else {
-        await finalizarLigacaoMVP();
+    // se já está em chamada, encerra
+    if (state.sessaoId) {
+        await hangup();
+        return;
     }
-});
 
-async function iniciarLigacaoMVP() {
+    // iniciar chamada
     try {
         btnCall.disabled = true;
-        chatStatus.textContent = "Iniciando ligação...";
+        chatStatus.textContent = "Iniciando chamada…";
 
-        const r = await apiFetch(API.iniciarLigacao, {
+        // ✅ inicia por conversa (backend valida chat unlock + saldo)
+        const r = await apiFetch(`/ligacoes/video/iniciar`, {
             method: "POST",
             body: { conversaId: state.conversaId },
         });
 
-        state.sessaoIdAtiva = r.sessaoId;
-        state.t0 = Date.now();
+        state.sessaoId = r.sessaoId;
+        state.roomId = r.roomId;
 
-        chatStatus.textContent = "Ligação em andamento";
+        openCallOverlay("📹 Videochamada", "Chamando…");
+        await startMedia();
+        await createPeerIfNeeded();
+
+        socket.emit("joinRoom", { roomId: state.roomId });
+
+        // caller: espera accept (evento socket call:accepted)
+        state.callActive = true;
+
         btnCall.textContent = "⛔";
+        chatStatus.textContent = "Chamando…";
+
     } catch (e) {
+        if (isChatLockedError(e)) {
+            await atualizarStatusChat();
+            showCreditWall();
+            setMsg("Libere o chat com créditos para ligar.", "error");
+            return;
+        }
+
         if (enforcePremiumFromError(e)) return;
-        alert("Erro ao iniciar ligação: " + e.message);
-        chatStatus.textContent = "";
+
+        if (e?.status === 402 && e?.data?.code === "SALDO_INSUFICIENTE") {
+            alert("Saldo insuficiente para iniciar chamada.");
+            return;
+        }
+
+        alert("Erro ao iniciar chamada: " + (e?.message || "erro"));
     } finally {
         btnCall.disabled = false;
-    }
-}
-
-async function finalizarLigacaoMVP() {
-    try {
-        btnCall.disabled = true;
-        chatStatus.textContent = "Finalizando...";
-
-        const segundos = Math.max(1, Math.floor((Date.now() - state.t0) / 1000));
-
-        const r = await apiFetch(API.finalizarLigacao, {
-            method: "POST",
-            body: {
-                sessaoId: state.sessaoIdAtiva,
-                conversaId: state.conversaId,
-                segundosConsumidos: segundos,
-            },
-        });
-
-        state.sessaoIdAtiva = null;
-        state.t0 = null;
-
-        btnCall.textContent = "📞";
-        chatStatus.textContent = `Finalizada: ${r.sessao?.minutosCobrados ?? "?"} min`;
-
-        await carregarMensagens();
-        await atualizarSaldo();
-    } catch (e) {
-        if (enforcePremiumFromError(e)) return;
-        alert("Erro ao finalizar ligação: " + e.message);
         chatStatus.textContent = "";
-    } finally {
-        btnCall.disabled = false;
     }
-}
+});
 
 // ==============================
 // Init
@@ -849,7 +1039,6 @@ await carregarConversas();
 document.addEventListener("visibilitychange", async () => {
     if (!document.hidden) {
         await checarPremium();
-        await atualizarSaldo();
         await atualizarStatusChat();
     }
 });
