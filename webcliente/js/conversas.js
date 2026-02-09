@@ -59,6 +59,20 @@ const btnMute = document.getElementById("btnMute");
 const btnCam = document.getElementById("btnCam");
 
 // ==============================
+// Scroll helpers (NOVO)
+// ==============================
+function isNearBottom(el, threshold = 140) {
+    if (!el) return true;
+    const distance = el.scrollHeight - (el.scrollTop + el.clientHeight);
+    return distance <= threshold;
+}
+
+function scrollToBottom(el) {
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+}
+
+// ==============================
 // Auth robusto
 // ==============================
 function safeJsonParse(v) {
@@ -145,8 +159,6 @@ if (!state.usuario && !localStorage.getItem("token")) {
 // ==============================
 // Socket.IO
 // ==============================
-// precisa carregar no HTML:
-// <script src="/socket.io/socket.io.js"></script>
 const token = localStorage.getItem("token") || "";
 const userId = state.usuario?.id;
 
@@ -163,7 +175,6 @@ socket.on("connect_error", (err) => {
     console.error("[socket] connect_error:", err?.message || err);
 });
 
-// debug eventos call:
 socket.onAny((event, ...args) => {
     if (String(event).startsWith("call:")) console.log("[socket event]", event, args?.[0]);
 });
@@ -175,11 +186,10 @@ socket.on("wallet:update", (p) => {
     if (saldoCreditosEl) saldoCreditosEl.textContent = `${saldo}`;
 });
 
-// ✅ Novo: READY -> caller só cria offer quando callee avisar
+// ✅ READY -> caller só cria offer quando callee avisar
 socket.on("call:ready", async ({ sessaoId }) => {
     if (!state.sessaoId || String(sessaoId) !== String(state.sessaoId)) return;
 
-    // só caller usa isso
     state.calleeReady = true;
     if (callSub) callSub.textContent = "Conectando…";
 
@@ -206,18 +216,14 @@ socket.on("call:incoming", async (p) => {
         state.sessaoId = r.sessaoId;
         state.roomId = r.roomId;
 
-        // reset flags
-        state.calleeReady = true;      // aqui você É o callee
+        state.calleeReady = true; // aqui você é o callee
         state.callerOfferSent = false;
 
         openCallOverlay(`📹 Chamada com ${nome}`, "Entrando na sala…");
 
         await ensurePeerAndMedia();
-
-        // ✅ entra na room antes de tudo
         joinRoomNow();
 
-        // ✅ avisa pro caller: "já tô no room e pronto"
         socket.emit("call:ready", { roomId: state.roomId, sessaoId: state.sessaoId });
 
         if (callSub) callSub.textContent = "Aguardando conexão…";
@@ -229,16 +235,13 @@ socket.on("call:incoming", async (p) => {
     }
 });
 
-// NÃO cria mais offer aqui! (evita race)
 socket.on("call:accepted", async (p) => {
     if (!p?.roomId) return;
     if (!state.roomId || p.roomId !== state.roomId) return;
 
-    // caller recebe accepted, mas só cria offer quando receber call:ready
     if (callSub) callSub.textContent = "Aceita ✅ aguardando entrada do outro…";
     state.callActive = true;
 
-    // segurança: se por algum motivo o READY não vier, tenta em 2s
     setTimeout(async () => {
         if (!state.calleeReady && state.sessaoId) {
             console.warn("READY não chegou, tentando offer por fallback…");
@@ -369,11 +372,9 @@ function applyChatLockUI() {
         if (texto) texto.disabled = true;
         if (btnEnviar) btnEnviar.disabled = true;
 
-        // ✅ SEM conversa -> desabilita tudo mesmo
         if (btnGift) btnGift.disabled = true;
         if (btnCall) btnCall.disabled = true;
 
-        // limpa feedback
         btnGift?.classList.remove("lockedAction");
         btnCall?.classList.remove("lockedAction");
         return;
@@ -391,13 +392,9 @@ function applyChatLockUI() {
         if (btnEnviar) btnEnviar.disabled = false;
     }
 
-    // ✅ AJUSTE PRINCIPAL:
-    // Com conversa aberta, ligação/presente ficam SEMPRE disponíveis (mobile/desktop),
-    // e o clique decide se abre paywall (seu handler já faz isso).
     if (btnGift) btnGift.disabled = false;
     if (btnCall) btnCall.disabled = false;
 
-    // Só feedback visual quando não é premium (continua clicável)
     btnGift?.classList.toggle("lockedAction", !state.premiumAtivo);
     btnCall?.classList.toggle("lockedAction", !state.premiumAtivo);
 }
@@ -537,7 +534,7 @@ function renderLista() {
     });
 
     if (!items.length) {
-        lista.innerHTML = `<div class="empty">Nenhuma conversa.</div>`;
+        if (lista) lista.innerHTML = `<div class="empty">Nenhuma conversa.</div>`;
         return;
     }
 
@@ -656,21 +653,14 @@ async function abrirConversa(conversaId) {
     await carregarMensagens();
 }
 
-// ==============================
-// ✅ MELHORIA: Auto-scroll inteligente (não puxa quando usuário sobe)
-// ==============================
-function shouldStickToBottom(el, threshold = 140) {
-    if (!el) return true;
-    const distance = el.scrollHeight - (el.scrollTop + el.clientHeight);
-    return distance < threshold;
-}
-
 // Mensagens
 async function carregarMensagens({ silent = false } = {}) {
     if (!state.conversaId) return;
 
     try {
         if (!silent) chatStatus.textContent = "Carregando...";
+
+        const shouldStick = isNearBottom(msgs); // ✅ NOVO
 
         const data = await apiFetch(API.mensagensDaConversa(state.conversaId));
 
@@ -684,7 +674,7 @@ async function carregarMensagens({ silent = false } = {}) {
             items = (data?.data && Array.isArray(data.data)) ? data.data : [];
         }
 
-        renderMensagens(items);
+        renderMensagens(items, { stickToBottom: shouldStick }); // ✅ NOVO
 
         if (!silent) chatStatus.textContent = "";
 
@@ -697,16 +687,13 @@ async function carregarMensagens({ silent = false } = {}) {
     }
 }
 
-function renderMensagens(items) {
+function renderMensagens(items, { stickToBottom = true } = {}) {
     if (!items?.length) {
         msgs.innerHTML = `<div class="empty">Sem mensagens ainda.</div>`;
         return;
     }
 
     const me = state.usuario?.id;
-
-    // ✅ salva o estado do scroll antes de re-render
-    const stick = shouldStickToBottom(msgs);
 
     msgs.innerHTML = items.map((m) => {
         const isMe = (m.autorId === me);
@@ -737,10 +724,8 @@ function renderMensagens(items) {
     `;
     }).join("");
 
-    // ✅ só cola no final se usuário já estava perto do fim
-    if (stick) {
-        msgs.scrollTop = msgs.scrollHeight;
-    }
+    // ✅ só desce se o usuário já estava no final
+    if (stickToBottom) scrollToBottom(msgs);
 }
 
 async function enviarMensagem() {
@@ -923,10 +908,8 @@ async function startMedia() {
 }
 
 function getIceServers() {
-    // STUN padrão
     const stun = { urls: "stun:stun.l.google.com:19302" };
 
-    // TURN
     const turn = {
         urls: [
             "turn:desejoproibido.app:3478?transport=udp",
@@ -945,7 +928,6 @@ async function createPeerIfNeeded() {
     const pc = new RTCPeerConnection({ iceServers: getIceServers() });
     state.pc = pc;
 
-    // tracks locais
     if (state.localStream) {
         state.localStream.getTracks().forEach(track => pc.addTrack(track, state.localStream));
     }
@@ -985,7 +967,6 @@ async function createPeerIfNeeded() {
     };
 }
 
-// garante mídia + pc
 async function ensurePeerAndMedia() {
     await startMedia();
     await createPeerIfNeeded();
@@ -998,7 +979,7 @@ function joinRoomNow() {
 }
 
 async function createOfferOnce() {
-    if (state.callerOfferSent) return; // evita spam
+    if (state.callerOfferSent) return;
     if (!state.pc) await createPeerIfNeeded();
 
     const offer = await state.pc.createOffer();
@@ -1014,7 +995,6 @@ async function createOfferOnce() {
     console.log("[webrtc] offer enviado");
 }
 
-// retry do offer
 function scheduleOfferRetry() {
     clearOfferRetry();
 
@@ -1087,7 +1067,6 @@ btnCall?.addEventListener("click", async () => {
         return;
     }
 
-    // se já está em chamada, encerra
     if (state.sessaoId) {
         await hangup();
         return;
@@ -1095,7 +1074,7 @@ btnCall?.addEventListener("click", async () => {
 
     try {
         btnCall.disabled = true;
-        chatStatus.textContent = "Iniciando chamada…";
+        if (chatStatus) chatStatus.textContent = "Iniciando chamada…";
 
         const r = await apiFetch(`/ligacoes/video/iniciar`, {
             method: "POST",
@@ -1105,21 +1084,18 @@ btnCall?.addEventListener("click", async () => {
         state.sessaoId = r.sessaoId;
         state.roomId = r.roomId;
 
-        // caller flags
         state.calleeReady = false;
         state.callerOfferSent = false;
 
         openCallOverlay("📹 Videochamada", "Chamando…");
 
         await ensurePeerAndMedia();
-
-        // caller entra no room já
         joinRoomNow();
 
         state.callActive = true;
 
         btnCall.textContent = "⛔";
-        chatStatus.textContent = "Chamando…";
+        if (chatStatus) chatStatus.textContent = "Chamando…";
 
     } catch (e) {
         if (isChatLockedError(e)) {
@@ -1139,7 +1115,7 @@ btnCall?.addEventListener("click", async () => {
         alert("Erro ao iniciar chamada: " + (e?.message || "erro"));
     } finally {
         btnCall.disabled = false;
-        chatStatus.textContent = "";
+        if (chatStatus) chatStatus.textContent = "";
     }
 });
 
