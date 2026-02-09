@@ -1090,3 +1090,15 @@ setInterval(async () => {
 setInterval(() => {
     if (state.conversaId) carregarMensagens({ silent: true });
 }, 4000);
+
+socket.on("connect", () => console.log("[socket] conectado", socket.id, "room:", state.roomId, "sessao:", state.sessaoId));
+socket.on("connect_error", (e) => console.log("[socket] connect_error", e?.message || e));
+
+socket.onAny((event, ...args) => {
+    if (String(event).startsWith("call:")) console.log("[socket event]", event, args?.[0]);
+});
+
+function joinRoomNow() {
+    console.log("[socket] joinRoom", state.roomId);
+    socket.emit("joinRoom", { roomId: state.roomId });
+}
