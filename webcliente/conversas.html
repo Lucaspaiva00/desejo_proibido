@@ -16,6 +16,14 @@
       filter: grayscale(.2);
     }
 
+    .lockedAction {
+      opacity: .85;
+    }
+
+    .lockedAction::after {
+      content: " 🔒";
+    }
+
     .dp-modal-overlay {
       position: fixed;
       inset: 0;
