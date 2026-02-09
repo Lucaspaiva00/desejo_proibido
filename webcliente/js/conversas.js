@@ -142,13 +142,10 @@ if (!state.usuario && !localStorage.getItem("token")) {
 // ⚠️ precisa carregar socket.io client no HTML:
 // <script src="/socket.io/socket.io.js"></script>
 const token = localStorage.getItem("token") || "";
-
-if (!window.io) {
-    console.error("socket.io client não carregou. Verifique /socket.io/socket.io.js");
-}
+const userId = state.usuario?.id;
 
 const socket = window.io({
-    auth: { token },
+    auth: { token, userId },
     transports: ["websocket"],
 });
 
