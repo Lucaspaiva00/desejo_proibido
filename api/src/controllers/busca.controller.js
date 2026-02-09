@@ -20,7 +20,7 @@ function buildNascimentoRange(idadeMin, idadeMax) {
         const min = clamp(idadeMin, 18, 99);
         const dt = new Date(now);
         dt.setFullYear(dt.getFullYear() - min);
-        lte = dt;
+        lte = dt; // nasceu até aqui => tem pelo menos idadeMin
     }
 
     if (Number.isFinite(idadeMax)) {
@@ -28,7 +28,7 @@ function buildNascimentoRange(idadeMin, idadeMax) {
         const dt = new Date(now);
         dt.setFullYear(dt.getFullYear() - (max + 1));
         dt.setDate(dt.getDate() + 1);
-        gte = dt;
+        gte = dt; // nasceu depois => é no máximo idadeMax
     }
 
     if (!gte && !lte) return null;
@@ -65,6 +65,8 @@ export async function buscar(req, res) {
             req.query.somenteVerificados === "on";
 
         const ordenarPor = toStr(req.query.ordenarPor || "recent");
+
+        // mantém seu parâmetro take
         const take = clamp(toInt(req.query.take, 50) ?? 50, 1, 100);
 
         const nascRange = buildNascimentoRange(
@@ -72,6 +74,9 @@ export async function buscar(req, res) {
             Number.isFinite(idadeMax) ? idadeMax : NaN
         );
 
+        // =========================
+        // 1) BLOQUEIOS (já existia)
+        // =========================
         const bloqueios = await prisma.bloqueio.findMany({
             where: { OR: [{ deUsuarioId: userId }, { paraUsuarioId: userId }] },
             select: { deUsuarioId: true, paraUsuarioId: true },
@@ -83,25 +88,70 @@ export async function buscar(req, res) {
             if (b.paraUsuarioId === userId) idsBloqueados.add(b.deUsuarioId);
         }
 
+        // =========================
+        // 2) EXCLUSÕES QUE FALTAVAM
+        // =========================
+
+        // 2.1) curtidas enviadas (não repetir quem já curti)
+        const curtidos = await prisma.curtida.findMany({
+            where: { deUsuarioId: userId },
+            select: { paraUsuarioId: true },
+        });
+        const idsCurtidos = new Set(curtidos.map((c) => c.paraUsuarioId));
+
+        // 2.2) skips enviados (não repetir quem já pulei)
+        const pulados = await prisma.skip.findMany({
+            where: { deUsuarioId: userId },
+            select: { paraUsuarioId: true },
+        });
+        const idsPulados = new Set(pulados.map((s) => s.paraUsuarioId));
+
+        // 2.3) matches (A↔B) — esse é o seu bug
+        const matches = await prisma.match.findMany({
+            where: { OR: [{ usuarioAId: userId }, { usuarioBId: userId }] },
+            select: { usuarioAId: true, usuarioBId: true },
+        });
+        const idsMatch = new Set(
+            matches.map((m) => (m.usuarioAId === userId ? m.usuarioBId : m.usuarioAId))
+        );
+
+        // junta tudo
+        const excluir = new Set([
+            userId,
+            ...idsBloqueados,
+            ...idsCurtidos,
+            ...idsPulados,
+            ...idsMatch,
+        ]);
+
+        // =========================
+        // 3) WHERE DA BUSCA (feed real)
+        // =========================
         const where = {
             ativo: true,
             isInvisivel: false,
-            id: { not: userId, notIn: [...idsBloqueados] },
+            id: { notIn: [...excluir] },
 
             perfil: {
                 is: {
                     ...(q
                         ? {
                             OR: [
-                                { nome: { contains: q } },
-                                { bio: { contains: q } },
+                                { nome: { contains: q, mode: "insensitive" } },
+                                { bio: { contains: q, mode: "insensitive" } },
                             ],
                         }
                         : {}),
 
-                    ...(cidade ? { cidade: { contains: cidade } } : {}),
+                    ...(cidade ? { cidade: { contains: cidade, mode: "insensitive" } } : {}),
                     ...(estado && estado.length === 2 ? { estado } : {}),
-                    ...(genero && genero !== "Qualquer" ? { genero } : {}),
+
+                    // seu front manda "QUALQUER" mas aqui você compara com "Qualquer"
+                    // vamos cobrir os dois
+                    ...(genero && genero.toLowerCase() !== "qualquer"
+                        ? { genero: { equals: genero, mode: "insensitive" } }
+                        : {}),
+
                     ...(somenteVerificados ? { verificado: true } : {}),
 
                     ...(nascRange
@@ -136,6 +186,7 @@ export async function buscar(req, res) {
             },
         });
 
+        // random no server (como você já fazia)
         if (!orderBy) {
             rows = rows
                 .map((x) => ({ x, r: Math.random() }))
@@ -157,6 +208,7 @@ export async function buscar(req, res) {
     }
 }
 
+// Mantive como estava (se você tiver PreferenciaBusca de verdade, eu ajusto depois)
 export async function preferencias(req, res) {
     return res.json({
         q: "",
