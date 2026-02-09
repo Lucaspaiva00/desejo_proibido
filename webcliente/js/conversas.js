@@ -25,7 +25,7 @@ const btnGift = document.getElementById("btnGift");
 const btnCall = document.getElementById("btnCall");
 const minutosPill = document.getElementById("minutosPill");
 
-// ✅ NOVO: botão comprar créditos no topo do chat
+// botão comprar créditos no topo
 const btnComprarCreditosTopo = document.getElementById("btnComprarCreditosTopo");
 
 // Paywall / Premium UI
@@ -35,7 +35,7 @@ const btnAssinar = document.getElementById("btnAssinar");
 const btnEntendi = document.getElementById("btnEntendi");
 const btnAssinarTopo = document.getElementById("btnAssinarTopo");
 
-// ✅ Credit wall (liberar chat por créditos)
+// Credit wall
 const creditwall = document.getElementById("creditwall");
 const btnLiberarChat = document.getElementById("btnLiberarChat");
 const btnComprarCreditos = document.getElementById("btnComprarCreditos");
@@ -47,7 +47,7 @@ const giftOverlay = document.getElementById("giftOverlay");
 const giftClose = document.getElementById("giftClose");
 const giftList = document.getElementById("giftList");
 
-// ✅ Video overlay (precisa existir no HTML)
+// Video overlay
 const callOverlay = document.getElementById("callOverlay");
 const callTitle = document.getElementById("callTitle");
 const callSub = document.getElementById("callSub");
@@ -58,15 +58,11 @@ const btnHangup = document.getElementById("btnHangup");
 const btnMute = document.getElementById("btnMute");
 const btnCam = document.getElementById("btnCam");
 
-// =====================================
-// ✅ Auth robusto (não depende da chave)
-// =====================================
+// ==============================
+// Auth robusto
+// ==============================
 function safeJsonParse(v) {
-    try {
-        return JSON.parse(v);
-    } catch {
-        return null;
-    }
+    try { return JSON.parse(v); } catch { return null; }
 }
 
 function getAuth() {
@@ -78,20 +74,14 @@ function getAuth() {
         const v = localStorage.getItem(k);
         if (v) {
             const obj = safeJsonParse(v);
-            if (obj) {
-                usuario = obj;
-                break;
-            }
+            if (obj) { usuario = obj; break; }
         }
     }
 
     let token = null;
     for (const k of keysToken) {
         const v = localStorage.getItem(k);
-        if (v) {
-            token = v;
-            break;
-        }
+        if (v) { token = v; break; }
     }
 
     const authRaw = localStorage.getItem("auth");
@@ -125,7 +115,6 @@ const state = {
     conversas: [],
     presentesCache: null,
 
-    // chat unlock
     chatLiberado: false,
     custoChat: 0,
     saldoCreditos: 0,
@@ -134,10 +123,17 @@ const state = {
     sessaoId: null,
     roomId: null,
     callActive: false,
+
     pc: null,
     localStream: null,
+
     micOn: true,
     camOn: true,
+
+    // READY handshake
+    calleeReady: false,
+    callerOfferSent: false,
+    offerRetryTimer: null,
 };
 
 // se não achou nada, manda pro login
@@ -149,28 +145,25 @@ if (!state.usuario && !localStorage.getItem("token")) {
 // ==============================
 // Socket.IO
 // ==============================
-// ⚠️ precisa carregar socket.io client no HTML:
+// precisa carregar no HTML:
 // <script src="/socket.io/socket.io.js"></script>
 const token = localStorage.getItem("token") || "";
 const userId = state.usuario?.id;
 
-// OBS: não forço transports=["websocket"] aqui pra evitar falhas em alguns mobiles/proxys.
-// Se quiser websocket-only, pode voltar depois.
 const socket = window.io({
     auth: { token, userId },
+    transports: ["websocket"],
 });
 
-function joinRoomNow() {
-    if (!state.roomId) return;
-    console.log("[socket] joinRoom", state.roomId, "sessao:", state.sessaoId);
-    socket.emit("joinRoom", { roomId: state.roomId });
-}
+socket.on("connect", () => {
+    console.log("[socket] conectado", socket.id);
+});
 
-// Debug útil
-socket.on("connect", () =>
-    console.log("[socket] conectado", socket.id, "userId:", userId, "room:", state.roomId, "sessao:", state.sessaoId)
-);
-socket.on("connect_error", (e) => console.log("[socket] connect_error", e?.message || e));
+socket.on("connect_error", (err) => {
+    console.error("[socket] connect_error:", err?.message || err);
+});
+
+// debug eventos call:
 socket.onAny((event, ...args) => {
     if (String(event).startsWith("call:")) console.log("[socket event]", event, args?.[0]);
 });
@@ -182,8 +175,24 @@ socket.on("wallet:update", (p) => {
     if (saldoCreditosEl) saldoCreditosEl.textContent = `${saldo}`;
 });
 
+// ✅ Novo: READY -> caller só cria offer quando callee avisar
+socket.on("call:ready", async ({ sessaoId }) => {
+    if (!state.sessaoId || String(sessaoId) !== String(state.sessaoId)) return;
+
+    // só caller usa isso
+    state.calleeReady = true;
+    callSub.textContent = "Conectando…";
+
+    try {
+        await ensurePeerAndMedia();
+        await createOfferOnce();
+        scheduleOfferRetry();
+    } catch (e) {
+        console.error("Erro call:ready -> createOffer:", e);
+    }
+});
+
 socket.on("call:incoming", async (p) => {
-    // p: {sessaoId, roomId, conversaId, de:{id,nome}}
     try {
         const nome = p?.de?.nome || "Usuário";
         const ok = confirm(`📹 ${nome} está te ligando por vídeo. Aceitar?`);
@@ -192,36 +201,54 @@ socket.on("call:incoming", async (p) => {
             return;
         }
 
-        // aceita
         const r = await apiFetch(`/ligacoes/video/${p.sessaoId}/aceitar`, { method: "POST" });
 
         state.sessaoId = r.sessaoId;
         state.roomId = r.roomId;
 
-        openCallOverlay(`📹 Chamada com ${nome}`, "Conectando…");
+        // reset flags
+        state.calleeReady = true;      // aqui você É o callee
+        state.callerOfferSent = false;
 
-        // ✅ ordem segura
-        await startMedia();
-        await createPeerIfNeeded();
+        openCallOverlay(`📹 Chamada com ${nome}`, "Entrando na sala…");
+
+        await ensurePeerAndMedia();
+
+        // ✅ entra na room antes de tudo
         joinRoomNow();
+
+        // ✅ avisa pro caller: "já tô no room e pronto"
+        socket.emit("call:ready", { roomId: state.roomId, sessaoId: state.sessaoId });
 
         callSub.textContent = "Aguardando conexão…";
         state.callActive = true;
+
     } catch (e) {
         alert("Erro ao aceitar chamada: " + (e?.message || "erro"));
         await endCallLocal();
     }
 });
 
+// NÃO cria mais offer aqui! (evita race)
 socket.on("call:accepted", async (p) => {
-    // caller recebe: pode começar offer
+    if (!p?.roomId) return;
     if (!state.roomId || p.roomId !== state.roomId) return;
-    callSub.textContent = "Aceita ✅ conectando…";
-    try {
-        await createOffer();
-    } catch (e) {
-        console.error("Erro createOffer:", e);
-    }
+
+    // caller recebe accepted, mas só cria offer quando receber call:ready
+    callSub.textContent = "Aceita ✅ aguardando entrada do outro…";
+    state.callActive = true;
+
+    // segurança: se por algum motivo o READY não vier, tenta em 2s
+    setTimeout(async () => {
+        if (!state.calleeReady && state.sessaoId) {
+            console.warn("READY não chegou, tentando offer por fallback…");
+            try {
+                await ensurePeerAndMedia();
+                await createOfferOnce();
+                scheduleOfferRetry();
+            } catch { }
+        }
+    }, 2000);
 });
 
 socket.on("call:declined", async () => {
@@ -242,9 +269,7 @@ socket.on("call:offer", async ({ sdp, sessaoId }) => {
     try {
         if (sessaoId && state.sessaoId && sessaoId !== state.sessaoId) return;
 
-        // ✅ garante peer + mídia antes de aplicar descrição remota
-        await startMedia();
-        if (!state.pc) await createPeerIfNeeded();
+        await ensurePeerAndMedia();
 
         await state.pc.setRemoteDescription(new RTCSessionDescription(sdp));
         const ans = await state.pc.createAnswer();
@@ -260,6 +285,7 @@ socket.on("call:answer", async ({ sdp, sessaoId }) => {
     try {
         if (!state.pc) return;
         if (sessaoId && state.sessaoId && sessaoId !== state.sessaoId) return;
+
         await state.pc.setRemoteDescription(new RTCSessionDescription(sdp));
     } catch (e) {
         console.error("Erro ao receber answer:", e);
@@ -272,12 +298,12 @@ socket.on("call:ice", async ({ candidate, sessaoId }) => {
         if (sessaoId && state.sessaoId && sessaoId !== state.sessaoId) return;
         await state.pc.addIceCandidate(new RTCIceCandidate(candidate));
     } catch (e) {
-        console.warn("Falha addIceCandidate (normal às vezes):", e?.message || e);
+        console.warn("Falha addIceCandidate (às vezes é normal):", e?.message || e);
     }
 });
 
 // ==============================
-// Helpers
+// Helpers UI
 // ==============================
 function setMsg(text, type = "muted") {
     if (!msg) return;
@@ -294,6 +320,7 @@ function escapeHtml(s) {
         .replaceAll("'", "&#039;");
 }
 
+// presentes modal
 function openGiftModal() {
     giftOverlay?.classList.add("show");
     giftOverlay?.setAttribute("aria-hidden", "false");
@@ -314,9 +341,7 @@ document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeGiftModal();
 });
 
-// ==============================
-// ✅ CREDIT WALL helpers
-// ==============================
+// CREDIT WALL
 function showCreditWall() {
     if (!creditwall) return;
     creditwall.classList.add("show");
@@ -332,14 +357,10 @@ function hideCreditWall() {
 function setCreditWallInfo({ custoCreditos, saldoCreditos }) {
     state.custoChat = Number(custoCreditos || 0);
     state.saldoCreditos = Number(saldoCreditos || 0);
-
     if (unlockCost) unlockCost.textContent = `${state.custoChat} créditos`;
     if (saldoCreditosEl) saldoCreditosEl.textContent = `${state.saldoCreditos}`;
 }
 
-// ✅ Regra correta agora:
-// - Pode enviar msg se (premiumAtivo) OU (chatLiberado)
-// - Presente/ligação só se premiumAtivo
 function applyChatLockUI() {
     const hasChat = !!state.conversaId;
 
@@ -369,14 +390,11 @@ function applyChatLockUI() {
     if (btnCall) btnCall.disabled = !podePremiumAcoes;
 }
 
-// ==============================
 // Premium UI
-// ==============================
 function openCheckout() {
     const ret = encodeURIComponent(window.location.href);
     window.location.href = `comprar-creditos.html?return=${ret}`;
 }
-
 btnAssinar?.addEventListener("click", openCheckout);
 btnAssinarTopo?.addEventListener("click", openCheckout);
 btnComprarCreditos?.addEventListener("click", openCheckout);
@@ -395,17 +413,15 @@ const API = {
     statusChat: (conversaId) => `/conversas/${conversaId}/status`,
     liberarChat: (conversaId) => `/conversas/${conversaId}/liberar`,
     enviarMensagem: "/mensagens",
-
     listarPresentes: "/presentes",
     enviarPresente: "/presentes/enviar",
-
     premiumStatus: "/premium/me",
 };
 
 function syncUsuarioPremium(isPremium, saldoCreditos = null) {
     try {
         const raw = localStorage.getItem("usuario");
-        const u = raw ? JSON.parse(raw) : state.usuario || {};
+        const u = raw ? JSON.parse(raw) : (state.usuario || {});
         if (!u) return;
 
         u.isPremium = !!isPremium;
@@ -454,9 +470,7 @@ async function checarPremium() {
     }
 }
 
-// ==============================
-// Tratamento para bloqueio 402/403
-// ==============================
+// erros
 function isPremiumBlockedError(e) {
     const st = e?.status;
     if (st === 402 || st === 403) return true;
@@ -489,14 +503,12 @@ function isContatoBloqueadoError(e) {
     return e?.data?.code === "CONTATO_BLOQUEADO";
 }
 
-// ==============================
-// Carregar lista de conversas
-// ==============================
+// Conversas
 async function carregarConversas() {
     try {
         setMsg("Carregando conversas...");
         const data = await apiFetch(API.listarConversas);
-        state.conversas = Array.isArray(data) ? data : data.data || [];
+        state.conversas = Array.isArray(data) ? data : (data.data || []);
         renderLista();
         setMsg("");
     } catch (e) {
@@ -517,14 +529,13 @@ function renderLista() {
         return;
     }
 
-    lista.innerHTML = items
-        .map((c) => {
-            const nome = c.outro?.perfil?.nome || c.outroNome || c.outro?.email || "Usuário";
-            const sub = c.ultimaMensagem?.texto || c.ultimaMensagem || "";
-            const active = state.conversaId === c.id ? "active" : "";
-            const lock = c.chatLiberado ? "" : " 🔒";
+    lista.innerHTML = items.map((c) => {
+        const nome = c.outro?.perfil?.nome || c.outroNome || c.outro?.email || "Usuário";
+        const sub = c.ultimaMensagem?.texto || c.ultimaMensagem || "";
+        const active = (state.conversaId === c.id) ? "active" : "";
+        const lock = c.chatLiberado ? "" : " 🔒";
 
-            return `
+        return `
       <button class="item ${active}" data-id="${c.id}">
         <div class="row1">
           <div class="title">${escapeHtml(nome)}${lock}</div>
@@ -532,8 +543,7 @@ function renderLista() {
         <div class="row2 muted">${escapeHtml(sub).slice(0, 60)}</div>
       </button>
     `;
-        })
-        .join("");
+    }).join("");
 
     [...lista.querySelectorAll("button[data-id]")].forEach((btn) => {
         btn.addEventListener("click", () => {
@@ -542,12 +552,9 @@ function renderLista() {
         });
     });
 }
-
 q?.addEventListener("input", renderLista);
 
-// ==============================
-// ✅ Status do chat (créditos)
-// ==============================
+// Status chat
 async function atualizarStatusChat() {
     if (!state.conversaId) {
         state.chatLiberado = false;
@@ -602,9 +609,7 @@ btnLiberarChat?.addEventListener("click", async () => {
     }
 });
 
-// ==============================
 // Abrir conversa
-// ==============================
 async function abrirConversa(conversaId) {
     state.conversaId = conversaId;
 
@@ -639,9 +644,7 @@ async function abrirConversa(conversaId) {
     await carregarMensagens();
 }
 
-// ==============================
 // Mensagens
-// ==============================
 async function carregarMensagens({ silent = false } = {}) {
     if (!state.conversaId) return;
 
@@ -655,11 +658,9 @@ async function carregarMensagens({ silent = false } = {}) {
             items = data;
         } else if (data?.mensagens && Array.isArray(data.mensagens)) {
             items = data.mensagens;
-            if (typeof data.chatLiberado === "boolean") {
-                state.chatLiberado = data.chatLiberado;
-            }
+            if (typeof data.chatLiberado === "boolean") state.chatLiberado = data.chatLiberado;
         } else {
-            items = data?.data && Array.isArray(data.data) ? data.data : [];
+            items = (data?.data && Array.isArray(data.data)) ? data.data : [];
         }
 
         renderMensagens(items);
@@ -683,27 +684,26 @@ function renderMensagens(items) {
 
     const me = state.usuario?.id;
 
-    msgs.innerHTML = items
-        .map((m) => {
-            const isMe = m.autorId === me;
-            const tipo = m.tipo || "TEXTO";
+    msgs.innerHTML = items.map((m) => {
+        const isMe = (m.autorId === me);
+        const tipo = m.tipo || "TEXTO";
 
-            const dt = m.criadoEm ? new Date(m.criadoEm).toLocaleString() : "";
-            const meta = m.metaJson || {};
+        const dt = m.criadoEm ? new Date(m.criadoEm).toLocaleString() : "";
+        const meta = m.metaJson || {};
 
-            let extraClass = "";
-            if (tipo === "SISTEMA") extraClass = "system";
-            if (tipo === "PRESENTE") extraClass = "gift";
+        let extraClass = "";
+        if (tipo === "SISTEMA") extraClass = "system";
+        if (tipo === "PRESENTE") extraClass = "gift";
 
-            let conteudo = "";
-            if (tipo === "PRESENTE") {
-                const nome = meta.nome || (m.texto || "🎁 Presente");
-                conteudo = `<div><b> ${escapeHtml(nome)}</b> </div>`;
-            } else {
-                conteudo = `<div>${escapeHtml(m.texto || "")}</div>`;
-            }
+        let conteudo = "";
+        if (tipo === "PRESENTE") {
+            const nome = meta.nome || (m.texto || "🎁 Presente");
+            conteudo = `<div><b>${escapeHtml(nome)}</b></div>`;
+        } else {
+            conteudo = `<div>${escapeHtml(m.texto || "")}</div>`;
+        }
 
-            return `
+        return `
       <div class="msgRow ${isMe ? "me" : "other"}">
         <div class="bubble ${extraClass}">
           ${conteudo}
@@ -711,8 +711,7 @@ function renderMensagens(items) {
         </div>
       </div>
     `;
-        })
-        .join("");
+    }).join("");
 
     msgs.scrollTop = msgs.scrollHeight;
 }
@@ -767,9 +766,7 @@ texto?.addEventListener("keydown", (e) => {
     }
 });
 
-// ==============================
 // Presentes
-// ==============================
 btnGift?.addEventListener("click", async () => {
     if (!state.conversaId) return;
 
@@ -789,9 +786,7 @@ async function carregarPresentes() {
     giftList.innerHTML = "Carregando...";
 
     try {
-        if (!state.presentesCache) {
-            state.presentesCache = await apiFetch(API.listarPresentes);
-        }
+        if (!state.presentesCache) state.presentesCache = await apiFetch(API.listarPresentes);
         const itens = state.presentesCache || [];
 
         if (!itens.length) {
@@ -799,25 +794,21 @@ async function carregarPresentes() {
             return;
         }
 
-        giftList.innerHTML = itens
-            .map((p) => {
-                const custo = Number(p.custoCreditos || 0);
-                const saldo = Number(state.saldoCreditos || 0);
-                const disabled = custo > saldo;
+        giftList.innerHTML = itens.map((p) => {
+            const custo = Number(p.custoCreditos || 0);
+            const saldo = Number(state.saldoCreditos || 0);
+            const disabled = custo > saldo;
 
-                return `
+            return `
         <button class="dp-gift" data-id="${p.id}" ${disabled ? "disabled" : ""}>
           <div>
             <span class="name">${escapeHtml(p.nome)}</span>
-            <span class="sub">
-              Crédita ${Number(p.minutos || 0)} minuto(s) • Custa ${custo} crédito(s)
-            </span>
+            <span class="sub">Crédita ${Number(p.minutos || 0)} minuto(s) • Custa ${custo} crédito(s)</span>
           </div>
           <span class="dp-pill">💰 ${custo}</span>
         </button>
       `;
-            })
-            .join("");
+        }).join("");
 
         [...giftList.querySelectorAll("button[data-id]")].forEach((btn) => {
             btn.addEventListener("click", async () => {
@@ -857,7 +848,7 @@ async function enviarPresente(presenteId) {
 }
 
 // ==============================
-// Video Call UI
+// Video Call UI + WebRTC
 // ==============================
 function openCallOverlay(title, sub) {
     if (!callOverlay) return;
@@ -875,49 +866,41 @@ function closeCallOverlay() {
     document.body.classList.remove("no-scroll");
 }
 
-btnCallClose?.addEventListener("click", async () => {
-    await hangup();
-});
-
-btnHangup?.addEventListener("click", async () => {
-    await hangup();
-});
+btnCallClose?.addEventListener("click", async () => { await hangup(); });
+btnHangup?.addEventListener("click", async () => { await hangup(); });
 
 btnMute?.addEventListener("click", () => {
     state.micOn = !state.micOn;
-    if (state.localStream) {
-        state.localStream.getAudioTracks().forEach((t) => (t.enabled = state.micOn));
-    }
+    if (state.localStream) state.localStream.getAudioTracks().forEach(t => t.enabled = state.micOn);
     btnMute.textContent = state.micOn ? "🎙️ Mudo" : "🔇 Sem mic";
 });
 
 btnCam?.addEventListener("click", () => {
     state.camOn = !state.camOn;
-    if (state.localStream) {
-        state.localStream.getVideoTracks().forEach((t) => (t.enabled = state.camOn));
-    }
+    if (state.localStream) state.localStream.getVideoTracks().forEach(t => t.enabled = state.camOn);
     btnCam.textContent = state.camOn ? "📷 Câmera" : "🚫 Sem cam";
 });
 
 async function startMedia() {
     if (state.localStream) return;
 
-    state.localStream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-    });
+    state.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
 
     if (localVideo) {
         localVideo.srcObject = state.localStream;
-        localVideo.muted = true; // evita eco local
+        localVideo.muted = true;
         localVideo.playsInline = true;
+        localVideo.autoplay = true;
         await localVideo.play?.().catch(() => { });
     }
 }
 
 function getIceServers() {
-    // ✅ STUN + TURN (se você configurar coturn depois)
-    // Se você ainda NÃO instalou coturn, pode comentar o "turn" por enquanto.
+    // STUN padrão
+    const stun = { urls: "stun:stun.l.google.com:19302" };
+
+    // ⚠️ TURN só vai funcionar se você realmente tiver coturn rodando e liberado na rede.
+    // Se não tiver, pode remover o TURN (mas em 4G/CGNAT normalmente precisa).
     const turn = {
         urls: [
             "turn:desejoproibido.app:3478?transport=udp",
@@ -927,40 +910,28 @@ function getIceServers() {
         credential: "dpturn123",
     };
 
-    const stun = { urls: "stun:stun.l.google.com:19302" };
-
     return [stun, turn];
 }
 
 async function createPeerIfNeeded() {
     if (state.pc) return;
 
-    const pc = new RTCPeerConnection({
-        iceServers: getIceServers(),
-    });
-
+    const pc = new RTCPeerConnection({ iceServers: getIceServers() });
     state.pc = pc;
 
     // tracks locais
     if (state.localStream) {
-        state.localStream.getTracks().forEach((track) => {
-            pc.addTrack(track, state.localStream);
-        });
+        state.localStream.getTracks().forEach(track => pc.addTrack(track, state.localStream));
     }
 
-    // ✅ MAIS ESTÁVEL: usa o stream que vem do ontrack
     pc.ontrack = (event) => {
         const stream = event.streams && event.streams[0] ? event.streams[0] : null;
-
-        console.log(
-            "[webrtc] ontrack",
-            stream ? stream.getTracks().map((t) => t.kind) : "sem stream"
-        );
-
         if (stream && remoteVideo) {
             remoteVideo.srcObject = stream;
             remoteVideo.playsInline = true;
-            remoteVideo.muted = false;
+            remoteVideo.autoplay = true;
+
+            // iOS às vezes bloqueia autoplay; tenta tocar
             remoteVideo.play?.().catch(() => { });
         }
     };
@@ -976,20 +947,33 @@ async function createPeerIfNeeded() {
     };
 
     pc.oniceconnectionstatechange = () => {
-        console.log("[webrtc] ICE state:", pc.iceConnectionState);
+        console.log("[webrtc] iceConnectionState:", pc.iceConnectionState);
+        if (pc.iceConnectionState === "failed") callSub.textContent = "Falhou ICE (provável falta de TURN)";
     };
 
     pc.onconnectionstatechange = () => {
+        console.log("[webrtc] connectionState:", pc.connectionState);
         const st = pc.connectionState;
-        console.log("[webrtc] PC connectionState:", st);
-
         if (st === "connected") callSub.textContent = "Conectado ✅";
-        if (st === "failed") callSub.textContent = "Falhou ❌ (geralmente TURN resolve)";
         if (st === "disconnected") callSub.textContent = "Desconectado…";
+        if (st === "failed") callSub.textContent = "Falhou ❌";
     };
 }
 
-async function createOffer() {
+// garante mídia + pc
+async function ensurePeerAndMedia() {
+    await startMedia();
+    await createPeerIfNeeded();
+}
+
+function joinRoomNow() {
+    if (!state.roomId) return;
+    console.log("[socket] joinRoom", state.roomId);
+    socket.emit("joinRoom", { roomId: state.roomId });
+}
+
+async function createOfferOnce() {
+    if (state.callerOfferSent) return; // evita spam
     if (!state.pc) await createPeerIfNeeded();
 
     const offer = await state.pc.createOffer();
@@ -1000,28 +984,47 @@ async function createOffer() {
         sdp: offer,
         sessaoId: state.sessaoId,
     });
+
+    state.callerOfferSent = true;
+    console.log("[webrtc] offer enviado");
+}
+
+// retry do offer caso o callee tenha perdido o primeiro (rede ruim / iOS)
+function scheduleOfferRetry() {
+    clearOfferRetry();
+
+    state.offerRetryTimer = setTimeout(async () => {
+        // Se ainda não conectou, reenvia offer
+        if (!state.pc || state.pc.connectionState !== "connected") {
+            console.warn("[webrtc] retry offer (fallback)");
+            state.callerOfferSent = false;
+            try { await createOfferOnce(); } catch { }
+            scheduleOfferRetry();
+        }
+    }, 2500);
+}
+
+function clearOfferRetry() {
+    if (state.offerRetryTimer) clearTimeout(state.offerRetryTimer);
+    state.offerRetryTimer = null;
 }
 
 async function endCallLocal() {
     try {
+        clearOfferRetry();
+
         state.callActive = false;
+        state.calleeReady = false;
+        state.callerOfferSent = false;
 
         if (state.pc) {
-            try {
-                state.pc.ontrack = null;
-            } catch { }
-            try {
-                state.pc.onicecandidate = null;
-            } catch { }
-            try {
-                state.pc.close();
-            } catch { }
+            try { state.pc.ontrack = null; } catch { }
+            try { state.pc.onicecandidate = null; } catch { }
+            try { state.pc.close(); } catch { }
         }
         state.pc = null;
 
-        if (state.localStream) {
-            state.localStream.getTracks().forEach((t) => t.stop());
-        }
+        if (state.localStream) state.localStream.getTracks().forEach(t => t.stop());
         state.localStream = null;
 
         if (localVideo) localVideo.srcObject = null;
@@ -1032,8 +1035,8 @@ async function endCallLocal() {
 
         closeCallOverlay();
 
-        btnCall.textContent = "📞";
-        chatStatus.textContent = "";
+        if (btnCall) btnCall.textContent = "📞";
+        if (chatStatus) chatStatus.textContent = "";
     } catch { }
 }
 
@@ -1041,18 +1044,14 @@ async function hangup() {
     try {
         if (state.sessaoId) {
             socket.emit("call:hangup", { sessaoId: state.sessaoId });
-            try {
-                await apiFetch(`/ligacoes/video/${state.sessaoId}/finalizar`, { method: "POST" });
-            } catch { }
+            try { await apiFetch(`/ligacoes/video/${state.sessaoId}/finalizar`, { method: "POST" }); } catch { }
         }
     } finally {
         await endCallLocal();
     }
 }
 
-// ==============================
-// Video Call - botão
-// ==============================
+// botão ligar
 btnCall?.addEventListener("click", async () => {
     if (!state.conversaId) return;
 
@@ -1064,6 +1063,7 @@ btnCall?.addEventListener("click", async () => {
         return;
     }
 
+    // se já está em chamada, encerra
     if (state.sessaoId) {
         await hangup();
         return;
@@ -1081,17 +1081,22 @@ btnCall?.addEventListener("click", async () => {
         state.sessaoId = r.sessaoId;
         state.roomId = r.roomId;
 
+        // caller flags
+        state.calleeReady = false;
+        state.callerOfferSent = false;
+
         openCallOverlay("📹 Videochamada", "Chamando…");
 
-        // ✅ ordem segura
-        await startMedia();
-        await createPeerIfNeeded();
+        await ensurePeerAndMedia();
+
+        // caller entra no room já
         joinRoomNow();
 
         state.callActive = true;
 
         btnCall.textContent = "⛔";
         chatStatus.textContent = "Chamando…";
+
     } catch (e) {
         if (isChatLockedError(e)) {
             await atualizarStatusChat();
