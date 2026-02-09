@@ -43,6 +43,7 @@ model Usuario {
   isInvisivel  Boolean           @default(false)
   invisivelAte DateTime?
   preferencias PreferenciaBusca?
+  idioma       String?           @default("pt") // ex: "pt", "en", "es"
 
   role Role @default(USER)
 
@@ -190,16 +191,39 @@ model Mensagem {
   conversaId String
   autorId    String
   tipo       MensagemTipo @default(TEXTO)
-  texto      String?
-  metaJson   Json?
-  criadoEm   DateTime     @default(now())
+
+  // ✅ texto original e idioma detectado
+  texto          String?
+  textoOriginal  String?
+  idiomaOriginal String? @default("pt")
+
+  metaJson Json?
+  criadoEm DateTime @default(now())
 
   conversa Conversa @relation(fields: [conversaId], references: [id], onDelete: Cascade)
   autor    Usuario  @relation(fields: [autorId], references: [id], onDelete: Cascade)
 
+  // ✅ cache de traduções
+  traducoes MensagemTraducao[]
+
   @@index([conversaId])
   @@index([autorId])
   @@index([conversaId, criadoEm])
+  @@index([idiomaOriginal])
+}
+
+model MensagemTraducao {
+  id         String   @id @default(cuid())
+  mensagemId String
+  idioma     String // ex: "en", "pt", "es"
+  texto      String
+  criadoEm   DateTime @default(now())
+
+  mensagem Mensagem @relation(fields: [mensagemId], references: [id], onDelete: Cascade)
+
+  @@unique([mensagemId, idioma])
+  @@index([idioma])
+  @@index([mensagemId])
 }
 
 model Skip {
@@ -446,7 +470,7 @@ model SessaoLigacao {
 
 model Presente {
   id            String   @id @default(cuid())
-  nome          String   @unique // ✅ recomendado
+  nome          String   @unique
   minutos       Int      @default(0)
   imagemUrl     String?
   custoCreditos Int      @default(0)
@@ -465,7 +489,7 @@ model PresenteEnviado {
   deUsuarioId   String
   paraUsuarioId String
   minutos       Int
-  custoCreditos Int      @default(0) // ✅ recomendado
+  custoCreditos Int      @default(0)
   criadoEm      DateTime @default(now())
 
   presente    Presente @relation(fields: [presenteId], references: [id], onDelete: Cascade)

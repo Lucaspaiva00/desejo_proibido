@@ -15,12 +15,9 @@ function normalizeText(s = "") {
 function hasPhoneLike(text) {
     const t = normalizeText(text);
 
-    // Sequência de dígitos (ignora separadores)
     const digits = t.replace(/[^0-9]/g, "");
-    // 9 a 14 cobre BR e internacional comum (+55..., etc)
     if (digits.length >= 9 && digits.length <= 14) return true;
 
-    // Padrões comuns: (19) 99689-2382, +55 11 99999-9999, 99999-9999 etc
     const phonePattern =
         /(\+?\d{1,3}\s*)?(\(?\d{2,3}\)?\s*)?\d{4,5}[-\s]?\d{4}/;
 
@@ -32,13 +29,11 @@ function hasInstagram(text) {
 
     if (t.includes("instagram.com")) return true;
 
-    // Contexto de rede + @user
     const hasAtUser = /@[a-z0-9._]{3,}/.test(t);
     const hasContext = /(insta|instagram|ig|segue|follow|perfil|arroba)/.test(t);
 
     if (hasAtUser && hasContext) return true;
 
-    // "me chama no insta", "passo meu insta", etc mesmo sem @
     if (/(me chama|chama no|passo|te mando|te passo).*(insta|instagram|ig)/.test(t)) return true;
 
     return false;
@@ -47,16 +42,13 @@ function hasInstagram(text) {
 function hasOtherContact(text) {
     const t = normalizeText(text);
 
-    // Email
     if (/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/.test(t)) return true;
 
-    // Links / redes / contato
     const bad =
         /(wa\.me|api\.whatsapp|whatsapp|wpp|zap|t\.me|telegram|discord\.gg|discord|facebook|fb\.com|x\.com|twitter|snapchat|tiktok|linktr\.ee)/;
 
     if (bad.test(t)) return true;
 
-    // Qualquer URL (deixa ativo pra travar links em geral)
     if (/(https?:\/\/|www\.)\S+/i.test(t)) return true;
 
     return false;
@@ -89,7 +81,6 @@ export async function enviarMensagem(req, res) {
 
         const textoLimpo = String(texto).trim();
 
-        // ✅ TRAVA DE CONTATO (backend)
         if (containsContato(textoLimpo)) {
             return res.status(400).json({
                 erro: "Não é permitido enviar dados de contato (WhatsApp, Instagram, links ou e-mail).",
@@ -110,10 +101,8 @@ export async function enviarMensagem(req, res) {
         const isParte = conv.match.usuarioAId === userId || conv.match.usuarioBId === userId;
         if (!isParte) return res.status(403).json({ erro: "Sem acesso a esta conversa" });
 
-        // ✅ Opção B: premium efetivo = plano premium OU saldoCreditos>0
         const premiumEfetivo = await isPremiumEfetivo(userId);
 
-        // Se NÃO for premium efetivo, exige unlock por conversa
         if (!premiumEfetivo) {
             const unlocked = await isChatUnlocked(conversaId, userId);
             if (!unlocked) {
@@ -124,11 +113,15 @@ export async function enviarMensagem(req, res) {
             }
         }
 
+        const idiomaOriginal = String(req.usuario?.idioma || "pt").toLowerCase();
+
         const msg = await prisma.mensagem.create({
             data: {
                 conversaId,
                 autorId: userId,
                 texto: textoLimpo,
+                textoOriginal: textoLimpo,
+                idiomaOriginal,
             },
         });
 

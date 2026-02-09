@@ -60,10 +60,8 @@ async function normalizarExpiracoes(userId) {
     const now = new Date();
     const data = {};
 
-    // boost expirado
     if (u.boostAte && u.boostAte <= now) data.boostAte = null;
 
-    // invisível expirado
     if (u.invisivelAte && u.invisivelAte <= now) {
         data.invisivelAte = null;
         data.isInvisivel = false;
@@ -85,7 +83,6 @@ export async function me(req, res) {
 
         await normalizarExpiracoes(userId);
 
-        // garante wallet
         await prisma.wallet.upsert({
             where: { userId },
             update: {},
@@ -105,6 +102,7 @@ export async function me(req, res) {
                 boostAte: true,
                 role: true,
                 criadoEm: true,
+                idioma: true, // ✅ novo
             },
         });
 
@@ -118,7 +116,6 @@ export async function me(req, res) {
         return res.json({
             ...usuario,
             saldoCreditos,
-            // ✅ novo: o front usa isso
             premiumAtivo: calcPremiumAtivo(usuario?.isPremium, saldoCreditos),
         });
     } catch (e) {
@@ -128,9 +125,6 @@ export async function me(req, res) {
     }
 }
 
-// PUT /usuarios/invisivel  { ativo: true/false }
-// - ativar: premiumAtivo + cobra 150 + 30min
-// - desativar: desliga e zera invisivelAte (sem cobrar)
 export async function setInvisivel(req, res) {
     try {
         const userId = req.usuario.id;
@@ -145,21 +139,18 @@ export async function setInvisivel(req, res) {
 
         if (!u) return res.status(401).json({ erro: "Usuário inválido" });
 
-        // pega saldo
         const w0 = await prisma.wallet.findUnique({
             where: { userId },
             select: { saldoCreditos: true },
         });
         const saldo0 = w0?.saldoCreditos ?? 0;
 
-        // ✅ troca: não é só isPremium, é premiumAtivo (isPremium OU saldo >= 150)
         const premiumAtivo = calcPremiumAtivo(u.isPremium, saldo0);
 
         if (!premiumAtivo) {
             return res.status(403).json({ erro: "Disponível apenas no Premium (ou com 150 créditos)" });
         }
 
-        // desativar
         if (!ativo) {
             const atualizado = await prisma.usuario.update({
                 where: { id: userId },
@@ -181,7 +172,6 @@ export async function setInvisivel(req, res) {
 
         const now = new Date();
 
-        // se já está ativo e ainda válido, não cobra de novo
         if (u.isInvisivel && u.invisivelAte && u.invisivelAte > now) {
             const w = await prisma.wallet.findUnique({
                 where: { userId },
@@ -219,9 +209,6 @@ export async function setInvisivel(req, res) {
     }
 }
 
-// PUT /usuarios/boost
-// - premiumAtivo + cobra 150 + 30min
-// - se já ativo: estende +30min e cobra novamente
 export async function ativarBoost(req, res) {
     try {
         const userId = req.usuario.id;
@@ -235,7 +222,6 @@ export async function ativarBoost(req, res) {
 
         if (!u) return res.status(401).json({ erro: "Usuário inválido" });
 
-        // saldo
         const w0 = await prisma.wallet.findUnique({
             where: { userId },
             select: { saldoCreditos: true },
@@ -277,7 +263,6 @@ export async function ativarBoost(req, res) {
     }
 }
 
-// GET /usuarios/:id (mantém)
 export async function getUsuarioById(req, res) {
     try {
         const { id } = req.params;
@@ -292,6 +277,7 @@ export async function getUsuarioById(req, res) {
                 isInvisivel: true,
                 invisivelAte: true,
                 boostAte: true,
+                idioma: true,
                 perfil: true,
                 fotos: {
                     orderBy: { principal: "desc" },
@@ -304,5 +290,28 @@ export async function getUsuarioById(req, res) {
         return res.json(u);
     } catch (e) {
         return res.status(500).json({ erro: "Erro ao buscar usuário", detalhe: e.message });
+    }
+}
+
+export async function atualizarMeuIdioma(req, res) {
+    try {
+        const userId = req.usuario.id;
+        const { idioma } = req.body || {};
+
+        if (!idioma || !String(idioma).trim()) {
+            return res.status(400).json({ erro: "idioma é obrigatório (ex: pt, en, es)" });
+        }
+
+        const lang = String(idioma).toLowerCase().split("-")[0].trim();
+
+        const u = await prisma.usuario.update({
+            where: { id: userId },
+            data: { idioma: lang },
+            select: { id: true, email: true, idioma: true },
+        });
+
+        return res.json(u);
+    } catch (e) {
+        return res.status(500).json({ erro: "Erro ao atualizar idioma", detalhe: e.message });
     }
 }

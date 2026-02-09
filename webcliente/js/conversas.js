@@ -517,10 +517,9 @@ function isChatLockedError(e) {
 
 function isContatoBloqueadoError(e) {
     const st = e?.status;
-    if (st !== 422) return false;
+    if (st !== 400) return false;
     return e?.data?.code === "CONTATO_BLOQUEADO";
 }
-
 // Conversas
 async function carregarConversas() {
     try {
@@ -549,7 +548,11 @@ function renderLista() {
 
     lista.innerHTML = items.map((c) => {
         const nome = c.outro?.perfil?.nome || c.outroNome || c.outro?.email || "Usuário";
-        const sub = c.ultimaMensagem?.texto || c.ultimaMensagem || "";
+        const sub =
+            c.ultimaMensagem?.textoExibido ||
+            c.ultimaMensagem?.texto ||
+            c.ultimaMensagem ||
+            "";
         const active = (state.conversaId === c.id) ? "active" : "";
         const lock = c.chatLiberado ? "" : " 🔒";
 
@@ -720,7 +723,9 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
             const nome = meta.nome || (m.texto || "🎁 Presente");
             conteudo = `<div><b>${escapeHtml(nome)}</b></div>`;
         } else {
-            conteudo = `<div>${escapeHtml(m.texto || "")}</div>`;
+            const textToShow = m.textoExibido ?? m.texto ?? "";
+            conteudo = `<div>${escapeHtml(textToShow)}</div>`;
+
         }
 
         return `

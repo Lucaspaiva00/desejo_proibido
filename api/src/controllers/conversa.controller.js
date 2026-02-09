@@ -1,4 +1,6 @@
+// src/controllers/conversa.controller.js
 import { prisma } from "../prisma.js";
+import { getOrCreateTranslation } from "../services/translate.service.js";
 
 const CHAT_UNLOCK_CREDITS = Number(process.env.CHAT_UNLOCK_CREDITS || 10);
 
@@ -38,11 +40,42 @@ function assertParteDaConversa(conv, userId) {
     return match.usuarioAId === userId || match.usuarioBId === userId;
 }
 
+function shouldTranslateMessage(m) {
+    const tipo = m?.tipo || "TEXTO";
+    return tipo === "TEXTO";
+}
+
+async function mapMensagemParaUsuario(m, idiomaDestino) {
+    const original = (m.textoOriginal ?? m.texto ?? "").trim();
+    const idiomaOriginal = m.idiomaOriginal || "pt";
+
+    let textoExibido = m.texto ?? original;
+
+    if (shouldTranslateMessage(m) && original && idiomaDestino && idiomaDestino !== idiomaOriginal) {
+        const t = await getOrCreateTranslation({
+            mensagemId: m.id,
+            idiomaDestino,
+            textoOriginal: original,
+            idiomaOriginal,
+        });
+        if (t) textoExibido = t;
+    }
+
+    return {
+        ...m,
+        texto: m.texto ?? original,
+        textoOriginal: m.textoOriginal ?? original,
+        idiomaOriginal,
+        textoExibido,
+    };
+}
+
 // ==============================
 // ✅ LISTAR CONVERSAS
 // ==============================
 export async function listarConversas(req, res) {
     const userId = req.usuario.id;
+    const idiomaDestino = req.lang || req.usuario?.idioma || "pt";
 
     const conversas = await prisma.conversa.findMany({
         where: {
@@ -53,21 +86,23 @@ export async function listarConversas(req, res) {
     });
 
     const conversaIds = conversas.map((c) => c.id);
-
     if (conversaIds.length === 0) return res.json([]);
 
-    // ✅ últimas mensagens
     const ultimas = await prisma.mensagem.findMany({
         where: { conversaId: { in: conversaIds } },
         orderBy: { criadoEm: "desc" },
         distinct: ["conversaId"],
-        select: { conversaId: true, texto: true, criadoEm: true },
+        select: {
+            id: true,
+            conversaId: true,
+            texto: true,
+            textoOriginal: true,
+            idiomaOriginal: true,
+            tipo: true,
+            criadoEm: true,
+        },
     });
 
-    const lastByConversa = new Map();
-    for (const m of ultimas) lastByConversa.set(m.conversaId, m);
-
-    // ✅ ids do outro usuário
     const outroIds = conversas.map((c) => {
         const a = c.match.usuarioAId;
         const b = c.match.usuarioBId;
@@ -82,7 +117,6 @@ export async function listarConversas(req, res) {
     const outroById = new Map();
     for (const u of outros) outroById.set(u.id, u);
 
-    // ✅ unlocks do usuário em lote
     const unlocks = await prisma.walletTx.findMany({
         where: {
             userId,
@@ -95,12 +129,32 @@ export async function listarConversas(req, res) {
 
     const liberadasSet = new Set(unlocks.map((u) => u.refId));
 
+    // traduz a última mensagem quando for TEXTO
+    const lastByConversa = new Map();
+    for (const m of ultimas) {
+        const original = (m.textoOriginal ?? m.texto ?? "").trim();
+        const from = m.idiomaOriginal || "pt";
+        let textoExibido = m.texto ?? original;
+
+        if (m.tipo === "TEXTO" && original && idiomaDestino && idiomaDestino !== from) {
+            const t = await getOrCreateTranslation({
+                mensagemId: m.id,
+                idiomaDestino,
+                textoOriginal: original,
+                idiomaOriginal: from,
+            });
+            if (t) textoExibido = t;
+        }
+
+        lastByConversa.set(m.conversaId, { texto: m.texto ?? original, textoExibido, criadoEm: m.criadoEm });
+    }
+
     const data = conversas.map((c) => {
         const outroId =
             c.match.usuarioAId === userId ? c.match.usuarioBId : c.match.usuarioAId;
 
         const outro = outroById.get(outroId) || null;
-        const ultima = lastByConversa.get(c.id);
+        const ultima = lastByConversa.get(c.id) || null;
 
         return {
             id: c.id,
@@ -108,7 +162,7 @@ export async function listarConversas(req, res) {
             chatLiberado: liberadasSet.has(c.id),
             outroUsuarioId: outroId,
             outro,
-            ultimaMensagem: ultima ? { texto: ultima.texto, criadoEm: ultima.criadoEm } : null,
+            ultimaMensagem: ultima,
         };
     });
 
@@ -120,6 +174,7 @@ export async function listarConversas(req, res) {
 // ==============================
 export async function mensagensDaConversa(req, res) {
     const userId = req.usuario.id;
+    const idiomaDestino = req.lang || req.usuario?.idioma || "pt";
     const { id: conversaId } = req.params;
 
     const conv = await prisma.conversa.findUnique({
@@ -134,9 +189,25 @@ export async function mensagensDaConversa(req, res) {
         where: { conversaId },
         orderBy: { criadoEm: "asc" },
         take: 200,
+        select: {
+            id: true,
+            conversaId: true,
+            autorId: true,
+            tipo: true,
+            texto: true,
+            textoOriginal: true,
+            idiomaOriginal: true,
+            metaJson: true,
+            criadoEm: true,
+        },
     });
 
-    return res.json({ mensagens });
+    const mapped = [];
+    for (const m of mensagens) {
+        mapped.push(await mapMensagemParaUsuario(m, idiomaDestino));
+    }
+
+    return res.json({ mensagens: mapped, lang: idiomaDestino });
 }
 
 // ==============================
@@ -271,6 +342,8 @@ export async function liberarChat(req, res) {
                 autorId: userId,
                 tipo: "SISTEMA",
                 texto: "🔓 Chat liberado com créditos.",
+                textoOriginal: "🔓 Chat liberado com créditos.",
+                idiomaOriginal: String(req.usuario?.idioma || "pt").toLowerCase(),
             },
         });
     });

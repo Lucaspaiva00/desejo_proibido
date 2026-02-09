@@ -31,6 +31,8 @@ import pagamentosRoutes from "./routes/pagamentos.routes.js";
 import carteiraRoutes from "./routes/carteira.routes.js";
 import creditosRoutes from "./routes/creditos.routes.js";
 
+import { langMiddleware } from "./middlewares/lang.middleware.js";
+
 export const app = express();
 
 app.use(helmet());
@@ -48,6 +50,9 @@ const v1 = Router();
 
 // auth primeiro
 v1.use("/auth", authRoutes);
+
+// ✅ idioma para o resto do sistema
+v1.use(langMiddleware);
 
 // demais rotas
 v1.use("/perfil", perfilRoutes);
