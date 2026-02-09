@@ -368,8 +368,14 @@ function applyChatLockUI() {
         hideCreditWall();
         if (texto) texto.disabled = true;
         if (btnEnviar) btnEnviar.disabled = true;
+
+        // ✅ SEM conversa -> desabilita tudo mesmo
         if (btnGift) btnGift.disabled = true;
         if (btnCall) btnCall.disabled = true;
+
+        // limpa feedback
+        btnGift?.classList.remove("lockedAction");
+        btnCall?.classList.remove("lockedAction");
         return;
     }
 
@@ -385,16 +391,15 @@ function applyChatLockUI() {
         if (btnEnviar) btnEnviar.disabled = false;
     }
 
-    const podePremiumAcoes = !!state.premiumAtivo;
-    // Botões SEMPRE clicáveis (se tem conversa aberta)
-    // Se não for premium, o clique abre o paywall (seu handler já faz isso)
-    if (btnGift) btnGift.disabled = !hasChat;
-    if (btnCall) btnCall.disabled = !hasChat;
+    // ✅ AJUSTE PRINCIPAL:
+    // Com conversa aberta, ligação/presente ficam SEMPRE disponíveis (mobile/desktop),
+    // e o clique decide se abre paywall (seu handler já faz isso).
+    if (btnGift) btnGift.disabled = false;
+    if (btnCall) btnCall.disabled = false;
 
-    // Só pra dar feedback visual de bloqueado
-    btnGift?.classList.toggle("lockedAction", hasChat && !state.premiumAtivo);
-    btnCall?.classList.toggle("lockedAction", hasChat && !state.premiumAtivo);
-
+    // Só feedback visual quando não é premium (continua clicável)
+    btnGift?.classList.toggle("lockedAction", !state.premiumAtivo);
+    btnCall?.classList.toggle("lockedAction", !state.premiumAtivo);
 }
 
 // Premium UI
@@ -906,8 +911,7 @@ function getIceServers() {
     // STUN padrão
     const stun = { urls: "stun:stun.l.google.com:19302" };
 
-    // ⚠️ TURN só vai funcionar se você realmente tiver coturn rodando e liberado na rede.
-    // Se não tiver, pode remover o TURN (mas em 4G/CGNAT normalmente precisa).
+    // TURN
     const turn = {
         urls: [
             "turn:desejoproibido.app:3478?transport=udp",
@@ -937,8 +941,6 @@ async function createPeerIfNeeded() {
             remoteVideo.srcObject = stream;
             remoteVideo.playsInline = true;
             remoteVideo.autoplay = true;
-
-            // iOS às vezes bloqueia autoplay; tenta tocar
             remoteVideo.play?.().catch(() => { });
         }
     };
@@ -996,12 +998,11 @@ async function createOfferOnce() {
     console.log("[webrtc] offer enviado");
 }
 
-// retry do offer caso o callee tenha perdido o primeiro (rede ruim / iOS)
+// retry do offer
 function scheduleOfferRetry() {
     clearOfferRetry();
 
     state.offerRetryTimer = setTimeout(async () => {
-        // Se ainda não conectou, reenvia offer
         if (!state.pc || state.pc.connectionState !== "connected") {
             console.warn("[webrtc] retry offer (fallback)");
             state.callerOfferSent = false;
