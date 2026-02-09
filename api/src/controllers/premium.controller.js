@@ -17,6 +17,14 @@ export async function premiumMe(req, res) {
 
         if (!u) return res.status(401).json({ erro: "Usuário inválido" });
 
+        // ✅ garante wallet (igual vocês fazem em /usuarios/me)
+        await prisma.wallet.upsert({
+            where: { userId },
+            update: {},
+            create: { userId, saldoCreditos: 0 },
+        });
+
+        // ⚠️ se "userId" não for unique no schema, troque findUnique por findFirst
         const wallet = await prisma.wallet.findUnique({
             where: { userId },
             select: { saldoCreditos: true },
@@ -31,11 +39,7 @@ export async function premiumMe(req, res) {
             email: u.email,
             role: u.role,
             plano: u.plano,
-
-            // ✅ o front deve usar isso
             isPremium: premiumEfetivo,
-
-            // ✅ front usa para pill/label
             saldoCreditos,
         });
     } catch (e) {
@@ -46,10 +50,6 @@ export async function premiumMe(req, res) {
     }
 }
 
-/**
- * (Opcional) Mantém suas rotas de assinatura manual, se quiser.
- * Você pode até remover se não usar assinatura.
- */
 export async function ativarPremium(req, res) {
     try {
         const u = await prisma.usuario.update({
