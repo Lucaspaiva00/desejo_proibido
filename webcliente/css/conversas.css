@@ -691,3 +691,50 @@
         font-size: 34px;
     }
 }
+
+/* ===== FIX MOBILE: mostrar botões de ligação/presente ===== */
+@media (max-width: 520px) {
+
+    /* topo do chat vira "duas linhas" */
+    .chat-top {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .chat-user {
+        width: 100%;
+    }
+
+    /* ações precisam caber no mobile */
+    .chat-actions {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        /* ✅ permite quebrar linha */
+        gap: 8px;
+        justify-content: flex-start;
+        align-items: center;
+        overflow: visible !important;
+        /* ✅ garante que não vai cortar */
+    }
+
+    /* créditos ocupa uma linha inteira (pra sobrar espaço pros botões) */
+    #minutosPill {
+        flex: 1 1 100%;
+        justify-content: center;
+    }
+
+    /* botões menores no mobile pra caber legal */
+    .iconbtn {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        flex: 0 0 auto;
+    }
+
+    /* evita que algum CSS "mate" clique/visual */
+    .iconbtn[disabled] {
+        opacity: .55;
+    }
+}
