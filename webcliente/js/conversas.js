@@ -386,8 +386,15 @@ function applyChatLockUI() {
     }
 
     const podePremiumAcoes = !!state.premiumAtivo;
-    if (btnGift) btnGift.disabled = !podePremiumAcoes;
-    if (btnCall) btnCall.disabled = !podePremiumAcoes;
+    // Botões SEMPRE clicáveis (se tem conversa aberta)
+    // Se não for premium, o clique abre o paywall (seu handler já faz isso)
+    if (btnGift) btnGift.disabled = !hasChat;
+    if (btnCall) btnCall.disabled = !hasChat;
+
+    // Só pra dar feedback visual de bloqueado
+    btnGift?.classList.toggle("lockedAction", hasChat && !state.premiumAtivo);
+    btnCall?.classList.toggle("lockedAction", hasChat && !state.premiumAtivo);
+
 }
 
 // Premium UI
