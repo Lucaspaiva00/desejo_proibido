@@ -62,7 +62,11 @@ const btnCam = document.getElementById("btnCam");
 // ✅ Auth robusto (não depende da chave)
 // =====================================
 function safeJsonParse(v) {
-    try { return JSON.parse(v); } catch { return null; }
+    try {
+        return JSON.parse(v);
+    } catch {
+        return null;
+    }
 }
 
 function getAuth() {
@@ -74,14 +78,20 @@ function getAuth() {
         const v = localStorage.getItem(k);
         if (v) {
             const obj = safeJsonParse(v);
-            if (obj) { usuario = obj; break; }
+            if (obj) {
+                usuario = obj;
+                break;
+            }
         }
     }
 
     let token = null;
     for (const k of keysToken) {
         const v = localStorage.getItem(k);
-        if (v) { token = v; break; }
+        if (v) {
+            token = v;
+            break;
+        }
     }
 
     const authRaw = localStorage.getItem("auth");
@@ -144,13 +154,25 @@ if (!state.usuario && !localStorage.getItem("token")) {
 const token = localStorage.getItem("token") || "";
 const userId = state.usuario?.id;
 
+// OBS: não forço transports=["websocket"] aqui pra evitar falhas em alguns mobiles/proxys.
+// Se quiser websocket-only, pode voltar depois.
 const socket = window.io({
     auth: { token, userId },
-    transports: ["websocket"],
 });
 
-socket.on("connect_error", (err) => {
-    console.error("Socket connect_error:", err?.message || err);
+function joinRoomNow() {
+    if (!state.roomId) return;
+    console.log("[socket] joinRoom", state.roomId, "sessao:", state.sessaoId);
+    socket.emit("joinRoom", { roomId: state.roomId });
+}
+
+// Debug útil
+socket.on("connect", () =>
+    console.log("[socket] conectado", socket.id, "userId:", userId, "room:", state.roomId, "sessao:", state.sessaoId)
+);
+socket.on("connect_error", (e) => console.log("[socket] connect_error", e?.message || e));
+socket.onAny((event, ...args) => {
+    if (String(event).startsWith("call:")) console.log("[socket event]", event, args?.[0]);
 });
 
 socket.on("wallet:update", (p) => {
@@ -177,14 +199,14 @@ socket.on("call:incoming", async (p) => {
         state.roomId = r.roomId;
 
         openCallOverlay(`📹 Chamada com ${nome}`, "Conectando…");
+
+        // ✅ ordem segura
         await startMedia();
         await createPeerIfNeeded();
-
-        socket.emit("joinRoom", { roomId: state.roomId });
+        joinRoomNow();
 
         callSub.textContent = "Aguardando conexão…";
         state.callActive = true;
-
     } catch (e) {
         alert("Erro ao aceitar chamada: " + (e?.message || "erro"));
         await endCallLocal();
@@ -220,6 +242,8 @@ socket.on("call:offer", async ({ sdp, sessaoId }) => {
     try {
         if (sessaoId && state.sessaoId && sessaoId !== state.sessaoId) return;
 
+        // ✅ garante peer + mídia antes de aplicar descrição remota
+        await startMedia();
         if (!state.pc) await createPeerIfNeeded();
 
         await state.pc.setRemoteDescription(new RTCSessionDescription(sdp));
@@ -381,7 +405,7 @@ const API = {
 function syncUsuarioPremium(isPremium, saldoCreditos = null) {
     try {
         const raw = localStorage.getItem("usuario");
-        const u = raw ? JSON.parse(raw) : (state.usuario || {});
+        const u = raw ? JSON.parse(raw) : state.usuario || {};
         if (!u) return;
 
         u.isPremium = !!isPremium;
@@ -472,7 +496,7 @@ async function carregarConversas() {
     try {
         setMsg("Carregando conversas...");
         const data = await apiFetch(API.listarConversas);
-        state.conversas = Array.isArray(data) ? data : (data.data || []);
+        state.conversas = Array.isArray(data) ? data : data.data || [];
         renderLista();
         setMsg("");
     } catch (e) {
@@ -493,13 +517,14 @@ function renderLista() {
         return;
     }
 
-    lista.innerHTML = items.map((c) => {
-        const nome = c.outro?.perfil?.nome || c.outroNome || c.outro?.email || "Usuário";
-        const sub = c.ultimaMensagem?.texto || c.ultimaMensagem || "";
-        const active = (state.conversaId === c.id) ? "active" : "";
-        const lock = c.chatLiberado ? "" : " 🔒";
+    lista.innerHTML = items
+        .map((c) => {
+            const nome = c.outro?.perfil?.nome || c.outroNome || c.outro?.email || "Usuário";
+            const sub = c.ultimaMensagem?.texto || c.ultimaMensagem || "";
+            const active = state.conversaId === c.id ? "active" : "";
+            const lock = c.chatLiberado ? "" : " 🔒";
 
-        return `
+            return `
       <button class="item ${active}" data-id="${c.id}">
         <div class="row1">
           <div class="title">${escapeHtml(nome)}${lock}</div>
@@ -507,7 +532,8 @@ function renderLista() {
         <div class="row2 muted">${escapeHtml(sub).slice(0, 60)}</div>
       </button>
     `;
-    }).join("");
+        })
+        .join("");
 
     [...lista.querySelectorAll("button[data-id]")].forEach((btn) => {
         btn.addEventListener("click", () => {
@@ -633,7 +659,7 @@ async function carregarMensagens({ silent = false } = {}) {
                 state.chatLiberado = data.chatLiberado;
             }
         } else {
-            items = (data?.data && Array.isArray(data.data)) ? data.data : [];
+            items = data?.data && Array.isArray(data.data) ? data.data : [];
         }
 
         renderMensagens(items);
@@ -657,26 +683,27 @@ function renderMensagens(items) {
 
     const me = state.usuario?.id;
 
-    msgs.innerHTML = items.map((m) => {
-        const isMe = (m.autorId === me);
-        const tipo = m.tipo || "TEXTO";
+    msgs.innerHTML = items
+        .map((m) => {
+            const isMe = m.autorId === me;
+            const tipo = m.tipo || "TEXTO";
 
-        const dt = m.criadoEm ? new Date(m.criadoEm).toLocaleString() : "";
-        const meta = m.metaJson || {};
+            const dt = m.criadoEm ? new Date(m.criadoEm).toLocaleString() : "";
+            const meta = m.metaJson || {};
 
-        let extraClass = "";
-        if (tipo === "SISTEMA") extraClass = "system";
-        if (tipo === "PRESENTE") extraClass = "gift";
+            let extraClass = "";
+            if (tipo === "SISTEMA") extraClass = "system";
+            if (tipo === "PRESENTE") extraClass = "gift";
 
-        let conteudo = "";
-        if (tipo === "PRESENTE") {
-            const nome = meta.nome || (m.texto || "🎁 Presente");
-            conteudo = `<div><b> ${escapeHtml(nome)}</b> </div>`;
-        } else {
-            conteudo = `<div>${escapeHtml(m.texto || "")}</div>`;
-        }
+            let conteudo = "";
+            if (tipo === "PRESENTE") {
+                const nome = meta.nome || (m.texto || "🎁 Presente");
+                conteudo = `<div><b> ${escapeHtml(nome)}</b> </div>`;
+            } else {
+                conteudo = `<div>${escapeHtml(m.texto || "")}</div>`;
+            }
 
-        return `
+            return `
       <div class="msgRow ${isMe ? "me" : "other"}">
         <div class="bubble ${extraClass}">
           ${conteudo}
@@ -684,7 +711,8 @@ function renderMensagens(items) {
         </div>
       </div>
     `;
-    }).join("");
+        })
+        .join("");
 
     msgs.scrollTop = msgs.scrollHeight;
 }
@@ -771,12 +799,13 @@ async function carregarPresentes() {
             return;
         }
 
-        giftList.innerHTML = itens.map((p) => {
-            const custo = Number(p.custoCreditos || 0);
-            const saldo = Number(state.saldoCreditos || 0);
-            const disabled = custo > saldo;
+        giftList.innerHTML = itens
+            .map((p) => {
+                const custo = Number(p.custoCreditos || 0);
+                const saldo = Number(state.saldoCreditos || 0);
+                const disabled = custo > saldo;
 
-            return `
+                return `
         <button class="dp-gift" data-id="${p.id}" ${disabled ? "disabled" : ""}>
           <div>
             <span class="name">${escapeHtml(p.nome)}</span>
@@ -787,7 +816,8 @@ async function carregarPresentes() {
           <span class="dp-pill">💰 ${custo}</span>
         </button>
       `;
-        }).join("");
+            })
+            .join("");
 
         [...giftList.querySelectorAll("button[data-id]")].forEach((btn) => {
             btn.addEventListener("click", async () => {
@@ -856,7 +886,7 @@ btnHangup?.addEventListener("click", async () => {
 btnMute?.addEventListener("click", () => {
     state.micOn = !state.micOn;
     if (state.localStream) {
-        state.localStream.getAudioTracks().forEach(t => t.enabled = state.micOn);
+        state.localStream.getAudioTracks().forEach((t) => (t.enabled = state.micOn));
     }
     btnMute.textContent = state.micOn ? "🎙️ Mudo" : "🔇 Sem mic";
 });
@@ -864,7 +894,7 @@ btnMute?.addEventListener("click", () => {
 btnCam?.addEventListener("click", () => {
     state.camOn = !state.camOn;
     if (state.localStream) {
-        state.localStream.getVideoTracks().forEach(t => t.enabled = state.camOn);
+        state.localStream.getVideoTracks().forEach((t) => (t.enabled = state.camOn));
     }
     btnCam.textContent = state.camOn ? "📷 Câmera" : "🚫 Sem cam";
 });
@@ -886,8 +916,8 @@ async function startMedia() {
 }
 
 function getIceServers() {
-    // ✅ usando TURN do seu servidor (coturn)
-    // você pode trocar user/pass depois
+    // ✅ STUN + TURN (se você configurar coturn depois)
+    // Se você ainda NÃO instalou coturn, pode comentar o "turn" por enquanto.
     const turn = {
         urls: [
             "turn:desejoproibido.app:3478?transport=udp",
@@ -913,7 +943,7 @@ async function createPeerIfNeeded() {
 
     // tracks locais
     if (state.localStream) {
-        state.localStream.getTracks().forEach(track => {
+        state.localStream.getTracks().forEach((track) => {
             pc.addTrack(track, state.localStream);
         });
     }
@@ -921,6 +951,12 @@ async function createPeerIfNeeded() {
     // ✅ MAIS ESTÁVEL: usa o stream que vem do ontrack
     pc.ontrack = (event) => {
         const stream = event.streams && event.streams[0] ? event.streams[0] : null;
+
+        console.log(
+            "[webrtc] ontrack",
+            stream ? stream.getTracks().map((t) => t.kind) : "sem stream"
+        );
+
         if (stream && remoteVideo) {
             remoteVideo.srcObject = stream;
             remoteVideo.playsInline = true;
@@ -940,15 +976,15 @@ async function createPeerIfNeeded() {
     };
 
     pc.oniceconnectionstatechange = () => {
-        console.log("ICE state:", pc.iceConnectionState);
+        console.log("[webrtc] ICE state:", pc.iceConnectionState);
     };
 
     pc.onconnectionstatechange = () => {
         const st = pc.connectionState;
-        console.log("PC connectionState:", st);
+        console.log("[webrtc] PC connectionState:", st);
 
         if (st === "connected") callSub.textContent = "Conectado ✅";
-        if (st === "failed") callSub.textContent = "Falhou ❌ (TURN resolve isso)";
+        if (st === "failed") callSub.textContent = "Falhou ❌ (geralmente TURN resolve)";
         if (st === "disconnected") callSub.textContent = "Desconectado…";
     };
 }
@@ -971,14 +1007,20 @@ async function endCallLocal() {
         state.callActive = false;
 
         if (state.pc) {
-            try { state.pc.ontrack = null; } catch { }
-            try { state.pc.onicecandidate = null; } catch { }
-            try { state.pc.close(); } catch { }
+            try {
+                state.pc.ontrack = null;
+            } catch { }
+            try {
+                state.pc.onicecandidate = null;
+            } catch { }
+            try {
+                state.pc.close();
+            } catch { }
         }
         state.pc = null;
 
         if (state.localStream) {
-            state.localStream.getTracks().forEach(t => t.stop());
+            state.localStream.getTracks().forEach((t) => t.stop());
         }
         state.localStream = null;
 
@@ -999,7 +1041,9 @@ async function hangup() {
     try {
         if (state.sessaoId) {
             socket.emit("call:hangup", { sessaoId: state.sessaoId });
-            try { await apiFetch(`/ligacoes/video/${state.sessaoId}/finalizar`, { method: "POST" }); } catch { }
+            try {
+                await apiFetch(`/ligacoes/video/${state.sessaoId}/finalizar`, { method: "POST" });
+            } catch { }
         }
     } finally {
         await endCallLocal();
@@ -1038,16 +1082,16 @@ btnCall?.addEventListener("click", async () => {
         state.roomId = r.roomId;
 
         openCallOverlay("📹 Videochamada", "Chamando…");
+
+        // ✅ ordem segura
         await startMedia();
         await createPeerIfNeeded();
-
-        socket.emit("joinRoom", { roomId: state.roomId });
+        joinRoomNow();
 
         state.callActive = true;
 
         btnCall.textContent = "⛔";
         chatStatus.textContent = "Chamando…";
-
     } catch (e) {
         if (isChatLockedError(e)) {
             await atualizarStatusChat();
@@ -1090,15 +1134,3 @@ setInterval(async () => {
 setInterval(() => {
     if (state.conversaId) carregarMensagens({ silent: true });
 }, 4000);
-
-socket.on("connect", () => console.log("[socket] conectado", socket.id, "room:", state.roomId, "sessao:", state.sessaoId));
-socket.on("connect_error", (e) => console.log("[socket] connect_error", e?.message || e));
-
-socket.onAny((event, ...args) => {
-    if (String(event).startsWith("call:")) console.log("[socket event]", event, args?.[0]);
-});
-
-function joinRoomNow() {
-    console.log("[socket] joinRoom", state.roomId);
-    socket.emit("joinRoom", { roomId: state.roomId });
-}
