@@ -149,10 +149,6 @@ const socket = window.io({
     transports: ["websocket"],
 });
 
-socket.on("connect", () => {
-    // ok
-});
-
 socket.on("connect_error", (err) => {
     console.error("Socket connect_error:", err?.message || err);
 });
