@@ -1,87 +1,240 @@
+// src/controllers/usuario.controller.js
 import { prisma } from "../prisma.js";
 
-function addHours(date, hours) {
-    const d = new Date(date);
-    d.setHours(d.getHours() + hours);
-    return d;
+const CUSTO = 150;
+const DURACAO_MIN = 30;
+
+function addMinutes(date, minutes) {
+    return new Date(date.getTime() + minutes * 60 * 1000);
+}
+
+async function ensureWalletTx(tx, userId) {
+    await tx.wallet.upsert({
+        where: { userId },
+        update: {},
+        create: { userId, saldoCreditos: 0 },
+    });
+}
+
+async function debitarCreditosTx(tx, userId, valor, origem) {
+    await ensureWalletTx(tx, userId);
+
+    const w = await tx.wallet.findUnique({ where: { userId } });
+    const saldo = w?.saldoCreditos ?? 0;
+
+    if (saldo < valor) {
+        const err = new Error("Saldo de créditos insuficiente");
+        err.status = 402;
+        throw err;
+    }
+
+    await tx.wallet.update({
+        where: { userId },
+        data: { saldoCreditos: { decrement: valor } },
+    });
+
+    await tx.walletTx.create({
+        data: {
+            userId,
+            tipo: "DEBITO",
+            origem, // "BOOST" | "INVISIVEL"
+            valor,
+        },
+    });
+
+    const w2 = await tx.wallet.findUnique({ where: { userId } });
+    return w2?.saldoCreditos ?? 0;
+}
+
+async function normalizarExpiracoes(userId) {
+    const u = await prisma.usuario.findUnique({
+        where: { id: userId },
+        select: {
+            boostAte: true,
+            invisivelAte: true,
+            isInvisivel: true,
+        },
+    });
+    if (!u) return;
+
+    const now = new Date();
+    const data = {};
+
+    // boost expirado
+    if (u.boostAte && u.boostAte <= now) data.boostAte = null;
+
+    // invisível expirado
+    if (u.invisivelAte && u.invisivelAte <= now) {
+        data.invisivelAte = null;
+        data.isInvisivel = false;
+    }
+
+    if (Object.keys(data).length) {
+        await prisma.usuario.update({ where: { id: userId }, data });
+    }
 }
 
 // GET /usuarios/me
 export async function me(req, res) {
-    const usuario = await prisma.usuario.findUnique({
-        where: { id: req.usuario.id },
-        select: {
-            id: true,
-            email: true,
-            ativo: true,
-            isPremium: true,
-            isInvisivel: true,
-            boostAte: true,
-            role: true,
-            criadoEm: true,
-        },
-    });
+    try {
+        const userId = req.usuario.id;
 
-    return res.json(usuario);
+        await normalizarExpiracoes(userId);
+
+        // garante wallet
+        await prisma.wallet.upsert({
+            where: { userId },
+            update: {},
+            create: { userId, saldoCreditos: 0 },
+        });
+
+        const usuario = await prisma.usuario.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                email: true,
+                ativo: true,
+                isPremium: true,
+                plano: true,
+                isInvisivel: true,
+                invisivelAte: true,
+                boostAte: true,
+                role: true,
+                criadoEm: true,
+            },
+        });
+
+        const wallet = await prisma.wallet.findUnique({
+            where: { userId },
+            select: { saldoCreditos: true },
+        });
+
+        return res.json({
+            ...usuario,
+            saldoCreditos: wallet?.saldoCreditos ?? 0,
+        });
+    } catch (e) {
+        return res.status(500).json({ erro: "Erro ao buscar /usuarios/me", detalhe: e.message });
+    }
 }
 
 // PUT /usuarios/invisivel  { ativo: true/false }
+// - ativar: premium + cobra 150 + 30min
+// - desativar: desliga e zera invisivelAte (sem cobrar)
 export async function setInvisivel(req, res) {
-    const { ativo } = req.body;
+    try {
+        const userId = req.usuario.id;
+        const ativo = !!req.body?.ativo;
 
-    const usuario = await prisma.usuario.findUnique({
-        where: { id: req.usuario.id },
-        select: { id: true, isPremium: true },
-    });
+        await normalizarExpiracoes(userId);
 
-    if (!usuario) return res.status(401).json({ erro: "Usuário inválido" });
+        const u = await prisma.usuario.findUnique({
+            where: { id: userId },
+            select: { id: true, isPremium: true, isInvisivel: true, invisivelAte: true },
+        });
 
-    if (!usuario.isPremium) {
-        return res.status(403).json({ erro: "Disponível apenas no Premium" });
+        if (!u) return res.status(401).json({ erro: "Usuário inválido" });
+        if (!u.isPremium) return res.status(403).json({ erro: "Disponível apenas no Premium" });
+
+        // desativar
+        if (!ativo) {
+            const atualizado = await prisma.usuario.update({
+                where: { id: userId },
+                data: { isInvisivel: false, invisivelAte: null },
+                select: { id: true, isInvisivel: true, invisivelAte: true },
+            });
+
+            const w = await prisma.wallet.findUnique({ where: { userId }, select: { saldoCreditos: true } });
+            return res.json({
+                ...atualizado,
+                custo: 0,
+                saldoCreditos: w?.saldoCreditos ?? 0,
+            });
+        }
+
+        const now = new Date();
+
+        // se já está ativo e ainda válido, não cobra de novo
+        if (u.isInvisivel && u.invisivelAte && u.invisivelAte > now) {
+            const w = await prisma.wallet.findUnique({ where: { userId }, select: { saldoCreditos: true } });
+            return res.json({
+                id: u.id,
+                isInvisivel: true,
+                invisivelAte: u.invisivelAte,
+                custo: 0,
+                saldoCreditos: w?.saldoCreditos ?? 0,
+                mensagem: "Já estava ativo",
+            });
+        }
+
+        const invisivelAte = addMinutes(now, DURACAO_MIN);
+
+        const result = await prisma.$transaction(async (tx) => {
+            const saldoApos = await debitarCreditosTx(tx, userId, CUSTO, "INVISIVEL");
+
+            const atualizado = await tx.usuario.update({
+                where: { id: userId },
+                data: { isInvisivel: true, invisivelAte },
+                select: { id: true, isInvisivel: true, invisivelAte: true },
+            });
+
+            return { ...atualizado, custo: CUSTO, saldoCreditos: saldoApos };
+        });
+
+        return res.json(result);
+    } catch (e) {
+        const status = e.status || 500;
+        return res.status(status).json({ erro: "Erro ao ativar invisível", detalhe: e.message });
     }
-
-    const atualizado = await prisma.usuario.update({
-        where: { id: usuario.id },
-        data: { isInvisivel: !!ativo },
-        select: { id: true, isInvisivel: true, isPremium: true },
-    });
-
-    return res.json(atualizado);
 }
 
-// PUT /usuarios/boost  { horas?: 6 }
+// PUT /usuarios/boost
+// - premium + cobra 150 + 30min
+// - se já ativo: estende +30min e cobra novamente (padrão “comprar tempo”)
 export async function ativarBoost(req, res) {
-    const horas = Number(req.body?.horas || 6);
+    try {
+        const userId = req.usuario.id;
 
-    const usuario = await prisma.usuario.findUnique({
-        where: { id: req.usuario.id },
-        select: { id: true, isPremium: true, boostAte: true },
-    });
+        await normalizarExpiracoes(userId);
 
-    if (!usuario) return res.status(401).json({ erro: "Usuário inválido" });
+        const u = await prisma.usuario.findUnique({
+            where: { id: userId },
+            select: { id: true, isPremium: true, boostAte: true },
+        });
 
-    if (!usuario.isPremium) {
-        return res.status(403).json({ erro: "Boost disponível apenas no Premium" });
+        if (!u) return res.status(401).json({ erro: "Usuário inválido" });
+        if (!u.isPremium) return res.status(403).json({ erro: "Boost disponível apenas no Premium" });
+
+        const now = new Date();
+        const base = u.boostAte && u.boostAte > now ? u.boostAte : now;
+        const novoBoostAte = addMinutes(base, DURACAO_MIN);
+
+        const result = await prisma.$transaction(async (tx) => {
+            const saldoApos = await debitarCreditosTx(tx, userId, CUSTO, "BOOST");
+
+            const atualizado = await tx.usuario.update({
+                where: { id: userId },
+                data: { boostAte: novoBoostAte },
+                select: { id: true, boostAte: true },
+            });
+
+            return {
+                ok: true,
+                boostAte: atualizado.boostAte,
+                custo: CUSTO,
+                saldoCreditos: saldoApos,
+                mensagem: `✅ Boost ativado até ${atualizado.boostAte.toLocaleString()}`,
+            };
+        });
+
+        return res.json(result);
+    } catch (e) {
+        const status = e.status || 500;
+        return res.status(status).json({ erro: "Erro ao ativar boost", detalhe: e.message });
     }
-
-    const now = new Date();
-    const base = usuario.boostAte && usuario.boostAte > now ? usuario.boostAte : now;
-    const novoBoostAte = addHours(base, horas);
-
-    const atualizado = await prisma.usuario.update({
-        where: { id: usuario.id },
-        data: { boostAte: novoBoostAte },
-        select: { id: true, boostAte: true },
-    });
-
-    return res.json({
-        ok: true,
-        boostAte: atualizado.boostAte,
-        mensagem: `✅ Boost ativado até ${atualizado.boostAte.toLocaleString()}`,
-    });
 }
 
-// GET /usuarios/:id
+// GET /usuarios/:id (mantém)
 export async function getUsuarioById(req, res) {
     try {
         const { id } = req.params;
@@ -90,28 +243,21 @@ export async function getUsuarioById(req, res) {
             where: { id },
             select: {
                 id: true,
-                email: true, // se quiser esconder depois, tira
+                email: true,
                 ativo: true,
                 isPremium: true,
                 isInvisivel: true,
+                invisivelAte: true,
                 boostAte: true,
                 perfil: true,
                 fotos: {
                     orderBy: { principal: "desc" },
-                    select: {
-                        id: true,
-                        url: true,
-                        principal: true,
-                        criadoEm: true,
-                    },
+                    select: { id: true, url: true, principal: true, criadoEm: true },
                 },
             },
         });
 
-        if (!u || !u.ativo) {
-            return res.status(404).json({ erro: "Usuário não encontrado" });
-        }
-
+        if (!u || !u.ativo) return res.status(404).json({ erro: "Usuário não encontrado" });
         return res.json(u);
     } catch (e) {
         return res.status(500).json({ erro: "Erro ao buscar usuário", detalhe: e.message });

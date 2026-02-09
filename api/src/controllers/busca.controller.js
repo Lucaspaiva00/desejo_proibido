@@ -45,6 +45,18 @@ function orderByFrom(ordenarPor) {
 export async function buscar(req, res) {
     try {
         const userId = req.usuario.id;
+        await prisma.usuario.updateMany({
+            where: {
+                invisivelAte: { not: null, lte: new Date() },
+                isInvisivel: true,
+            },
+            data: { isInvisivel: false, invisivelAte: null },
+        });
+
+        await prisma.usuario.updateMany({
+            where: { boostAte: { not: null, lte: new Date() } },
+            data: { boostAte: null },
+        });
 
         const q = toStr(req.query.q).trim();
         const cidade = toStr(req.query.cidade).trim();

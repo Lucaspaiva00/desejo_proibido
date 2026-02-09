@@ -36,12 +36,12 @@ enum MensagemTipo {
 }
 
 model Usuario {
-  id          String  @id @default(cuid())
-  email       String  @unique
-  senhaHash   String
-  ativo       Boolean @default(true)
-  isInvisivel Boolean @default(false)
-
+  id           String            @id @default(cuid())
+  email        String            @unique
+  senhaHash    String
+  ativo        Boolean           @default(true)
+  isInvisivel  Boolean           @default(false)
+  invisivelAte DateTime?
   preferencias PreferenciaBusca?
 
   role Role @default(USER)
@@ -49,7 +49,7 @@ model Usuario {
   plano     String  @default("FREE")
   isPremium Boolean @default(false)
 
-  modoInvisivel Boolean @default(false)
+  modoInvisivel Boolean   @default(false)
   boostAte      DateTime?
 
   minutosDisponiveis Int @default(0)
@@ -121,7 +121,7 @@ model Perfil {
 
   genero     String?
   nascimento DateTime?
-  verificado Boolean @default(false)
+  verificado Boolean   @default(false)
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -165,9 +165,9 @@ model Match {
   usuarioBId String
   criadoEm   DateTime @default(now())
 
-  usuarioA Usuario @relation("MatchesA", fields: [usuarioAId], references: [id], onDelete: Cascade)
-  usuarioB Usuario @relation("MatchesB", fields: [usuarioBId], references: [id], onDelete: Cascade)
-  conversa  Conversa?
+  usuarioA Usuario   @relation("MatchesA", fields: [usuarioAId], references: [id], onDelete: Cascade)
+  usuarioB Usuario   @relation("MatchesB", fields: [usuarioBId], references: [id], onDelete: Cascade)
+  conversa Conversa?
 
   @@unique([usuarioAId, usuarioBId])
   @@index([usuarioAId])
@@ -251,12 +251,12 @@ model Denuncia {
 }
 
 model Termo {
-  id       String   @id @default(cuid())
+  id       String    @id @default(cuid())
   tipo     TermoTipo
   versao   String
   conteudo String
-  ativo    Boolean  @default(true)
-  criadoEm DateTime @default(now())
+  ativo    Boolean   @default(true)
+  criadoEm DateTime  @default(now())
 
   aceites AceiteTermos[]
 
@@ -299,12 +299,12 @@ model AcaoAdmin {
 }
 
 model BanGlobal {
-  id        String   @id @default(cuid())
-  usuarioId String   @unique
+  id        String    @id @default(cuid())
+  usuarioId String    @unique
   motivo    String?
   ate       DateTime?
-  ativo     Boolean  @default(true)
-  criadoEm  DateTime @default(now())
+  ativo     Boolean   @default(true)
+  criadoEm  DateTime  @default(now())
 
   usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
@@ -446,7 +446,7 @@ model SessaoLigacao {
 
 model Presente {
   id            String   @id @default(cuid())
-  nome          String   @unique        // ✅ recomendado
+  nome          String   @unique // ✅ recomendado
   minutos       Int      @default(0)
   imagemUrl     String?
   custoCreditos Int      @default(0)
@@ -465,7 +465,7 @@ model PresenteEnviado {
   deUsuarioId   String
   paraUsuarioId String
   minutos       Int
-  custoCreditos Int      @default(0)    // ✅ recomendado
+  custoCreditos Int      @default(0) // ✅ recomendado
   criadoEm      DateTime @default(now())
 
   presente    Presente @relation(fields: [presenteId], references: [id], onDelete: Cascade)
@@ -519,12 +519,12 @@ model Live {
 }
 
 model LiveViewer {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   liveId          String
   viewerId        String
-  entrouEm        DateTime @default(now())
+  entrouEm        DateTime  @default(now())
   saiuEm          DateTime?
-  minutosCobrados Int      @default(0)
+  minutosCobrados Int       @default(0)
 
   live   Live    @relation(fields: [liveId], references: [id], onDelete: Cascade)
   viewer Usuario @relation(fields: [viewerId], references: [id], onDelete: Cascade)

@@ -2,7 +2,19 @@ import { prisma } from "../prisma.js";
 
 export async function feed(req, res) {
   const meuId = req.usuario.id;
+  // ✅ normaliza flags expiradas globalmente (evita invisível eterno)
+  await prisma.usuario.updateMany({
+    where: {
+      invisivelAte: { not: null, lte: new Date() },
+      isInvisivel: true,
+    },
+    data: { isInvisivel: false, invisivelAte: null },
+  });
 
+  await prisma.usuario.updateMany({
+    where: { boostAte: { not: null, lte: new Date() } },
+    data: { boostAte: null },
+  });
   const page = Number(req.query.page || 1);
   const limit = Number(req.query.limit || 10);
   const skip = (page - 1) * limit;
