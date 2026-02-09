@@ -16,10 +16,7 @@
       filter: grayscale(.2);
     }
 
-    .lockedAction {
-      opacity: .85;
-    }
-
+    /* (corrigido: você tinha duplicado .lockedAction e sobrescrevia tudo) */
     .lockedAction::after {
       content: " 🔒";
     }
@@ -287,7 +284,6 @@
       overflow: hidden;
     }
 
-    /* Remote ocupa tudo */
     #remoteVideo {
       position: absolute;
       inset: 0;
@@ -299,7 +295,6 @@
       z-index: 1;
     }
 
-    /* Local PiP no canto */
     #localVideo {
       position: absolute;
       right: 12px;
@@ -332,7 +327,6 @@
       max-width: 180px;
     }
 
-    /* ✅ Desktop volta para 2 telas lado a lado */
     @media (min-width: 900px) {
       .callOverlay {
         padding: 16px;
@@ -396,8 +390,6 @@
 
     /* ===== FIX MOBILE: garantir que 📞 e 🎁 apareçam ===== */
     @media (max-width: 520px) {
-
-      /* topo vira duas linhas */
       .chat-top {
         flex-direction: column !important;
         align-items: stretch !important;
@@ -408,7 +400,6 @@
         width: 100% !important;
       }
 
-      /* ações quebram linha e NÃO somem */
       .chat-actions {
         width: 100% !important;
         display: flex !important;
@@ -419,30 +410,75 @@
         overflow: visible !important;
       }
 
-      /* créditos ocupa uma linha inteira */
       #minutosPill {
         flex: 1 1 100% !important;
         justify-content: center !important;
       }
 
-      /* FORÇA os botões existirem no mobile (caso dating.css esconda) */
       #btnComprarCreditosTopo,
       #btnCall,
       #btnGift {
         display: inline-flex !important;
       }
 
-      /* tamanho bom pro iPhone */
       .iconbtn {
         width: 40px !important;
         height: 40px !important;
         flex: 0 0 auto !important;
       }
 
-      /* evita o #chatStatus empurrar tudo */
       #chatStatus {
         flex: 1 1 100% !important;
       }
+    }
+
+    /* ==========================================================
+       ✅ MELHORIA PRINCIPAL: SCROLL INTERNO DO CHAT (#msgs)
+       ========================================================== */
+
+    /* garante que tudo consiga “encolher” dentro do flex/grid */
+    .chat-layout,
+    .panel,
+    .panel.right,
+    .panel.right.chat {
+      min-height: 0;
+    }
+
+    /* painel do chat vira coluna */
+    .panel.right.chat {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* topo e composer não crescem */
+    .chat-top {
+      flex: 0 0 auto;
+    }
+
+    .composer {
+      flex: 0 0 auto;
+    }
+
+    /* ✅ mensagens crescem e têm scroll */
+    #msgs.msgs {
+      flex: 1 1 auto;
+      min-height: 0;
+      /* ESSENCIAL */
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      scroll-behavior: smooth;
+    }
+
+    /* composer “grudado” embaixo sem quebrar */
+    .composer {
+      position: sticky;
+      bottom: 0;
+      background: rgba(10, 10, 10, .92);
+      border-top: 1px solid rgba(255, 255, 255, .10);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      z-index: 5;
     }
   </style>
 </head>
@@ -627,12 +663,9 @@
         <button class="iconbtn" id="btnCallClose" title="Fechar">✕</button>
       </div>
 
-      <!-- MOBILE: remote full + local pip (mesmo container) -->
       <div class="callGrid" id="callGrid">
         <video id="remoteVideo" autoplay playsinline></video>
         <video id="localVideo" autoplay playsinline muted></video>
-
-        <!-- DESKTOP: este bloco é ignorado no mobile, mas usado no media query -->
         <div class="callVideoBox" style="display:none;"></div>
       </div>
 
@@ -648,7 +681,7 @@
   <script src="/socket.io/socket.io.js"></script>
 
   <!-- ✅ cache-bust -->
-  <script type="module" src="js/conversas.js?v=20260209-3"></script>
+  <script type="module" src="js/conversas.js?v=20260209-4"></script>
 
   <script>
     const navToggle = document.getElementById("navToggle");

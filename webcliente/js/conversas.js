@@ -181,7 +181,7 @@ socket.on("call:ready", async ({ sessaoId }) => {
 
     // só caller usa isso
     state.calleeReady = true;
-    callSub.textContent = "Conectando…";
+    if (callSub) callSub.textContent = "Conectando…";
 
     try {
         await ensurePeerAndMedia();
@@ -220,7 +220,7 @@ socket.on("call:incoming", async (p) => {
         // ✅ avisa pro caller: "já tô no room e pronto"
         socket.emit("call:ready", { roomId: state.roomId, sessaoId: state.sessaoId });
 
-        callSub.textContent = "Aguardando conexão…";
+        if (callSub) callSub.textContent = "Aguardando conexão…";
         state.callActive = true;
 
     } catch (e) {
@@ -235,7 +235,7 @@ socket.on("call:accepted", async (p) => {
     if (!state.roomId || p.roomId !== state.roomId) return;
 
     // caller recebe accepted, mas só cria offer quando receber call:ready
-    callSub.textContent = "Aceita ✅ aguardando entrada do outro…";
+    if (callSub) callSub.textContent = "Aceita ✅ aguardando entrada do outro…";
     state.callActive = true;
 
     // segurança: se por algum motivo o READY não vier, tenta em 2s
@@ -656,6 +656,15 @@ async function abrirConversa(conversaId) {
     await carregarMensagens();
 }
 
+// ==============================
+// ✅ MELHORIA: Auto-scroll inteligente (não puxa quando usuário sobe)
+// ==============================
+function shouldStickToBottom(el, threshold = 140) {
+    if (!el) return true;
+    const distance = el.scrollHeight - (el.scrollTop + el.clientHeight);
+    return distance < threshold;
+}
+
 // Mensagens
 async function carregarMensagens({ silent = false } = {}) {
     if (!state.conversaId) return;
@@ -696,6 +705,9 @@ function renderMensagens(items) {
 
     const me = state.usuario?.id;
 
+    // ✅ salva o estado do scroll antes de re-render
+    const stick = shouldStickToBottom(msgs);
+
     msgs.innerHTML = items.map((m) => {
         const isMe = (m.autorId === me);
         const tipo = m.tipo || "TEXTO";
@@ -725,7 +737,10 @@ function renderMensagens(items) {
     `;
     }).join("");
 
-    msgs.scrollTop = msgs.scrollHeight;
+    // ✅ só cola no final se usuário já estava perto do fim
+    if (stick) {
+        msgs.scrollTop = msgs.scrollHeight;
+    }
 }
 
 async function enviarMensagem() {
@@ -957,12 +972,13 @@ async function createPeerIfNeeded() {
 
     pc.oniceconnectionstatechange = () => {
         console.log("[webrtc] iceConnectionState:", pc.iceConnectionState);
-        if (pc.iceConnectionState === "failed") callSub.textContent = "Falhou ICE (provável falta de TURN)";
+        if (pc.iceConnectionState === "failed" && callSub) callSub.textContent = "Falhou ICE (provável falta de TURN)";
     };
 
     pc.onconnectionstatechange = () => {
         console.log("[webrtc] connectionState:", pc.connectionState);
         const st = pc.connectionState;
+        if (!callSub) return;
         if (st === "connected") callSub.textContent = "Conectado ✅";
         if (st === "disconnected") callSub.textContent = "Desconectado…";
         if (st === "failed") callSub.textContent = "Falhou ❌";
