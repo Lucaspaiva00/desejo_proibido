@@ -66,7 +66,7 @@
     <!-- CONTEÚDO -->
     <div class="wrap perfil-wrap">
 
-        <!-- PÍLULA PREMIUM (igual imagem) -->
+        <!-- PÍLULA PREMIUM -->
         <div class="premium-pill" id="premiumPill" style="display:none;">
             <span class="pill-ico">🔒</span>
             <span class="pill-text">Conta Premium Ativa</span>
@@ -107,13 +107,13 @@
                         placeholder="Um livro a ser decifrado"></textarea>
                 </div>
 
-                <!-- BOTÕES (igual imagem) -->
+                <!-- BOTÕES -->
                 <div class="perfil-actions">
                     <button id="btnSalvar" class="pbtn pbtn-primary">Salvar</button>
                     <button id="btnIrFotos" class="pbtn pbtn-dark">Fotos</button>
                 </div>
 
-                <!-- BLOCO PREMIUM (igual imagem: 2 linhas) -->
+                <!-- BLOCO PREMIUM -->
                 <div class="premium-block">
 
                     <!-- Linha 1: Modo invisível -->
@@ -158,31 +158,15 @@
         </div>
     </div>
 
+    <!-- ✅ PERFIL JS (fonte da verdade do Premium vem do /usuarios/me) -->
     <script type="module" src="js/perfil.js"></script>
 
-    <script type="module">
+    <!-- Drawer Mobile -->
+    <script>
         // botão Fotos
         const b = document.getElementById("btnIrFotos");
         if (b) b.onclick = () => (location.href = "fotos.html");
 
-        // texto do toggle
-        const t = document.getElementById("toggleInvisivel");
-        const txt = document.getElementById("txtInvisivel");
-        function syncToggle() {
-            txt.textContent = t.checked ? "Ativado" : "Desativado";
-        }
-        t?.addEventListener("change", syncToggle);
-        syncToggle();
-
-        // mostrar pill premium (você pode ligar isso baseado no retorno do /me no seu perfil.js)
-        // aqui deixei simples: se tiver "premium=true" no localStorage
-        const pill = document.getElementById("premiumPill");
-        const isPremium = localStorage.getItem("premium") === "true";
-        if (pill) pill.style.display = isPremium ? "inline-flex" : "none";
-    </script>
-
-    <!-- Drawer Mobile -->
-    <script>
         const navToggle = document.getElementById("navToggle");
         const navDrawer = document.getElementById("navDrawer");
         const navOverlay = document.getElementById("navOverlay");
@@ -205,7 +189,7 @@
             navToggle.setAttribute("aria-expanded", "false");
             navDrawer.setAttribute("aria-hidden", "true");
             navOverlay.setAttribute("aria-hidden", "true");
-            document.body.classList.remove("no-scroll");
+            document.body.classList.add("no-scroll");
         }
 
         navToggle?.addEventListener("click", () => {
