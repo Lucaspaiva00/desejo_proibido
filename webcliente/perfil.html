@@ -158,15 +158,11 @@
         </div>
     </div>
 
-    <!-- ✅ PERFIL JS (fonte da verdade do Premium vem do /usuarios/me) -->
+    <!-- ✅ PERFIL.JS agora controla Premium/Toggle/Pill -->
     <script type="module" src="js/perfil.js"></script>
 
     <!-- Drawer Mobile -->
     <script>
-        // botão Fotos
-        const b = document.getElementById("btnIrFotos");
-        if (b) b.onclick = () => (location.href = "fotos.html");
-
         const navToggle = document.getElementById("navToggle");
         const navDrawer = document.getElementById("navDrawer");
         const navOverlay = document.getElementById("navOverlay");
@@ -189,7 +185,7 @@
             navToggle.setAttribute("aria-expanded", "false");
             navDrawer.setAttribute("aria-hidden", "true");
             navOverlay.setAttribute("aria-hidden", "true");
-            document.body.classList.add("no-scroll");
+            document.body.classList.remove("no-scroll");
         }
 
         navToggle?.addEventListener("click", () => {

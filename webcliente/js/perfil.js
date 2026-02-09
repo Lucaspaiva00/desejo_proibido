@@ -6,6 +6,7 @@ document.getElementById("btnSair").onclick = logout;
 const btnSairMobile = document.getElementById("btnSairMobile");
 if (btnSairMobile) btnSairMobile.onclick = logout;
 
+// UI
 const elNome = document.getElementById("nome");
 const elCidade = document.getElementById("cidade");
 const elEstado = document.getElementById("estado");
@@ -21,9 +22,71 @@ const msgInv = document.getElementById("msgInvisivel");
 const btnBoost = document.getElementById("btnBoost");
 const msgBoost = document.getElementById("msgBoost");
 
-// pill
 const pill = document.getElementById("premiumPill");
 
+// botão Fotos
+const btnIrFotos = document.getElementById("btnIrFotos");
+if (btnIrFotos) btnIrFotos.onclick = () => (location.href = "fotos.html");
+
+// ==============================
+// Auth robusto (mesmo padrão do conversas.js)
+// ==============================
+function safeJsonParse(v) {
+    try { return JSON.parse(v); } catch { return null; }
+}
+
+function getAuth() {
+    const keysUser = ["usuarioLogado", "usuario", "user", "authUser"];
+    const keysToken = ["token", "authToken", "dp_token", "tokenJwt"];
+
+    let usuario = null;
+    for (const k of keysUser) {
+        const v = localStorage.getItem(k);
+        if (v) {
+            const obj = safeJsonParse(v);
+            if (obj) { usuario = obj; break; }
+        }
+    }
+
+    let token = null;
+    for (const k of keysToken) {
+        const v = localStorage.getItem(k);
+        if (v) { token = v; break; }
+    }
+
+    const authRaw = localStorage.getItem("auth");
+    if (authRaw) {
+        const a = safeJsonParse(authRaw);
+        if (a) {
+            if (!token && a.token) token = a.token;
+            if (!usuario && a.usuario) usuario = a.usuario;
+        }
+    }
+
+    if (!token && usuario?.token) token = usuario.token;
+    return { usuario, token };
+}
+
+const auth = getAuth();
+if (auth.token && !localStorage.getItem("token")) {
+    localStorage.setItem("token", auth.token);
+}
+
+// se não achou nada, manda pro login
+if (!auth.usuario && !localStorage.getItem("token")) {
+    alert("Sessão expirada. Faça login.");
+    location.href = "login.html";
+}
+
+// Estado
+const state = {
+    premiumAtivo: false,
+    saldoCreditos: 0,
+};
+
+// ==============================
+// Helpers
+// ==============================
 function setMsg(text) {
     if (!msg) return;
     msg.textContent = text || "";
@@ -56,16 +119,8 @@ function preencherPerfil(p) {
     if (elGenero) elGenero.value = p?.genero ?? "";
 }
 
-async function carregarPerfil() {
-    try {
-        const perfil = await apiFetch("/perfil/me");
-        preencherPerfil(perfil);
-    } catch {
-        // silencioso
-    }
-}
-
 function setEstadoPremiumUI(isPremiumAtivo) {
+    // pill
     if (pill) pill.style.display = isPremiumAtivo ? "inline-flex" : "none";
 
     if (!toggle || !txt) return;
@@ -107,23 +162,72 @@ function syncBoostUI(boostAte) {
     }
 }
 
+// ==============================
+// Premium (IGUAL conversas.js)
+// ==============================
+async function checarPremium() {
+    try {
+        const r = await apiFetch("/premium/me");
+        const ativo = !!r?.isPremium;
+        const saldo = Number(r?.saldoCreditos ?? 0);
+
+        state.premiumAtivo = ativo;
+        state.saldoCreditos = saldo;
+
+        // mantém consistência no localStorage (igual chat faz)
+        try {
+            const raw = localStorage.getItem("usuario");
+            const u = raw ? JSON.parse(raw) : (auth.usuario || {});
+            if (u) {
+                u.isPremium = ativo;
+                u.premiumAtivo = ativo;
+                u.premium = ativo;
+                u.saldoCreditos = saldo;
+                localStorage.setItem("usuario", JSON.stringify(u));
+            }
+        } catch { }
+
+        setEstadoPremiumUI(ativo);
+        return ativo;
+    } catch {
+        state.premiumAtivo = false;
+        setEstadoPremiumUI(false);
+        return false;
+    }
+}
+
+// ==============================
+// Perfil e Recursos Premium
+// ==============================
+async function carregarPerfil() {
+    try {
+        const perfil = await apiFetch("/perfil/me");
+        preencherPerfil(perfil);
+    } catch {
+        // silencioso
+    }
+}
+
 async function carregarInvisivelEBoost() {
     if (!toggle || !txt) return;
 
     try {
+        // checa premium primeiro (igual chat)
+        await checarPremium();
+
+        // se não é premium, já bloqueia UI e sai
+        if (!state.premiumAtivo) return;
+
+        // agora busca dados do usuário (invisível/boost)
         const u = await apiFetch("/usuarios/me");
-
-        // ✅ premiumAtivo vem do backend (fallback por garantia)
-        const premiumAtivo = !!u.premiumAtivo || !!u.isPremium || (u.saldoCreditos ?? 0) >= 150;
-
-        setEstadoPremiumUI(premiumAtivo);
-        if (!premiumAtivo) return;
 
         syncInvisivelUI(!!u.isInvisivel, u.invisivelAte);
         syncBoostUI(u.boostAte);
 
-        // TOGGLE INVISÍVEL (cobra ao ligar)
+        // TOGGLE INVISÍVEL
         toggle.onchange = async () => {
+            if (!state.premiumAtivo) return;
+
             msgInv.textContent = "";
             const novo = toggle.checked;
 
@@ -145,9 +249,7 @@ async function carregarInvisivelEBoost() {
                 syncInvisivelUI(!!r.isInvisivel, r.invisivelAte);
 
                 if (r.custo > 0) {
-                    msgInv.textContent = `✅ Invisível ativado (-${r.custo} créditos). Até: ${fmtDate(
-                        r.invisivelAte
-                    )}. Saldo: ${r.saldoCreditos}`;
+                    msgInv.textContent = `✅ Invisível ativado (-${r.custo} créditos). Até: ${fmtDate(r.invisivelAte)}. Saldo: ${r.saldoCreditos}`;
                 } else if (!r.isInvisivel) {
                     msgInv.textContent = "✅ Você voltou a aparecer no feed.";
                 }
@@ -158,7 +260,7 @@ async function carregarInvisivelEBoost() {
                 if (e?.status === 402) {
                     msgInv.textContent = "❌ Saldo insuficiente para ativar (precisa de 150 créditos).";
                 } else {
-                    msgInv.textContent = e.message || "Erro ao alterar invisível";
+                    msgInv.textContent = e?.message || "Erro ao alterar invisível";
                 }
             }
         };
@@ -166,6 +268,8 @@ async function carregarInvisivelEBoost() {
         // BOOST
         if (btnBoost) {
             btnBoost.onclick = async () => {
+                if (!state.premiumAtivo) return;
+
                 msgBoost.textContent = "";
                 btnBoost.disabled = true;
                 const oldText = btnBoost.textContent;
@@ -178,14 +282,12 @@ async function carregarInvisivelEBoost() {
                     });
 
                     syncBoostUI(r.boostAte);
-                    msgBoost.textContent = `✅ Boost ativado (-${r.custo} créditos). Até: ${fmtDate(
-                        r.boostAte
-                    )}. Saldo: ${r.saldoCreditos}`;
+                    msgBoost.textContent = `✅ Boost ativado (-${r.custo} créditos). Até: ${fmtDate(r.boostAte)}. Saldo: ${r.saldoCreditos}`;
                 } catch (e) {
                     if (e?.status === 402) {
                         msgBoost.textContent = "❌ Saldo insuficiente para ativar boost (precisa de 150 créditos).";
                     } else {
-                        msgBoost.textContent = e.message || "Erro ao ativar boost";
+                        msgBoost.textContent = e?.message || "Erro ao ativar boost";
                     }
                 } finally {
                     btnBoost.disabled = false;
@@ -198,6 +300,7 @@ async function carregarInvisivelEBoost() {
     }
 }
 
+// salvar perfil
 document.getElementById("btnSalvar").onclick = async () => {
     try {
         setMsg("");
