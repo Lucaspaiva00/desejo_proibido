@@ -1,9 +1,25 @@
 // src/socket.js
+import jwt from "jsonwebtoken";
 import { prisma } from "./prisma.js";
 import { getSaldoCreditos } from "./utils/creditos.js";
-import { debitWallet } from "./utils/wallet.js"; // se você tiver. Se não tiver, fallback abaixo.
+import { debitWallet } from "./utils/wallet.js"; // se existir ok, senão fallback abaixo.
 
 const CUSTO_POR_MINUTO = 10;
+
+function getUserIdFromToken(token) {
+  try {
+    if (!token) return null;
+    const secret = process.env.JWT_SECRET;
+    if (!secret) return null;
+
+    const decoded = jwt.verify(token, secret);
+    // ajuste se seu payload for diferente
+    const id = decoded?.id || decoded?.userId || decoded?.sub;
+    return id ? String(id) : null;
+  } catch {
+    return null;
+  }
+}
 
 export function registerSockets(io) {
   // ============================
@@ -35,14 +51,20 @@ export function registerSockets(io) {
     }
   }
 
-  async function safeDebit(usuarioId, amount) {
+  async function safeDebit(userId, amount) {
     // prioridade: seu helper debitWallet (se existir)
     if (typeof debitWallet === "function") {
-      return await debitWallet(usuarioId, amount);
+      return await debitWallet(userId, amount);
     }
 
-    // fallback direto no Prisma (ajuste se o nome da tabela for outro)
-    const wallet = await prisma.carteira.findUnique({ where: { usuarioId } });
+    // fallback direto no Prisma (padrão do seu projeto: wallet com userId)
+    await prisma.wallet.upsert({
+      where: { userId },
+      update: {},
+      create: { userId, saldoCreditos: 0 },
+    });
+
+    const wallet = await prisma.wallet.findUnique({ where: { userId } });
     const saldo = Number(wallet?.saldoCreditos ?? 0);
 
     if (saldo < amount) {
@@ -52,12 +74,13 @@ export function registerSockets(io) {
       throw err;
     }
 
-    await prisma.carteira.update({
-      where: { usuarioId },
-      data: { saldoCreditos: saldo - amount },
+    const updated = await prisma.wallet.update({
+      where: { userId },
+      data: { saldoCreditos: { decrement: amount } },
+      select: { saldoCreditos: true },
     });
 
-    return { saldoCreditos: saldo - amount };
+    return { saldoCreditos: Number(updated?.saldoCreditos ?? 0) };
   }
 
   function stopBillingTimer(sessaoId) {
@@ -145,6 +168,7 @@ export function registerSockets(io) {
         const minutosAtuais = Math.floor(segundos / 60);
         while (minutosCobrados < minutosAtuais) {
           const saldoAntes = await getSaldoCreditos(sessao.usuarioId);
+
           if (saldoAntes < CUSTO_POR_MINUTO) {
             await prisma.sessaoLigacao.update({
               where: { id },
@@ -173,7 +197,9 @@ export function registerSockets(io) {
             data: { minutosCobrados, segundosConsumidos: segundos },
           });
 
+          // avisa saldo pra sala e pro caller
           io.to(sessao.roomId).emit("wallet:update", { saldoCreditos: deb?.saldoCreditos });
+          emitToUser(sessao.usuarioId, "wallet:update", { saldoCreditos: deb?.saldoCreditos });
         }
       } catch (e) {
         console.error("billing timer error:", e?.message || e);
@@ -196,12 +222,27 @@ export function registerSockets(io) {
   // ============================
   io.on("connection", async (socket) => {
     try {
-      const userId = socket.handshake.auth?.userId || socket.handshake.query?.userId;
+      const token =
+        socket.handshake.auth?.token ||
+        socket.handshake.query?.token ||
+        "";
 
-      if (userId) addUserSocket(userId, socket.id);
+      // ✅ userId vem do JWT
+      let userId = getUserIdFromToken(token);
+
+      // fallback compat (se ainda enviar userId antigo)
+      if (!userId) {
+        userId = socket.handshake.auth?.userId || socket.handshake.query?.userId || null;
+      }
+
+      if (userId) {
+        addUserSocket(userId, socket.id);
+        socket.data.userId = String(userId);
+      }
 
       socket.on("disconnect", () => {
-        if (userId) removeUserSocket(userId, socket.id);
+        const uid = socket.data.userId;
+        if (uid) removeUserSocket(uid, socket.id);
       });
 
       // ============================
@@ -213,9 +254,8 @@ export function registerSockets(io) {
       });
 
       // ============================
-      // ✅ READY handshake (NOVO)
+      // ✅ READY handshake
       // ============================
-      // callee avisa "já entrei no room e estou pronto"
       socket.on("call:ready", ({ roomId, sessaoId }) => {
         if (!roomId) return;
         socket.to(roomId).emit("call:ready", { sessaoId });

@@ -163,10 +163,9 @@ const token = localStorage.getItem("token") || "";
 const userId = state.usuario?.id;
 
 const socket = window.io({
-    auth: { token, userId },
+    auth: { token }, // ✅ não depende de state.usuario.id
     transports: ["websocket"],
 });
-
 socket.on("connect", () => {
     console.log("[socket] conectado", socket.id);
 });
@@ -430,8 +429,17 @@ const API = {
 function syncUsuarioPremium(isPremium, saldoCreditos = null) {
     try {
         const raw = localStorage.getItem("usuario");
-        const u = raw ? JSON.parse(raw) : (state.usuario || {});
-        if (!u) return;
+        const fromStorage = raw ? JSON.parse(raw) : null;
+
+        // base SEMPRE vem do state (login/auth)
+        const base = state.usuario || {};
+
+        // merge: storage complementa, mas não pode remover id/token
+        const u = { ...(fromStorage || {}), ...(base || {}) };
+
+        // garante id/token
+        if (!u.id && base.id) u.id = base.id;
+        if (!u.token && base.token) u.token = base.token;
 
         u.isPremium = !!isPremium;
         u.premiumAtivo = !!isPremium;
@@ -445,6 +453,7 @@ function syncUsuarioPremium(isPremium, saldoCreditos = null) {
         state.usuario = u;
     } catch { }
 }
+
 
 async function checarPremium() {
     try {

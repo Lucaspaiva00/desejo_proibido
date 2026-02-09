@@ -177,7 +177,7 @@ export async function aceitarChamada(req, res) {
       select: { id: true, status: true, roomId: true, aceitouEm: true, usuarioId: true, alvoId: true },
     });
 
-    // inicia cobrança no servidor (a cada 60s)
+    // inicia cobrança no servidor
     const io = req.app.get("io");
     if (io?._dp) {
       io._dp.startBillingTimer(updated.id);
@@ -251,12 +251,11 @@ export async function finalizarChamada(req, res) {
       });
     }
 
-    // encerra via socket helper (cobra restante e emite evento)
+    // encerra via socket helper (emite evento)
     const io = req.app.get("io");
     if (io?._dp) {
       await io._dp.finalizeSession(sessao.id, "FINALIZADA");
     } else {
-      // fallback sem socket: finaliza simples (sem cobrança restante ideal)
       const agora = new Date();
       const inicio = sessao.aceitouEm ?? sessao.iniciadoEm;
       const segundos = Math.max(0, Math.floor((agora.getTime() - new Date(inicio).getTime()) / 1000));
