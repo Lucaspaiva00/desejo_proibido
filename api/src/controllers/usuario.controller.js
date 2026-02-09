@@ -74,6 +74,10 @@ async function normalizarExpiracoes(userId) {
     }
 }
 
+function calcPremiumAtivo(isPremium, saldoCreditos) {
+    return !!isPremium || (saldoCreditos ?? 0) >= CUSTO;
+}
+
 // GET /usuarios/me
 export async function me(req, res) {
     try {
@@ -109,17 +113,23 @@ export async function me(req, res) {
             select: { saldoCreditos: true },
         });
 
+        const saldoCreditos = wallet?.saldoCreditos ?? 0;
+
         return res.json({
             ...usuario,
-            saldoCreditos: wallet?.saldoCreditos ?? 0,
+            saldoCreditos,
+            // ✅ novo: o front usa isso
+            premiumAtivo: calcPremiumAtivo(usuario?.isPremium, saldoCreditos),
         });
     } catch (e) {
-        return res.status(500).json({ erro: "Erro ao buscar /usuarios/me", detalhe: e.message });
+        return res
+            .status(500)
+            .json({ erro: "Erro ao buscar /usuarios/me", detalhe: e.message });
     }
 }
 
 // PUT /usuarios/invisivel  { ativo: true/false }
-// - ativar: premium + cobra 150 + 30min
+// - ativar: premiumAtivo + cobra 150 + 30min
 // - desativar: desliga e zera invisivelAte (sem cobrar)
 export async function setInvisivel(req, res) {
     try {
@@ -134,7 +144,20 @@ export async function setInvisivel(req, res) {
         });
 
         if (!u) return res.status(401).json({ erro: "Usuário inválido" });
-        if (!u.isPremium) return res.status(403).json({ erro: "Disponível apenas no Premium" });
+
+        // pega saldo
+        const w0 = await prisma.wallet.findUnique({
+            where: { userId },
+            select: { saldoCreditos: true },
+        });
+        const saldo0 = w0?.saldoCreditos ?? 0;
+
+        // ✅ troca: não é só isPremium, é premiumAtivo (isPremium OU saldo >= 150)
+        const premiumAtivo = calcPremiumAtivo(u.isPremium, saldo0);
+
+        if (!premiumAtivo) {
+            return res.status(403).json({ erro: "Disponível apenas no Premium (ou com 150 créditos)" });
+        }
 
         // desativar
         if (!ativo) {
@@ -144,7 +167,11 @@ export async function setInvisivel(req, res) {
                 select: { id: true, isInvisivel: true, invisivelAte: true },
             });
 
-            const w = await prisma.wallet.findUnique({ where: { userId }, select: { saldoCreditos: true } });
+            const w = await prisma.wallet.findUnique({
+                where: { userId },
+                select: { saldoCreditos: true },
+            });
+
             return res.json({
                 ...atualizado,
                 custo: 0,
@@ -156,7 +183,11 @@ export async function setInvisivel(req, res) {
 
         // se já está ativo e ainda válido, não cobra de novo
         if (u.isInvisivel && u.invisivelAte && u.invisivelAte > now) {
-            const w = await prisma.wallet.findUnique({ where: { userId }, select: { saldoCreditos: true } });
+            const w = await prisma.wallet.findUnique({
+                where: { userId },
+                select: { saldoCreditos: true },
+            });
+
             return res.json({
                 id: u.id,
                 isInvisivel: true,
@@ -189,8 +220,8 @@ export async function setInvisivel(req, res) {
 }
 
 // PUT /usuarios/boost
-// - premium + cobra 150 + 30min
-// - se já ativo: estende +30min e cobra novamente (padrão “comprar tempo”)
+// - premiumAtivo + cobra 150 + 30min
+// - se já ativo: estende +30min e cobra novamente
 export async function ativarBoost(req, res) {
     try {
         const userId = req.usuario.id;
@@ -203,7 +234,19 @@ export async function ativarBoost(req, res) {
         });
 
         if (!u) return res.status(401).json({ erro: "Usuário inválido" });
-        if (!u.isPremium) return res.status(403).json({ erro: "Boost disponível apenas no Premium" });
+
+        // saldo
+        const w0 = await prisma.wallet.findUnique({
+            where: { userId },
+            select: { saldoCreditos: true },
+        });
+        const saldo0 = w0?.saldoCreditos ?? 0;
+
+        const premiumAtivo = calcPremiumAtivo(u.isPremium, saldo0);
+
+        if (!premiumAtivo) {
+            return res.status(403).json({ erro: "Boost disponível apenas no Premium (ou com 150 créditos)" });
+        }
 
         const now = new Date();
         const base = u.boostAte && u.boostAte > now ? u.boostAte : now;

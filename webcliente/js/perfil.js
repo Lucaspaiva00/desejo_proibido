@@ -21,8 +21,8 @@ const msgInv = document.getElementById("msgInvisivel");
 const btnBoost = document.getElementById("btnBoost");
 const msgBoost = document.getElementById("msgBoost");
 
-// ✅ pill premium controlada pelo backend
-const premiumPill = document.getElementById("premiumPill");
+// pill
+const pill = document.getElementById("premiumPill");
 
 function setMsg(text) {
     if (!msg) return;
@@ -60,22 +60,17 @@ async function carregarPerfil() {
     try {
         const perfil = await apiFetch("/perfil/me");
         preencherPerfil(perfil);
-    } catch (e) {
-        console.error("Erro ao carregar /perfil/me", e);
-        // não bloqueia a tela
+    } catch {
+        // silencioso
     }
 }
 
-function setEstadoPremiumUI(isPremium) {
-    // ✅ pill premium
-    if (premiumPill) premiumPill.style.display = isPremium ? "inline-flex" : "none";
-
-    // (opcional) cache
-    localStorage.setItem("premium", isPremium ? "true" : "false");
+function setEstadoPremiumUI(isPremiumAtivo) {
+    if (pill) pill.style.display = isPremiumAtivo ? "inline-flex" : "none";
 
     if (!toggle || !txt) return;
 
-    if (!isPremium) {
+    if (!isPremiumAtivo) {
         toggle.disabled = true;
         toggle.checked = false;
         txt.textContent = "Disponível no Premium";
@@ -90,7 +85,6 @@ function setEstadoPremiumUI(isPremium) {
     }
 
     toggle.disabled = false;
-
     if (btnBoost) {
         btnBoost.disabled = false;
         btnBoost.textContent = "🚀 Dar Boost (150 créditos / 30min)";
@@ -99,14 +93,11 @@ function setEstadoPremiumUI(isPremium) {
 
 function syncInvisivelUI(isOn, invisivelAte) {
     if (!toggle || !txt) return;
-
     toggle.checked = !!isOn;
     txt.textContent = toggle.checked ? "Ativado" : "Desativado";
 
     if (msgInv) {
-        msgInv.textContent = toggle.checked
-            ? (invisivelAte ? `✅ Invisível até: ${fmtDate(invisivelAte)}` : "✅ Invisível ativado.")
-            : "";
+        msgInv.textContent = toggle.checked ? `✅ Invisível até: ${fmtDate(invisivelAte)}` : "";
     }
 }
 
@@ -122,13 +113,12 @@ async function carregarInvisivelEBoost() {
     try {
         const u = await apiFetch("/usuarios/me");
 
-        const isPremium = !!u?.isPremium;
-        setEstadoPremiumUI(isPremium);
+        // ✅ premiumAtivo vem do backend (fallback por garantia)
+        const premiumAtivo = !!u.premiumAtivo || !!u.isPremium || (u.saldoCreditos ?? 0) >= 150;
 
-        // se não for premium, não liga handlers premium
-        if (!isPremium) return;
+        setEstadoPremiumUI(premiumAtivo);
+        if (!premiumAtivo) return;
 
-        // sincroniza estado atual
         syncInvisivelUI(!!u.isInvisivel, u.invisivelAte);
         syncBoostUI(u.boostAte);
 
@@ -137,7 +127,6 @@ async function carregarInvisivelEBoost() {
             msgInv.textContent = "";
             const novo = toggle.checked;
 
-            // confirma cobrança ao ativar
             if (novo) {
                 const ok = confirm("Ativar Modo Invisível por 30 minutos? (Custo: 150 créditos)");
                 if (!ok) {
@@ -156,7 +145,9 @@ async function carregarInvisivelEBoost() {
                 syncInvisivelUI(!!r.isInvisivel, r.invisivelAte);
 
                 if (r.custo > 0) {
-                    msgInv.textContent = `✅ Invisível ativado (-${r.custo} créditos). Até: ${fmtDate(r.invisivelAte)}. Saldo: ${r.saldoCreditos}`;
+                    msgInv.textContent = `✅ Invisível ativado (-${r.custo} créditos). Até: ${fmtDate(
+                        r.invisivelAte
+                    )}. Saldo: ${r.saldoCreditos}`;
                 } else if (!r.isInvisivel) {
                     msgInv.textContent = "✅ Você voltou a aparecer no feed.";
                 }
@@ -166,15 +157,13 @@ async function carregarInvisivelEBoost() {
 
                 if (e?.status === 402) {
                     msgInv.textContent = "❌ Saldo insuficiente para ativar (precisa de 150 créditos).";
-                } else if (e?.status === 401) {
-                    msgInv.textContent = "❌ Sessão expirada. Faça login novamente.";
                 } else {
-                    msgInv.textContent = e?.message || "Erro ao alterar invisível";
+                    msgInv.textContent = e.message || "Erro ao alterar invisível";
                 }
             }
         };
 
-        // BOOST (cobra sempre que clicar)
+        // BOOST
         if (btnBoost) {
             btnBoost.onclick = async () => {
                 msgBoost.textContent = "";
@@ -185,18 +174,18 @@ async function carregarInvisivelEBoost() {
                 try {
                     const r = await apiFetch("/usuarios/boost", {
                         method: "PUT",
-                        body: {}, // 30min fixo no backend
+                        body: {},
                     });
 
                     syncBoostUI(r.boostAte);
-                    msgBoost.textContent = `✅ Boost ativado (-${r.custo} créditos). Até: ${fmtDate(r.boostAte)}. Saldo: ${r.saldoCreditos}`;
+                    msgBoost.textContent = `✅ Boost ativado (-${r.custo} créditos). Até: ${fmtDate(
+                        r.boostAte
+                    )}. Saldo: ${r.saldoCreditos}`;
                 } catch (e) {
                     if (e?.status === 402) {
                         msgBoost.textContent = "❌ Saldo insuficiente para ativar boost (precisa de 150 créditos).";
-                    } else if (e?.status === 401) {
-                        msgBoost.textContent = "❌ Sessão expirada. Faça login novamente.";
                     } else {
-                        msgBoost.textContent = e?.message || "Erro ao ativar boost";
+                        msgBoost.textContent = e.message || "Erro ao ativar boost";
                     }
                 } finally {
                     btnBoost.disabled = false;
@@ -204,11 +193,8 @@ async function carregarInvisivelEBoost() {
                 }
             };
         }
-    } catch (e) {
-        // ❗ não engole mais erro
-        console.error("Erro ao carregar /usuarios/me", e);
-        setEstadoPremiumUI(false);
-        if (msgInv) msgInv.textContent = "❌ Falha ao validar Premium. Refaça login.";
+    } catch {
+        // silencioso
     }
 }
 
@@ -235,7 +221,7 @@ document.getElementById("btnSalvar").onclick = async () => {
         await apiFetch("/perfil", { method: "PUT", body });
         setMsg("✅ Perfil salvo!");
     } catch (e) {
-        setMsg(e?.message || "Erro ao salvar");
+        setMsg(e.message);
     }
 };
 

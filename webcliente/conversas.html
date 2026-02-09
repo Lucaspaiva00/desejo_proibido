@@ -393,6 +393,57 @@
         max-width: none;
       }
     }
+
+    /* ===== FIX MOBILE: garantir que 📞 e 🎁 apareçam ===== */
+    @media (max-width: 520px) {
+
+      /* topo vira duas linhas */
+      .chat-top {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
+      }
+
+      .chat-user {
+        width: 100% !important;
+      }
+
+      /* ações quebram linha e NÃO somem */
+      .chat-actions {
+        width: 100% !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        justify-content: flex-start !important;
+        align-items: center !important;
+        gap: 8px !important;
+        overflow: visible !important;
+      }
+
+      /* créditos ocupa uma linha inteira */
+      #minutosPill {
+        flex: 1 1 100% !important;
+        justify-content: center !important;
+      }
+
+      /* FORÇA os botões existirem no mobile (caso dating.css esconda) */
+      #btnComprarCreditosTopo,
+      #btnCall,
+      #btnGift {
+        display: inline-flex !important;
+      }
+
+      /* tamanho bom pro iPhone */
+      .iconbtn {
+        width: 40px !important;
+        height: 40px !important;
+        flex: 0 0 auto !important;
+      }
+
+      /* evita o #chatStatus empurrar tudo */
+      #chatStatus {
+        flex: 1 1 100% !important;
+      }
+    }
   </style>
 </head>
 
