@@ -1,3 +1,4 @@
+// src/routes/auth.routes.js
 import { Router } from "express";
 import {
     registrar,

@@ -1,3 +1,4 @@
+// src/middlewares/auth.middleware.js
 import { verificarToken } from "../utils/jwt.js";
 import { prisma } from "../prisma.js";
 import { logAcesso } from "../utils/auditoria.js";
@@ -17,7 +18,7 @@ export async function auth(req, res, next) {
     }
 
     try {
-        const payload = verificarToken(token); // { id, email }
+        const payload = verificarToken(token);
 
         const u = await prisma.usuario.findUnique({
             where: { id: payload.id },

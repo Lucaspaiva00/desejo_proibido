@@ -62,8 +62,17 @@ async function apiFetch(path, options = {}) {
 
   // body em JSON se não for GET/HEAD
   if (method !== "GET" && method !== "HEAD") {
-    fetchOptions.headers["Content-Type"] = "application/json";
-    fetchOptions.body = JSON.stringify(body ?? {});
+    // ✅ se o caller passou Content-Type custom (ex: multipart/form-data), respeita
+    if (!("Content-Type" in headers)) {
+      fetchOptions.headers["Content-Type"] = "application/json";
+    }
+
+    // ✅ permite body string/raw sem quebrar
+    if (typeof body === "string") {
+      fetchOptions.body = body;
+    } else {
+      fetchOptions.body = JSON.stringify(body ?? {});
+    }
   }
 
   if (token) {

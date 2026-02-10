@@ -1,12 +1,10 @@
+// src/utils/auditoria.js
 import { prisma } from "../prisma.js";
 
-export async function logAcesso(req, {
-    usuarioId = null,
-    email = null,
-    evento,
-    status = null,
-    detalhe = null,
-} = {}) {
+export async function logAcesso(
+    req,
+    { usuarioId = null, email = null, evento, status = null, detalhe = null } = {}
+) {
     try {
         await prisma.logAcesso.create({
             data: {
@@ -22,22 +20,24 @@ export async function logAcesso(req, {
             },
         });
     } catch (e) {
-        // não pode derrubar request por log
         console.error("Falha ao gravar LogAcesso:", e.message);
     }
 }
 
-export async function logDenuncia(req, {
-    denunciaId = null,
-    denuncianteId = null,
-    denunciadoId = null,
-    adminId = null,
-    tipo,
-    statusAntes = null,
-    statusDepois = null,
-    motivo = null,
-    detalhes = null,
-} = {}) {
+export async function logDenuncia(
+    req,
+    {
+        denunciaId = null,
+        denuncianteId = null,
+        denunciadoId = null,
+        adminId = null,
+        tipo,
+        statusAntes = null,
+        statusDepois = null,
+        motivo = null,
+        detalhes = null,
+    } = {}
+) {
     try {
         await prisma.logDenuncia.create({
             data: {

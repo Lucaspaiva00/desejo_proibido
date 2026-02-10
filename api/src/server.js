@@ -1,3 +1,4 @@
+// src/server.js
 import "dotenv/config";
 import http from "http";
 import { Server as IOServer } from "socket.io";

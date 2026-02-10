@@ -5,13 +5,18 @@ import { assinarToken } from "../utils/jwt.js";
 import { logAcesso } from "../utils/auditoria.js";
 import { getPremiumStatus, ensureWallet } from "../utils/wallet.js";
 
-// ✅ NOVO
 import { sendEmail } from "../utils/email.js";
 import { gerarTokenRaw, hashToken, addMinutes, safeInt } from "../utils/tokens.js";
 
+/**
+ * Monta URL pública (domínio do site/app).
+ * - APP_URL deve ser algo como: https://desejoproibido.app
+ * - Não coloca /api aqui; você passa o path completo na chamada.
+ */
 function appUrl(path) {
     const base = (process.env.APP_URL || "http://localhost:5000").replace(/\/$/, "");
-    return base + path;
+    const p = String(path || "");
+    return base + (p.startsWith("/") ? p : `/${p}`);
 }
 
 export async function registrar(req, res) {
@@ -31,7 +36,6 @@ export async function registrar(req, res) {
         const existe = await prisma.usuario.findUnique({ where: { email } });
         if (existe) return res.status(409).json({ erro: "Email já cadastrado" });
 
-        // ✅ Busca termos ativos
         const termosAtivos = await prisma.termo.findMany({
             where: {
                 ativo: true,
@@ -53,11 +57,8 @@ export async function registrar(req, res) {
             data: {
                 email,
                 senhaHash,
-
-                // ✅ novo padrão: começa NÃO verificado
                 emailVerificado: false,
                 emailVerificadoEm: null,
-
                 aceitesTermos: {
                     create: termosAtivos.map((t) => ({
                         termoId: t.id,
@@ -70,10 +71,9 @@ export async function registrar(req, res) {
             select: { id: true, email: true, criadoEm: true },
         });
 
-        // cria wallet imediatamente (opcional, mas ajuda)
         await ensureWallet(usuario.id);
 
-        // ✅ cria token + manda email verificação (seguro: hash no banco)
+        // ✅ token verificação e-mail
         try {
             const minutes = safeInt(process.env.EMAIL_TOKEN_MINUTES, 60);
             const raw = gerarTokenRaw();
@@ -85,6 +85,7 @@ export async function registrar(req, res) {
                 create: { usuarioId: usuario.id, tokenHash, expiraEm: addMinutes(new Date(), minutes) },
             });
 
+            // ✅ Link aponta pra rota do backend (que agora existe em /api e /api/v1)
             const link = appUrl(`/api/auth/verify-email?token=${raw}`);
 
             await sendEmail({
@@ -97,7 +98,6 @@ export async function registrar(req, res) {
         `,
             });
         } catch (e) {
-            // não impede cadastro caso SMTP falhe
             console.error("email verification send error:", e?.message || e);
         }
 
@@ -183,7 +183,6 @@ export async function login(req, res) {
             email: usuario.email,
         });
 
-        // ✅ devolve status premium efetivo já no login (opcional, mas ajuda no front)
         const { saldoCreditos, premiumEfetivo } = await getPremiumStatus(usuario.id);
 
         return res.json({
@@ -193,8 +192,6 @@ export async function login(req, res) {
                 isPremium: premiumEfetivo,
                 plano: usuario.plano,
                 saldoCreditos,
-
-                // ✅ útil pro front
                 emailVerificado: !!usuario.emailVerificado,
             },
             token,
@@ -219,7 +216,7 @@ export async function me(req, res) {
             role: usuario.role,
             criadoEm: usuario.criadoEm,
             plano: usuario.plano,
-            isPremium: premiumEfetivo, // ✅ calculado
+            isPremium: premiumEfetivo,
             saldoCreditos,
             emailVerificado: !!usuario.emailVerificado,
         });
@@ -245,7 +242,6 @@ export async function forgotPassword(req, res) {
         const raw = gerarTokenRaw();
         const tokenHash = hashToken(raw);
 
-        // invalida tokens antigos não usados (evita spam / reaproveitamento)
         await prisma.resetSenhaToken.updateMany({
             where: { usuarioId: u.id, usadoEm: null },
             data: { usadoEm: new Date() },
@@ -259,6 +255,7 @@ export async function forgotPassword(req, res) {
             },
         });
 
+        // ✅ link do FRONT (página pública)
         const link = appUrl(`/reset-password.html?token=${raw}`);
 
         await sendEmail({

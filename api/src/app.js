@@ -82,14 +82,13 @@ v1.use("/creditos", creditosRoutes);
 // ✅ PAGAMENTOS
 v1.use("/pagamentos", pagamentosRoutes);
 
-// health (sem /api)
+// health
 app.get("/health", (req, res) => res.json({ ok: true }));
 
-// rotas sem /api
 app.use(v1);
-
-// mesmas rotas com /api
 app.use("/api", v1);
+app.use("/api/v1", v1);
 
-// health (com /api)
+// health com /api
 app.get("/api/health", (req, res) => res.json({ ok: true }));
+app.get("/api/v1/health", (req, res) => res.json({ ok: true }));
