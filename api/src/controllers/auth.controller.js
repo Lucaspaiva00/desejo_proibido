@@ -258,20 +258,28 @@ export async function forgotPassword(req, res) {
         // ✅ link do FRONT (página pública)
         const link = appUrl(`/reset-password.html?token=${raw}`);
 
-        await sendEmail({
-            to: u.email,
-            subject: "Redefinir senha — Desejo Proibido",
-            html: `
+        // ✅ SMTP NÃO PODE CAUSAR 500: tenta enviar, se falhar, só loga e retorna ok
+        try {
+            await sendEmail({
+                to: u.email,
+                subject: "Redefinir senha — Desejo Proibido",
+                html: `
         <p>Você solicitou redefinição de senha.</p>
         <p><a href="${link}">Clique aqui para redefinir</a></p>
         <p>Esse link expira em ${minutes} minutos.</p>
         <p>Se não foi você, ignore.</p>
       `,
-        });
+            });
+        } catch (e) {
+            console.error("forgotPassword sendEmail error:", e?.message || e);
+            // NÃO RETORNA ERRO PRA NÃO QUEBRAR O FLUXO
+        }
 
         return res.json({ ok: true });
     } catch (e) {
-        return res.status(500).json({ erro: "Erro ao solicitar reset", detalhe: e.message });
+        // ✅ NÃO RETORNA 500 NUNCA (p/ não vazar / não quebrar UX)
+        console.error("forgotPassword fatal error:", e?.message || e);
+        return res.json({ ok: true });
     }
 }
 
