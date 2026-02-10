@@ -280,3 +280,61 @@
         min-width: 150px;
     }
 }
+
+/* =========================================================
+   ✅ AJUSTE REAL DA TELA "MINHAS FOTOS"
+   - enquadramento bonito
+   - sem esticar
+   - recorte inteligente
+========================================================= */
+
+/* 1) Card/caixa onde a foto aparece (no seu print é um card com borda e botão Remover) */
+#lista .panel,
+#lista .card,
+#lista .item,
+#lista>div,
+.minhas-fotos .panel,
+.minhas-fotos .card,
+.minhas-fotos .item {
+    border-radius: 18px;
+    overflow: hidden;
+    /* ✅ corta a imagem */
+}
+
+/* 2) Área da imagem: mantém proporção fixa e não deixa o botão quebrar o layout */
+#lista img,
+.minhas-fotos img {
+    width: 100%;
+    display: block;
+
+    /* ✅ recorta sem deformar */
+    object-fit: cover;
+    object-position: center;
+
+    /* ✅ altura consistente (proporção bonita) */
+    aspect-ratio: 4 / 3;
+    /* troque p/ 1 / 1 se quiser quadrado */
+    height: auto;
+}
+
+/* 3) Se sua imagem estiver dentro de um "preview" ou container, garante recorte */
+#lista .preview,
+#lista .foto,
+#lista .img,
+.minhas-fotos .preview,
+.minhas-fotos .foto,
+.minhas-fotos .img {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    /* mesma proporção */
+    overflow: hidden;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, .06);
+}
+
+/* 4) Hover suave (opcional) */
+#lista img:hover,
+.minhas-fotos img:hover {
+    transform: scale(1.02);
+    transition: transform .18s ease;
+}
