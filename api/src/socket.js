@@ -13,7 +13,6 @@ function getUserIdFromToken(token) {
     if (!secret) return null;
 
     const decoded = jwt.verify(token, secret);
-    // ajuste se seu payload for diferente
     const id = decoded?.id || decoded?.userId || decoded?.sub;
     return id ? String(id) : null;
   } catch {
@@ -28,10 +27,54 @@ export function registerSockets(io) {
   const userSockets = new Map();   // userId -> Set(socketId)
   const billingTimers = new Map(); // sessaoId -> intervalId
 
+  // ✅ PRESENÇA (online/offline real)
+  const onlineUsers = new Map();   // userId -> { online: true, lastSeen: Date, updatedAt: ms }
+  const PRESENCE_TIMEOUT_MS = Number(process.env.PRESENCE_TIMEOUT_MS || 30000);
+
+  function nowISO() {
+    return new Date().toISOString();
+  }
+
+  function markOnline(userId) {
+    const key = String(userId);
+    onlineUsers.set(key, { online: true, lastSeen: null, updatedAt: Date.now() });
+
+    io.emit("presence:update", { userId: key, online: true, at: nowISO() });
+  }
+
+  function markOfflineIfNoSockets(userId) {
+    const key = String(userId);
+    const set = userSockets.get(key);
+
+    // só marca offline se não tem mais nenhum socket conectado
+    if (set && set.size > 0) return;
+
+    onlineUsers.set(key, { online: false, lastSeen: new Date(), updatedAt: Date.now() });
+
+    io.emit("presence:update", { userId: key, online: false, at: nowISO() });
+  }
+
+  function presenceSnapshot(userIds = []) {
+    const out = [];
+    for (const id of userIds) {
+      const key = String(id);
+      const p = onlineUsers.get(key);
+      out.push({
+        userId: key,
+        online: !!p?.online,
+        lastSeen: p?.lastSeen ? new Date(p.lastSeen).toISOString() : null,
+      });
+    }
+    return out;
+  }
+
   function addUserSocket(userId, socketId) {
     const key = String(userId);
     if (!userSockets.has(key)) userSockets.set(key, new Set());
     userSockets.get(key).add(socketId);
+
+    // ✅ marcou online
+    markOnline(key);
   }
 
   function removeUserSocket(userId, socketId) {
@@ -40,6 +83,9 @@ export function registerSockets(io) {
     if (!set) return;
     set.delete(socketId);
     if (set.size === 0) userSockets.delete(key);
+
+    // ✅ marca offline (se realmente ficou sem sockets)
+    markOfflineIfNoSockets(key);
   }
 
   function emitToUser(userId, event, payload) {
@@ -52,12 +98,10 @@ export function registerSockets(io) {
   }
 
   async function safeDebit(userId, amount) {
-    // prioridade: seu helper debitWallet (se existir)
     if (typeof debitWallet === "function") {
       return await debitWallet(userId, amount);
     }
 
-    // fallback direto no Prisma (padrão do seu projeto: wallet com userId)
     await prisma.wallet.upsert({
       where: { userId },
       update: {},
@@ -93,7 +137,6 @@ export function registerSockets(io) {
   async function finalizeSession(sessaoId, motivo = "FINALIZADA") {
     const id = String(sessaoId);
 
-    // para timer primeiro (evita dupla cobrança)
     stopBillingTimer(id);
 
     const sessao = await prisma.sessaoLigacao.findUnique({ where: { id } });
@@ -103,13 +146,11 @@ export function registerSockets(io) {
       return;
     }
 
-    // marca finalizada no banco
     await prisma.sessaoLigacao.update({
       where: { id },
       data: { status: "FINALIZADA", finalizadoEm: new Date() },
     });
 
-    // avisa os 2 lados e room
     io.to(sessao.roomId).emit("call:ended", { sessaoId: id, motivo });
     emitToUser(sessao.usuarioId, "call:ended", { sessaoId: id, motivo });
     emitToUser(sessao.alvoId, "call:ended", { sessaoId: id, motivo });
@@ -118,7 +159,6 @@ export function registerSockets(io) {
   async function startBillingTimer(sessaoId) {
     const id = String(sessaoId);
 
-    // evita timers duplicados
     if (billingTimers.has(id)) return;
 
     const sessao = await prisma.sessaoLigacao.findUnique({
@@ -127,8 +167,8 @@ export function registerSockets(io) {
         id: true,
         status: true,
         roomId: true,
-        usuarioId: true, // caller
-        alvoId: true,    // callee
+        usuarioId: true,
+        alvoId: true,
         aceitouEm: true,
         segundosConsumidos: true,
         minutosCobrados: true,
@@ -153,10 +193,8 @@ export function registerSockets(io) {
           return;
         }
 
-        // conta 1 segundo
         segundos += 1;
 
-        // atualiza segundos no banco a cada 5s
         if (segundos % 5 === 0) {
           await prisma.sessaoLigacao.update({
             where: { id },
@@ -164,7 +202,6 @@ export function registerSockets(io) {
           });
         }
 
-        // cobra somente quando completar um minuto novo
         const minutosAtuais = Math.floor(segundos / 60);
         while (minutosCobrados < minutosAtuais) {
           const saldoAntes = await getSaldoCreditos(sessao.usuarioId);
@@ -197,7 +234,6 @@ export function registerSockets(io) {
             data: { minutosCobrados, segundosConsumidos: segundos },
           });
 
-          // avisa saldo pra sala e pro caller
           io.to(sessao.roomId).emit("wallet:update", { saldoCreditos: deb?.saldoCreditos });
           emitToUser(sessao.usuarioId, "wallet:update", { saldoCreditos: deb?.saldoCreditos });
         }
@@ -215,7 +251,34 @@ export function registerSockets(io) {
     startBillingTimer,
     finalizeSession,
     stopBillingTimer,
+
+    // ✅ presence helpers (se quiser usar em controller depois)
+    presenceSnapshot,
   };
+
+  // ============================
+  // Presence cleanup (timeout)
+  // ============================
+  setInterval(() => {
+    const now = Date.now();
+    for (const [uid, p] of onlineUsers.entries()) {
+      if (!p?.online) continue;
+
+      // se está online, mas não tem sockets, corrige
+      const set = userSockets.get(uid);
+      if (!set || set.size === 0) {
+        markOfflineIfNoSockets(uid);
+        continue;
+      }
+
+      // se está online mas sem ping muito tempo, derruba (protege mobile/aba dormindo)
+      const age = now - (p.updatedAt || now);
+      if (age > PRESENCE_TIMEOUT_MS) {
+        // mantém como online se ainda existe socket (pq socket vivo), senão offline
+        if (!set || set.size === 0) markOfflineIfNoSockets(uid);
+      }
+    }
+  }, Math.max(5000, Math.floor(PRESENCE_TIMEOUT_MS / 2)));
 
   // ============================
   // Socket connection
@@ -227,10 +290,8 @@ export function registerSockets(io) {
         socket.handshake.query?.token ||
         "";
 
-      // ✅ userId vem do JWT
       let userId = getUserIdFromToken(token);
 
-      // fallback compat (se ainda enviar userId antigo)
       if (!userId) {
         userId = socket.handshake.auth?.userId || socket.handshake.query?.userId || null;
       }
@@ -238,11 +299,36 @@ export function registerSockets(io) {
       if (userId) {
         addUserSocket(userId, socket.id);
         socket.data.userId = String(userId);
+
+        // ✅ manda um snapshot inicial pra quem acabou de entrar (opcional)
+        socket.emit("presence:me", { userId: String(userId), online: true, at: nowISO() });
       }
 
       socket.on("disconnect", () => {
         const uid = socket.data.userId;
         if (uid) removeUserSocket(uid, socket.id);
+      });
+
+      // ============================
+      // ✅ Presence events (front usa isso)
+      // ============================
+      socket.on("presence:ping", () => {
+        const uid = socket.data.userId;
+        if (!uid) return;
+        const p = onlineUsers.get(uid) || {};
+        onlineUsers.set(uid, { ...p, online: true, lastSeen: null, updatedAt: Date.now() });
+      });
+
+      // retorna status atual de uma lista
+      socket.on("presence:watch", ({ userIds }) => {
+        const arr = Array.isArray(userIds) ? userIds : [];
+        socket.emit("presence:list", presenceSnapshot(arr));
+      });
+
+      // retorna quem está online (snapshot simples)
+      socket.on("presence:who", ({ userIds }) => {
+        const arr = Array.isArray(userIds) ? userIds : [];
+        socket.emit("presence:list", presenceSnapshot(arr));
       });
 
       // ============================

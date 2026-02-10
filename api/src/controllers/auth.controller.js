@@ -5,6 +5,15 @@ import { assinarToken } from "../utils/jwt.js";
 import { logAcesso } from "../utils/auditoria.js";
 import { getPremiumStatus, ensureWallet } from "../utils/wallet.js";
 
+// ✅ NOVO
+import { sendEmail } from "../utils/email.js";
+import { gerarTokenRaw, hashToken, addMinutes, safeInt } from "../utils/tokens.js";
+
+function appUrl(path) {
+    const base = (process.env.APP_URL || "http://localhost:5000").replace(/\/$/, "");
+    return base + path;
+}
+
 export async function registrar(req, res) {
     try {
         const { email, senha, aceitouTermos } = req.body;
@@ -44,6 +53,11 @@ export async function registrar(req, res) {
             data: {
                 email,
                 senhaHash,
+
+                // ✅ novo padrão: começa NÃO verificado
+                emailVerificado: false,
+                emailVerificadoEm: null,
+
                 aceitesTermos: {
                     create: termosAtivos.map((t) => ({
                         termoId: t.id,
@@ -58,6 +72,34 @@ export async function registrar(req, res) {
 
         // cria wallet imediatamente (opcional, mas ajuda)
         await ensureWallet(usuario.id);
+
+        // ✅ cria token + manda email verificação (seguro: hash no banco)
+        try {
+            const minutes = safeInt(process.env.EMAIL_TOKEN_MINUTES, 60);
+            const raw = gerarTokenRaw();
+            const tokenHash = hashToken(raw);
+
+            await prisma.emailVerificacaoToken.upsert({
+                where: { usuarioId: usuario.id },
+                update: { tokenHash, expiraEm: addMinutes(new Date(), minutes) },
+                create: { usuarioId: usuario.id, tokenHash, expiraEm: addMinutes(new Date(), minutes) },
+            });
+
+            const link = appUrl(`/api/auth/verify-email?token=${raw}`);
+
+            await sendEmail({
+                to: usuario.email,
+                subject: "Confirme seu e-mail — Desejo Proibido",
+                html: `
+          <p>Olá! Falta só confirmar seu e-mail.</p>
+          <p><a href="${link}">Clique aqui para confirmar</a></p>
+          <p>Se você não criou conta, ignore esta mensagem.</p>
+        `,
+            });
+        } catch (e) {
+            // não impede cadastro caso SMTP falhe
+            console.error("email verification send error:", e?.message || e);
+        }
 
         const token = assinarToken({ id: usuario.id, email: usuario.email });
         return res.status(201).json({ usuario, token });
@@ -151,6 +193,9 @@ export async function login(req, res) {
                 isPremium: premiumEfetivo,
                 plano: usuario.plano,
                 saldoCreditos,
+
+                // ✅ útil pro front
+                emailVerificado: !!usuario.emailVerificado,
             },
             token,
         });
@@ -176,8 +221,177 @@ export async function me(req, res) {
             plano: usuario.plano,
             isPremium: premiumEfetivo, // ✅ calculado
             saldoCreditos,
+            emailVerificado: !!usuario.emailVerificado,
         });
     } catch (e) {
         return res.status(500).json({ erro: "Erro ao buscar usuário", detalhe: e.message });
+    }
+}
+
+// ===============================
+// ✅ ESQUECI MINHA SENHA
+// ===============================
+export async function forgotPassword(req, res) {
+    try {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ erro: "Email é obrigatório" });
+
+        const u = await prisma.usuario.findUnique({ where: { email } });
+
+        // ✅ resposta neutra SEM vazar existência
+        if (!u) return res.json({ ok: true });
+
+        const minutes = safeInt(process.env.RESET_TOKEN_MINUTES, 30);
+        const raw = gerarTokenRaw();
+        const tokenHash = hashToken(raw);
+
+        // invalida tokens antigos não usados (evita spam / reaproveitamento)
+        await prisma.resetSenhaToken.updateMany({
+            where: { usuarioId: u.id, usadoEm: null },
+            data: { usadoEm: new Date() },
+        });
+
+        await prisma.resetSenhaToken.create({
+            data: {
+                usuarioId: u.id,
+                tokenHash,
+                expiraEm: addMinutes(new Date(), minutes),
+            },
+        });
+
+        const link = appUrl(`/reset-password.html?token=${raw}`);
+
+        await sendEmail({
+            to: u.email,
+            subject: "Redefinir senha — Desejo Proibido",
+            html: `
+        <p>Você solicitou redefinição de senha.</p>
+        <p><a href="${link}">Clique aqui para redefinir</a></p>
+        <p>Esse link expira em ${minutes} minutos.</p>
+        <p>Se não foi você, ignore.</p>
+      `,
+        });
+
+        return res.json({ ok: true });
+    } catch (e) {
+        return res.status(500).json({ erro: "Erro ao solicitar reset", detalhe: e.message });
+    }
+}
+
+export async function resetPassword(req, res) {
+    try {
+        const { token, novaSenha } = req.body;
+
+        if (!token || !novaSenha) {
+            return res.status(400).json({ erro: "Token e novaSenha são obrigatórios" });
+        }
+
+        if (String(novaSenha).length < 6) {
+            return res.status(400).json({ erro: "A senha deve ter no mínimo 6 caracteres" });
+        }
+
+        const tokenHash = hashToken(token);
+
+        const t = await prisma.resetSenhaToken.findFirst({
+            where: {
+                tokenHash,
+                usadoEm: null,
+                expiraEm: { gt: new Date() },
+            },
+            select: { id: true, usuarioId: true },
+        });
+
+        if (!t) return res.status(400).json({ erro: "Token inválido ou expirado" });
+
+        const senhaHash = await bcrypt.hash(novaSenha, 10);
+
+        await prisma.$transaction([
+            prisma.usuario.update({
+                where: { id: t.usuarioId },
+                data: { senhaHash },
+            }),
+            prisma.resetSenhaToken.update({
+                where: { id: t.id },
+                data: { usadoEm: new Date() },
+            }),
+        ]);
+
+        return res.json({ ok: true });
+    } catch (e) {
+        return res.status(500).json({ erro: "Erro ao redefinir senha", detalhe: e.message });
+    }
+}
+
+// ===============================
+// ✅ VERIFICAÇÃO DE E-MAIL
+// ===============================
+export async function resendEmailVerification(req, res) {
+    try {
+        const userId = req.usuario.id;
+
+        const u = await prisma.usuario.findUnique({
+            where: { id: userId },
+            select: { id: true, email: true, emailVerificado: true },
+        });
+
+        if (!u) return res.status(401).json({ erro: "Usuário inválido" });
+        if (u.emailVerificado) return res.json({ ok: true, jaVerificado: true });
+
+        const minutes = safeInt(process.env.EMAIL_TOKEN_MINUTES, 60);
+        const raw = gerarTokenRaw();
+        const tokenHash = hashToken(raw);
+
+        await prisma.emailVerificacaoToken.upsert({
+            where: { usuarioId: u.id },
+            update: { tokenHash, expiraEm: addMinutes(new Date(), minutes) },
+            create: { usuarioId: u.id, tokenHash, expiraEm: addMinutes(new Date(), minutes) },
+        });
+
+        const link = appUrl(`/api/auth/verify-email?token=${raw}`);
+
+        await sendEmail({
+            to: u.email,
+            subject: "Confirme seu e-mail — Desejo Proibido",
+            html: `
+        <p>Confirme seu e-mail:</p>
+        <p><a href="${link}">Clique aqui para confirmar</a></p>
+        <p>Se não foi você, ignore.</p>
+      `,
+        });
+
+        return res.json({ ok: true });
+    } catch (e) {
+        return res.status(500).json({ erro: "Erro ao reenviar verificação", detalhe: e.message });
+    }
+}
+
+export async function verifyEmail(req, res) {
+    try {
+        const { token } = req.query;
+        if (!token) return res.status(400).send("Token ausente");
+
+        const tokenHash = hashToken(String(token));
+
+        const t = await prisma.emailVerificacaoToken.findFirst({
+            where: {
+                tokenHash,
+                expiraEm: { gt: new Date() },
+            },
+            select: { id: true, usuarioId: true },
+        });
+
+        if (!t) return res.status(400).send("Token inválido ou expirado");
+
+        await prisma.$transaction([
+            prisma.usuario.update({
+                where: { id: t.usuarioId },
+                data: { emailVerificado: true, emailVerificadoEm: new Date() },
+            }),
+            prisma.emailVerificacaoToken.delete({ where: { id: t.id } }),
+        ]);
+
+        return res.redirect(appUrl(`/email-verified.html`));
+    } catch (e) {
+        return res.status(500).send("Erro ao verificar e-mail");
     }
 }

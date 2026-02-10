@@ -50,6 +50,10 @@ model Usuario {
   plano     String  @default("FREE")
   isPremium Boolean @default(false)
 
+  // ✅ NOVO: verificação de e-mail
+  emailVerificado   Boolean   @default(false)
+  emailVerificadoEm DateTime?
+
   modoInvisivel Boolean   @default(false)
   boostAte      DateTime?
 
@@ -106,10 +110,42 @@ model Usuario {
   wallet     Wallet?
   walletTxes WalletTx[]
 
+  // ✅ NOVO: tokens (1:1 via models)
+  emailToken EmailVerificacaoToken?
+  resetTokens ResetSenhaToken[]
+
   @@index([ativo])
   @@index([role])
   @@index([isPremium])
   @@index([boostAte])
+}
+
+model EmailVerificacaoToken {
+  id        String   @id @default(cuid())
+  usuarioId String   @unique
+  tokenHash String   @unique
+  expiraEm  DateTime
+  criadoEm  DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@index([expiraEm])
+}
+
+model ResetSenhaToken {
+  id        String   @id @default(cuid())
+  usuarioId String
+  tokenHash String   @unique
+  expiraEm  DateTime
+  usadoEm   DateTime?
+  criadoEm  DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@index([expiraEm])
+  @@index([usadoEm])
 }
 
 model Perfil {
