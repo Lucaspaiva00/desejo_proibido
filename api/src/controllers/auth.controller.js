@@ -5,7 +5,7 @@ import { assinarToken } from "../utils/jwt.js";
 import { logAcesso } from "../utils/auditoria.js";
 import { getPremiumStatus, ensureWallet } from "../utils/wallet.js";
 
-import { sendEmail } from "../utils/email.js";
+import { sendEmail, isSmtpConfigured } from "../utils/email.js";
 import { gerarTokenRaw, hashToken, addMinutes, safeInt } from "../utils/tokens.js";
 
 /**
@@ -73,7 +73,7 @@ export async function registrar(req, res) {
 
         await ensureWallet(usuario.id);
 
-        // ✅ token verificação e-mail
+        // ✅ token verificação e-mail (NÃO derruba cadastro se SMTP faltar)
         try {
             const minutes = safeInt(process.env.EMAIL_TOKEN_MINUTES, 60);
             const raw = gerarTokenRaw();
@@ -85,18 +85,21 @@ export async function registrar(req, res) {
                 create: { usuarioId: usuario.id, tokenHash, expiraEm: addMinutes(new Date(), minutes) },
             });
 
-            // ✅ Link aponta pra rota do backend (que agora existe em /api e /api/v1)
-            const link = appUrl(`/api/auth/verify-email?token=${raw}`);
+            if (isSmtpConfigured()) {
+                const link = appUrl(`/api/auth/verify-email?token=${raw}`);
 
-            await sendEmail({
-                to: usuario.email,
-                subject: "Confirme seu e-mail — Desejo Proibido",
-                html: `
-          <p>Olá! Falta só confirmar seu e-mail.</p>
-          <p><a href="${link}">Clique aqui para confirmar</a></p>
-          <p>Se você não criou conta, ignore esta mensagem.</p>
-        `,
-            });
+                await sendEmail({
+                    to: usuario.email,
+                    subject: "Confirme seu e-mail — Desejo Proibido",
+                    html: `
+            <p>Olá! Falta só confirmar seu e-mail.</p>
+            <p><a href="${link}">Clique aqui para confirmar</a></p>
+            <p>Se você não criou conta, ignore esta mensagem.</p>
+          `,
+                });
+            } else {
+                console.warn("[auth] SMTP não configurado — verificação de e-mail não enviada");
+            }
         } catch (e) {
             console.error("email verification send error:", e?.message || e);
         }
@@ -255,31 +258,27 @@ export async function forgotPassword(req, res) {
             },
         });
 
-        // ✅ link do FRONT (página pública)
         const link = appUrl(`/reset-password.html?token=${raw}`);
 
-        // ✅ SMTP NÃO PODE CAUSAR 500: tenta enviar, se falhar, só loga e retorna ok
-        try {
+        // ✅ NÃO derruba se SMTP não estiver configurado
+        if (isSmtpConfigured()) {
             await sendEmail({
                 to: u.email,
                 subject: "Redefinir senha — Desejo Proibido",
                 html: `
-        <p>Você solicitou redefinição de senha.</p>
-        <p><a href="${link}">Clique aqui para redefinir</a></p>
-        <p>Esse link expira em ${minutes} minutos.</p>
-        <p>Se não foi você, ignore.</p>
-      `,
+          <p>Você solicitou redefinição de senha.</p>
+          <p><a href="${link}">Clique aqui para redefinir</a></p>
+          <p>Esse link expira em ${minutes} minutos.</p>
+          <p>Se não foi você, ignore.</p>
+        `,
             });
-        } catch (e) {
-            console.error("forgotPassword sendEmail error:", e?.message || e);
-            // NÃO RETORNA ERRO PRA NÃO QUEBRAR O FLUXO
+        } else {
+            console.warn("[auth] SMTP não configurado — forgot-password não enviou e-mail");
         }
 
         return res.json({ ok: true });
     } catch (e) {
-        // ✅ NÃO RETORNA 500 NUNCA (p/ não vazar / não quebrar UX)
-        console.error("forgotPassword fatal error:", e?.message || e);
-        return res.json({ ok: true });
+        return res.status(500).json({ erro: "Erro ao solicitar reset", detalhe: e.message });
     }
 }
 
@@ -352,17 +351,21 @@ export async function resendEmailVerification(req, res) {
             create: { usuarioId: u.id, tokenHash, expiraEm: addMinutes(new Date(), minutes) },
         });
 
-        const link = appUrl(`/api/auth/verify-email?token=${raw}`);
+        if (isSmtpConfigured()) {
+            const link = appUrl(`/api/auth/verify-email?token=${raw}`);
 
-        await sendEmail({
-            to: u.email,
-            subject: "Confirme seu e-mail — Desejo Proibido",
-            html: `
-        <p>Confirme seu e-mail:</p>
-        <p><a href="${link}">Clique aqui para confirmar</a></p>
-        <p>Se não foi você, ignore.</p>
-      `,
-        });
+            await sendEmail({
+                to: u.email,
+                subject: "Confirme seu e-mail — Desejo Proibido",
+                html: `
+          <p>Confirme seu e-mail:</p>
+          <p><a href="${link}">Clique aqui para confirmar</a></p>
+          <p>Se não foi você, ignore.</p>
+        `,
+            });
+        } else {
+            console.warn("[auth] SMTP não configurado — resend-verification não enviou e-mail");
+        }
 
         return res.json({ ok: true });
     } catch (e) {
