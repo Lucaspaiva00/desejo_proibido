@@ -174,10 +174,12 @@ if (!state.usuario && !localStorage.getItem("token")) {
 // ==============================
 const token = localStorage.getItem("token") || "";
 
-const socket = window.io({
+const socket = io({
     auth: { token },
     transports: ["websocket"],
+    path: "/api/socket.io",
 });
+
 
 socket.on("connect", () => {
     console.log("[socket] conectado", socket.id);
