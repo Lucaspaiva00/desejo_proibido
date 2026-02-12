@@ -57,7 +57,10 @@ api.use(langMiddleware);
 
 // ✅ ROTAS DE UPLOAD (multer) — TEM QUE SER /upload (singular)
 // Assim o front chama: /api/upload/foto e /api/upload/audio
-api.use("/upload", uploadRoutes);
+// uploads (rotas de upload - se existirem endpoints)
+api.use("/upload", uploadRoutes);   // ✅ compat com o front
+api.use("/uploads", uploadRoutes);  // ✅ mantém compat se algo usa plural
+
 
 // demais rotas
 api.use("/perfil", perfilRoutes);
