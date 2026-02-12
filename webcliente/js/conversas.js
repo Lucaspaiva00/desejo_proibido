@@ -9,6 +9,11 @@ import { apiFetch, logout } from "./api.js";
 const UPLOAD_FOTO_ENDPOINT = "/api/upload/foto";
 const UPLOAD_AUDIO_ENDPOINT = "/api/upload/audio";
 
+// ✅ endpoints REAIS do backend para CRIAR mensagens de mídia
+// (seu backend tem POST /mensagens/foto e POST /mensagens/audio)
+const ENVIAR_FOTO_ENDPOINT = "/mensagens/foto";
+const ENVIAR_AUDIO_ENDPOINT = "/mensagens/audio";
+
 const msg = document.getElementById("msg");
 
 document.getElementById("btnSair").onclick = logout;
@@ -833,10 +838,12 @@ async function uploadArquivo(endpoint, fileOrBlob, filename = "file.bin") {
     return data.url;
 }
 
+// ✅ FIX: manda mídia para os endpoints corretos do backend
 async function enviarMensagemMidia(tipo, url) {
-    // url vem do uploadRoutes como "/uploads/arquivo.webm" ou "https://..."
+    if (!state.conversaId) throw new Error("Sem conversaId");
+
     if (tipo === "FOTO") {
-        await apiFetch("/mensagens/foto", {
+        await apiFetch(ENVIAR_FOTO_ENDPOINT, {
             method: "POST",
             body: {
                 conversaId: state.conversaId,
@@ -846,7 +853,7 @@ async function enviarMensagemMidia(tipo, url) {
             },
         });
     } else if (tipo === "AUDIO") {
-        await apiFetch("/mensagens/audio", {
+        await apiFetch(ENVIAR_AUDIO_ENDPOINT, {
             method: "POST",
             body: {
                 conversaId: state.conversaId,
@@ -860,7 +867,6 @@ async function enviarMensagemMidia(tipo, url) {
 
     await carregarMensagens();
 }
-
 
 btnFoto?.addEventListener("click", () => {
     if (!state.conversaId) return;
