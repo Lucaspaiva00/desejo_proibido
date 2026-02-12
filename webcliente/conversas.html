@@ -222,7 +222,6 @@
     /* ==========================================================
        ✅ OVERLAY VIDEOCHAMADA (FULLSCREEN MOBILE / CARD DESKTOP)
        ========================================================== */
-
     .callOverlay {
       position: fixed;
       inset: 0;
@@ -232,7 +231,6 @@
       justify-content: stretch;
       padding: 0;
       z-index: 99999;
-
       padding-top: env(safe-area-inset-top);
       padding-bottom: env(safe-area-inset-bottom);
       padding-left: env(safe-area-inset-left);
@@ -326,7 +324,7 @@
       max-width: 180px;
     }
 
-    @media (min-width: 900px) {
+    @media (min-width:900px) {
       .callOverlay {
         padding: 16px;
         align-items: center;
@@ -537,7 +535,13 @@
           </div>
         </div>
 
+        <!-- ✅ Composer com Foto/Áudio -->
         <div class="composer">
+          <button class="iconbtn" id="btnFoto" type="button" title="Enviar foto" disabled>📷</button>
+          <input id="inpFoto" type="file" accept="image/*" hidden />
+
+          <button class="iconbtn" id="btnAudio" type="button" title="Gravar áudio" disabled>🎤</button>
+
           <textarea id="texto" placeholder="Digite uma mensagem..." disabled></textarea>
           <button id="btnEnviar" class="btn btn-primary" disabled>Enviar</button>
         </div>
@@ -587,7 +591,7 @@
   <script src="/socket.io/socket.io.js"></script>
 
   <!-- ✅ app -->
-  <script type="module" src="js/conversas.js?v=20260212-1"></script>
+  <script type="module" src="js/conversas.js?v=20260212-2"></script>
 
   <script>
     const navToggle = document.getElementById("navToggle");
