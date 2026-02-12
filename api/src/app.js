@@ -55,8 +55,9 @@ api.use("/auth", authRoutes);
 // ✅ idioma para o resto do sistema
 api.use(langMiddleware);
 
-// uploads (rotas de upload - se existirem endpoints)
-api.use("/uploads", uploadRoutes);
+// ✅ ROTAS DE UPLOAD (multer) — TEM QUE SER /upload (singular)
+// Assim o front chama: /api/upload/foto e /api/upload/audio
+api.use("/upload", uploadRoutes);
 
 // demais rotas
 api.use("/perfil", perfilRoutes);
