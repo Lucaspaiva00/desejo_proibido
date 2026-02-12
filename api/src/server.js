@@ -10,21 +10,22 @@ const PORT = Number(process.env.PORT || 3333);
 // cria servidor HTTP
 const server = http.createServer(app);
 
-// socket.io
+// socket.io  ✅ CORREÇÃO AQUI
 const io = new IOServer(server, {
+  path: "/api/socket.io", // 🔥 ISSO RESOLVE O ERRO
   cors: {
-    origin: "*", // se quiser travar depois, pode
+    origin: "*",
     methods: ["GET", "POST"],
   },
 });
 
-// expõe io no app (caso algum controller precise)
+// expõe io no app
 app.set("io", io);
 
 // registra sockets
 registerSockets(io);
 
-// ⚠️ LISTEN APENAS AQUI
+// listen SOMENTE aqui
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 API rodando em porta ${PORT}`);
+  console.log(`🚀 API + Socket rodando na porta ${PORT}`);
 });
