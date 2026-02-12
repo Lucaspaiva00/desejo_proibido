@@ -322,6 +322,17 @@ function escapeHtml(s) {
         .replaceAll("'", "&#039;");
 }
 
+/**
+ * ✅ Separa "🔥 Fogo" -> { emoji:"🔥", text:"Fogo" }
+ * Usa Array.from pra funcionar melhor com emojis.
+ */
+function splitEmojiAndText(nome) {
+    const chars = Array.from(String(nome || "").trim());
+    const emoji = chars.shift() || "🎁";
+    const text = chars.join("").trim();
+    return { emoji, text };
+}
+
 // presentes modal
 function openGiftModal() {
     giftOverlay?.classList.add("show");
@@ -454,7 +465,6 @@ function syncUsuarioPremium(isPremium, saldoCreditos = null) {
     } catch { }
 }
 
-
 async function checarPremium() {
     try {
         const r = await apiFetch(API.premiumStatus);
@@ -520,6 +530,7 @@ function isContatoBloqueadoError(e) {
     if (st !== 400) return false;
     return e?.data?.code === "CONTATO_BLOQUEADO";
 }
+
 // Conversas
 async function carregarConversas() {
     try {
@@ -721,11 +732,17 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
         let conteudo = "";
         if (tipo === "PRESENTE") {
             const nome = meta.nome || (m.texto || "🎁 Presente");
-            conteudo = `<div><b>${escapeHtml(nome)}</b></div>`;
+            const { emoji, text } = splitEmojiAndText(nome);
+
+            conteudo = `
+              <div class="giftBig">
+                <div class="giftEmoji">${escapeHtml(emoji)}</div>
+                ${text ? `<div class="giftLabel">${escapeHtml(text)}</div>` : ""}
+              </div>
+            `;
         } else {
             const textToShow = m.textoExibido ?? m.texto ?? "";
             conteudo = `<div>${escapeHtml(textToShow)}</div>`;
-
         }
 
         return `
