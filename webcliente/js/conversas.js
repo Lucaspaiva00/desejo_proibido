@@ -834,12 +834,33 @@ async function uploadArquivo(endpoint, fileOrBlob, filename = "file.bin") {
 }
 
 async function enviarMensagemMidia(tipo, url) {
-    await apiFetch(API.enviarMensagem, {
-        method: "POST",
-        body: { conversaId: state.conversaId, tipo, midiaUrl: url },
-    });
+    // url vem do uploadRoutes como "/uploads/arquivo.webm" ou "https://..."
+    if (tipo === "FOTO") {
+        await apiFetch("/mensagens/foto", {
+            method: "POST",
+            body: {
+                conversaId: state.conversaId,
+                mediaPath: url,      // ✅ backend espera mediaPath
+                thumbPath: "",       // opcional
+                custoMoedas: null,   // opcional (vai usar DEFAULT_FOTO_UNLOCK_COST)
+            },
+        });
+    } else if (tipo === "AUDIO") {
+        await apiFetch("/mensagens/audio", {
+            method: "POST",
+            body: {
+                conversaId: state.conversaId,
+                mediaPath: url,      // ✅ backend espera mediaPath
+                duracao: null,       // opcional
+            },
+        });
+    } else {
+        throw new Error("Tipo de mídia inválido: " + tipo);
+    }
+
     await carregarMensagens();
 }
+
 
 btnFoto?.addEventListener("click", () => {
     if (!state.conversaId) return;
