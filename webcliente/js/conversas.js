@@ -66,6 +66,7 @@ function isNearBottom(el, threshold = 140) {
     const distance = el.scrollHeight - (el.scrollTop + el.clientHeight);
     return distance <= threshold;
 }
+
 function scrollToBottom(el) {
     if (!el) return;
     el.scrollTop = el.scrollHeight;
@@ -77,6 +78,7 @@ function scrollToBottom(el) {
 function safeJsonParse(v) {
     try { return JSON.parse(v); } catch { return null; }
 }
+
 function getAuth() {
     const keysUser = ["usuarioLogado", "usuario", "user", "authUser"];
     const keysToken = ["token", "authToken", "dp_token", "tokenJwt"];
@@ -109,6 +111,7 @@ function getAuth() {
 
     return { usuario, token };
 }
+
 const auth = getAuth();
 
 // garante token na chave "token"
@@ -163,8 +166,14 @@ const socket = window.io({
     transports: ["websocket"],
 });
 
-socket.on("connect", () => console.log("[socket] conectado", socket.id));
-socket.on("connect_error", (err) => console.error("[socket] connect_error:", err?.message || err));
+socket.on("connect", () => {
+    console.log("[socket] conectado", socket.id);
+});
+
+socket.on("connect_error", (err) => {
+    console.error("[socket] connect_error:", err?.message || err);
+});
+
 socket.onAny((event, ...args) => {
     if (String(event).startsWith("call:")) console.log("[socket event]", event, args?.[0]);
 });
@@ -206,7 +215,7 @@ socket.on("call:incoming", async (p) => {
         state.sessaoId = r.sessaoId;
         state.roomId = r.roomId;
 
-        state.calleeReady = true; // aqui você é o callee
+        state.calleeReady = true;
         state.callerOfferSent = false;
 
         openCallOverlay(`📹 Chamada com ${nome}`, "Entrando na sala…");
@@ -251,7 +260,9 @@ socket.on("call:declined", async () => {
 
 socket.on("call:ended", async (p) => {
     const motivo = p?.motivo || "FINALIZADA";
-    if (motivo === "SALDO_INSUFICIENTE") alert("Chamada encerrada: saldo insuficiente.");
+    if (motivo === "SALDO_INSUFICIENTE") {
+        alert("Chamada encerrada: saldo insuficiente.");
+    }
     await endCallLocal();
 });
 
@@ -311,9 +322,6 @@ function escapeHtml(s) {
         .replaceAll("'", "&#039;");
 }
 
-/**
- * ✅ Separa "🔥 Fogo" -> { emoji:"🔥", text:"Fogo" }
- */
 function splitEmojiAndText(nome) {
     const chars = Array.from(String(nome || "").trim());
     const emoji = chars.shift() || "🎁";
@@ -348,11 +356,13 @@ function showCreditWall() {
     creditwall.classList.add("show");
     creditwall.setAttribute("aria-hidden", "false");
 }
+
 function hideCreditWall() {
     if (!creditwall) return;
     creditwall.classList.remove("show");
     creditwall.setAttribute("aria-hidden", "true");
 }
+
 function setCreditWallInfo({ custoCreditos, saldoCreditos }) {
     state.custoChat = Number(custoCreditos || 0);
     state.saldoCreditos = Number(saldoCreditos || 0);
@@ -367,8 +377,10 @@ function applyChatLockUI() {
         hideCreditWall();
         if (texto) texto.disabled = true;
         if (btnEnviar) btnEnviar.disabled = true;
+
         if (btnGift) btnGift.disabled = true;
         if (btnCall) btnCall.disabled = true;
+
         btnGift?.classList.remove("lockedAction");
         btnCall?.classList.remove("lockedAction");
         return;
@@ -485,6 +497,7 @@ function isPremiumBlockedError(e) {
     const m = (e?.message || "").toLowerCase();
     return m.includes("premium") || m.includes("assin") || m.includes("pag");
 }
+
 function enforcePremiumFromError(e) {
     if (isPremiumBlockedError(e)) {
         if (paywall) {
@@ -538,7 +551,11 @@ function renderLista() {
 
     lista.innerHTML = items.map((c) => {
         const nome = c.outro?.perfil?.nome || c.outroNome || c.outro?.email || "Usuário";
-        const sub = c.ultimaMensagem?.textoExibido || c.ultimaMensagem?.texto || c.ultimaMensagem || "";
+        const sub =
+            c.ultimaMensagem?.textoExibido ||
+            c.ultimaMensagem?.texto ||
+            c.ultimaMensagem ||
+            "";
         const active = (state.conversaId === c.id) ? "active" : "";
         const lock = c.chatLiberado ? "" : " 🔒";
 
@@ -663,11 +680,14 @@ async function carregarMensagens({ silent = false } = {}) {
         const data = await apiFetch(API.mensagensDaConversa(state.conversaId));
 
         let items = [];
-        if (Array.isArray(data)) items = data;
-        else if (data?.mensagens && Array.isArray(data.mensagens)) {
+        if (Array.isArray(data)) {
+            items = data;
+        } else if (data?.mensagens && Array.isArray(data.mensagens)) {
             items = data.mensagens;
             if (typeof data.chatLiberado === "boolean") state.chatLiberado = data.chatLiberado;
-        } else items = (data?.data && Array.isArray(data.data)) ? data.data : [];
+        } else {
+            items = (data?.data && Array.isArray(data.data)) ? data.data : [];
+        }
 
         renderMensagens(items, { stickToBottom: shouldStick });
 
@@ -872,6 +892,7 @@ function openCallOverlay(title, sub) {
     if (callTitle) callTitle.textContent = title || "📹 Videochamada";
     if (callSub) callSub.textContent = sub || "Conectando…";
 }
+
 function closeCallOverlay() {
     if (!callOverlay) return;
     callOverlay.classList.remove("show");
