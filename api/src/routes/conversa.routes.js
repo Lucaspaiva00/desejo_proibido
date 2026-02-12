@@ -1,3 +1,4 @@
+// src/routes/conversa.routes.js
 import { Router } from "express";
 import { auth } from "../middlewares/auth.middleware.js";
 import {
@@ -9,7 +10,6 @@ import {
 } from "../controllers/conversa.controller.js";
 
 const router = Router();
-
 router.use(auth);
 
 router.get("/", listarConversas);
@@ -24,6 +24,7 @@ router.post("/:id/liberar", liberarChat);
 router.get("/:id", statusConversa);
 router.post("/:id", liberarChat);
 
+// mensagens
 router.get("/:id/mensagens", mensagensDaConversa);
 
 export default router;

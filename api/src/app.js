@@ -8,6 +8,8 @@ import "dotenv/config";
 import path from "path";
 import { fileURLToPath } from "url";
 
+import { langMiddleware } from "./middlewares/lang.middleware.js";
+
 import perfilRoutes from "./routes/perfil.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import fotoRoutes from "./routes/foto.routes.js";
@@ -30,28 +32,36 @@ import livesRoutes from "./routes/lives.routes.js";
 import pagamentosRoutes from "./routes/pagamentos.routes.js";
 import carteiraRoutes from "./routes/carteira.routes.js";
 import creditosRoutes from "./routes/creditos.routes.js";
-
-import { langMiddleware } from "./middlewares/lang.middleware.js";
+import uploadRoutes from "./routes/upload.routes.js";
 
 export const app = express();
 
+// ✅ middlewares base
 app.use(helmet());
-app.use(cors());
-app.use(express.json());
+app.use(
+    cors({
+        origin: true,
+        credentials: true,
+    })
+);
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
 
-// static
+// ✅ static /uploads (SERVIR ARQUIVOS)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 
-// router principal
+// ==============================
+// Router principal (v1)
+// ==============================
 const v1 = Router();
 
-// auth primeiro
+// auth primeiro (sem lang)
 v1.use("/auth", authRoutes);
 
-// ✅ idioma para o resto do sistema
+// ✅ idioma para o resto
 v1.use(langMiddleware);
 
 // demais rotas
@@ -72,23 +82,46 @@ v1.use("/admin", adminRoutes);
 v1.use("/presentes", presenteRoutes);
 v1.use("/busca", buscaRoutes);
 
+// ✅ uploads API (NÃO usar "/uploads" aqui pra não conflitar com static)
+v1.use("/upload", uploadRoutes);
+
 // ✅ SOMENTE VIDEO
 v1.use("/ligacoes/video", ligacaoVideoRoutes);
 
+// lives / carteira / créditos / pagamentos
 v1.use("/lives", livesRoutes);
 v1.use("/carteira", carteiraRoutes);
 v1.use("/creditos", creditosRoutes);
-
-// ✅ PAGAMENTOS
 v1.use("/pagamentos", pagamentosRoutes);
 
-// health
+// ==============================
+// Health
+// ==============================
 app.get("/health", (req, res) => res.json({ ok: true }));
-
-app.use(v1);
-app.use("/api", v1);
-app.use("/api/v1", v1);
-
-// health com /api
 app.get("/api/health", (req, res) => res.json({ ok: true }));
 app.get("/api/v1/health", (req, res) => res.json({ ok: true }));
+
+// ==============================
+// Mount sem duplicar rota (IMPORTANTE)
+// - Canonical: /api/v1
+// - Legacy: /api
+// - Dev/antigo: / (MAS sem pegar /api/*)
+// ==============================
+app.use("/api/v1", v1);
+app.use("/api", v1);
+
+// ⚠️ Root só atende se NÃO for /api/*
+app.use((req, res, next) => {
+    if (req.path.startsWith("/api")) return next();
+    return v1(req, res, next);
+});
+
+// ==============================
+// 404 padrão
+// ==============================
+app.use((req, res) => {
+    res.status(404).json({
+        error: "NOT_FOUND",
+        path: req.originalUrl,
+    });
+});

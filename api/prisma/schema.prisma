@@ -29,10 +29,16 @@ enum DenunciaStatus {
   IGNORADA
 }
 
+/**
+ * ✅ MELHORIA: adiciona FOTO e AUDIO
+ * (mantive seus tipos atuais)
+ */
 enum MensagemTipo {
   TEXTO
   PRESENTE
   SISTEMA
+  FOTO
+  AUDIO
 }
 
 model Usuario {
@@ -111,8 +117,11 @@ model Usuario {
   walletTxes WalletTx[]
 
   // ✅ NOVO: tokens (1:1 via models)
-  emailToken EmailVerificacaoToken?
+  emailToken  EmailVerificacaoToken?
   resetTokens ResetSenhaToken[]
+
+  // ✅ NOVO: mídia desbloqueada (foto/áudio se quiser)
+  midiasDesbloqueadas MidiaDesbloqueada[]
 
   @@index([ativo])
   @@index([role])
@@ -134,12 +143,12 @@ model EmailVerificacaoToken {
 }
 
 model ResetSenhaToken {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   usuarioId String
-  tokenHash String   @unique
+  tokenHash String    @unique
   expiraEm  DateTime
   usadoEm   DateTime?
-  criadoEm  DateTime @default(now())
+  criadoEm  DateTime  @default(now())
 
   usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
@@ -233,6 +242,28 @@ model Mensagem {
   textoOriginal  String?
   idiomaOriginal String? @default("pt")
 
+  /**
+   * ✅ NOVO: campos para mídia (FOTO/AUDIO)
+   * - mediaPath: caminho/chave interna na sua cloud (NÃO precisa ser público)
+   * - mediaMime: ex "image/jpeg", "audio/mpeg"
+   * - mediaSize: bytes
+   * - mediaDuracao: segundos (áudio)
+   * - thumbPath: thumbnail/preview (borrado) para foto bloqueada
+   */
+  mediaPath    String?
+  thumbPath    String?
+  mediaMime    String?
+  mediaSize    Int?
+  mediaDuracao Int?
+
+  /**
+   * ✅ NOVO: paywall da mídia
+   * - bloqueada: true para foto bloqueada
+   * - custoMoedas: custo para desbloquear
+   */
+  bloqueada   Boolean @default(false)
+  custoMoedas Int?
+
   metaJson Json?
   criadoEm DateTime @default(now())
 
@@ -242,10 +273,16 @@ model Mensagem {
   // ✅ cache de traduções
   traducoes MensagemTraducao[]
 
+  // ✅ NOVO: quem desbloqueou esta mídia
+  desbloqueios MidiaDesbloqueada[]
+
   @@index([conversaId])
   @@index([autorId])
   @@index([conversaId, criadoEm])
   @@index([idiomaOriginal])
+  // ✅ NOVO: filtros úteis
+  @@index([tipo])
+  @@index([bloqueada])
 }
 
 model MensagemTraducao {
@@ -259,6 +296,25 @@ model MensagemTraducao {
 
   @@unique([mensagemId, idioma])
   @@index([idioma])
+  @@index([mensagemId])
+}
+
+/**
+ * ✅ NOVO: registra desbloqueio por usuário
+ * - garante que cada usuário desbloqueia uma mensagem 1 vez
+ * - serve para liberar a mídia original (foto) via endpoint seguro
+ */
+model MidiaDesbloqueada {
+  id         String   @id @default(cuid())
+  mensagemId String
+  usuarioId  String
+  criadoEm   DateTime @default(now())
+
+  mensagem Mensagem @relation(fields: [mensagemId], references: [id], onDelete: Cascade)
+  usuario  Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([mensagemId, usuarioId])
+  @@index([usuarioId, criadoEm])
   @@index([mensagemId])
 }
 

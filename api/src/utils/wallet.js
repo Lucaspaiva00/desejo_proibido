@@ -109,20 +109,18 @@ export async function debitWallet(userId, amount, meta = {}) {
       throw err;
     }
 
-    // ✅ decrement seguro
     const updated = await tx.wallet.update({
       where: { userId },
       data: { saldoCreditos: { decrement: valor } },
       select: { saldoCreditos: true },
     });
 
-    // ✅ WalletTx conforme schema
     await tx.walletTx.create({
       data: {
         userId,
         tipo: "DEBIT",
         origem: meta.origem || "OUTRO",
-        valor: valor,                 // ✅ campo certo
+        valor: valor,
         refId: meta.refId || null,
       },
     });
