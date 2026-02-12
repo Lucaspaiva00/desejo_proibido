@@ -1,8 +1,9 @@
 /* =========================================================
-   conversas.css — CHAT PREMIUM (v2)
+   conversas.css — CHAT PREMIUM (v3 FINAL)
    ✅ scroll interno no chat (#msgs/.msgs)
    ✅ scroll interno na lista (#lista/.list)
-   ✅ presentes em estilo "sticker premium" (emoji)
+   ✅ presentes em estilo "STICKER 3D" (emoji, sem mexer no banco)
+   ✅ override do inline CSS do HTML (.bubble.gift com !important)
 ========================================================= */
 
 /* Base layout */
@@ -112,6 +113,8 @@
 
     height: calc(100dvh - 230px);
     min-height: 520px;
+
+    /* ✅ obrigatório */
     min-height: 0;
 }
 
@@ -181,13 +184,16 @@
 }
 
 /* =========================================================
-   MENSAGENS
+   MENSAGENS (scroll aqui)
 ========================================================= */
 .msgs,
 #msgs {
     padding: 14px;
+
     overflow: auto;
     flex: 1;
+
+    /* ✅ obrigatório */
     min-height: 0;
 
     overscroll-behavior: contain;
@@ -232,82 +238,112 @@
 }
 
 /* =========================================================
-   ✅ PRESENTE — "STICKER PREMIUM" (SEM IMAGEM, SÓ EMOJI)
-   Objetivo: parecer figurinha, não mensagem.
+   ✅ PRESENTE — STICKER 3D PREMIUM (emoji)
+   - MATA a borda preta
+   - card 3D + highlight + inset
+   - emoji com profundidade
+   - override do inline do HTML (tem !important lá)
 ========================================================= */
-
-/* remove cara de "mensagem" e vira sticker */
 .bubble.gift {
-    padding: 10px 10px 8px;
-    border-radius: 22px;
-    border: 1px solid rgba(255, 255, 255, .10);
+    position: relative !important;
+    overflow: hidden !important;
 
-    /* glass + luz */
+    /* remove borda chapada */
+    border: 0 !important;
+
+    /* vidro premium */
     background:
-        radial-gradient(140px 90px at 25% 20%, rgba(255, 255, 255, .12), transparent 62%),
-        radial-gradient(220px 160px at 80% 0%, rgba(255, 80, 80, .14), transparent 58%),
-        linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .025));
+        radial-gradient(160px 110px at 25% 18%, rgba(255, 255, 255, .16), transparent 62%),
+        radial-gradient(220px 160px at 85% 0%, rgba(255, 80, 80, .16), transparent 58%),
+        linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(0, 0, 0, .22)) !important;
 
     box-shadow:
-        0 18px 45px rgba(0, 0, 0, .55),
-        inset 0 1px 0 rgba(255, 255, 255, .12);
+        0 26px 60px rgba(0, 0, 0, .62),
+        0 2px 0 rgba(255, 255, 255, .06) inset,
+        0 -12px 30px rgba(0, 0, 0, .35) inset !important;
 
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    border-radius: 26px !important;
+
+    backdrop-filter: blur(12px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
+
+    transform: perspective(900px) rotateX(6deg) !important;
 }
 
-/* presente do "me" ganha um accent mais bonito */
-.msgRow.me .bubble.gift {
-    border-color: rgba(255, 80, 80, .22);
-    box-shadow:
-        0 18px 45px rgba(0, 0, 0, .55),
-        0 0 0 1px rgba(255, 80, 80, .10) inset,
-        inset 0 1px 0 rgba(255, 255, 255, .10);
+/* highlight / vinheta */
+.bubble.gift::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, 0) 40%),
+        radial-gradient(120% 90% at 50% 0%, rgba(255, 255, 255, .20), transparent 55%),
+        radial-gradient(120% 120% at 50% 120%, rgba(0, 0, 0, .28), transparent 55%);
+    opacity: .95;
+    pointer-events: none;
+}
+
+/* bisel interno (sem “borda preta”) */
+.bubble.gift::after {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    border-radius: inherit;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .10), rgba(0, 0, 0, .18));
+    opacity: .35;
+    pointer-events: none;
 }
 
 /* layout interno */
 .bubble.gift .giftBig {
+    position: relative;
+    z-index: 1;
+    padding: 12px 12px 10px !important;
     display: grid;
     place-items: center;
-    gap: 8px;
-    padding: 6px 8px 4px;
+    gap: 10px !important;
     text-align: center;
 }
 
-/* emoji: profundidade real */
+/* emoji 3D */
 .bubble.gift .giftEmoji {
-    font-size: 96px;
-    /* tamanho desktop */
-    line-height: 1;
-    display: inline-block;
-    transform: translateZ(0) rotate(-2deg);
+    font-size: 104px !important;
+    line-height: 1 !important;
+    display: inline-block !important;
+
+    transform: translateZ(0) rotate(-4deg) !important;
 
     filter:
-        drop-shadow(0 14px 26px rgba(0, 0, 0, .60)) drop-shadow(0 2px 0 rgba(255, 255, 255, .10)) drop-shadow(0 0 18px rgba(255, 80, 80, .18));
+        drop-shadow(0 26px 26px rgba(0, 0, 0, .55)) drop-shadow(0 10px 10px rgba(0, 0, 0, .35)) drop-shadow(0 2px 0 rgba(255, 255, 255, .10)) drop-shadow(0 0 22px rgba(255, 80, 80, .18)) !important;
 }
 
-/* label: minimal e elegante */
+/* label premium */
 .bubble.gift .giftLabel {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    position: relative;
+    z-index: 1;
 
-    padding: 4px 10px;
-    border-radius: 999px;
-    font-size: 11px;
-    letter-spacing: .25px;
-    text-transform: none;
+    border: 0 !important;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, .12), rgba(0, 0, 0, .28)) !important;
 
-    border: 1px solid rgba(255, 255, 255, .12);
-    background: rgba(0, 0, 0, .25);
-    opacity: .90;
+    box-shadow:
+        0 10px 22px rgba(0, 0, 0, .35),
+        0 1px 0 rgba(255, 255, 255, .10) inset !important;
+
+    padding: 6px 12px !important;
+    border-radius: 999px !important;
+    font-size: 12px !important;
+    opacity: .92 !important;
 }
 
-/* meta central e discreta */
+/* data central e discreta */
 .bubble.gift .meta {
-    text-align: center;
-    margin-top: 10px;
-    opacity: .60;
+    position: relative;
+    z-index: 1;
+    opacity: .55 !important;
+    text-align: center !important;
+    margin-top: 10px !important;
 }
 
 /* =========================================================
@@ -470,7 +506,7 @@
     }
 
     .bubble.gift .giftEmoji {
-        font-size: 84px;
+        font-size: 88px !important;
     }
 }
 
@@ -508,7 +544,11 @@
         flex: 0 0 auto !important;
     }
 
+    .bubble.gift {
+        transform: perspective(900px) rotateX(5deg) !important;
+    }
+
     .bubble.gift .giftEmoji {
-        font-size: 74px;
+        font-size: 76px !important;
     }
 }
