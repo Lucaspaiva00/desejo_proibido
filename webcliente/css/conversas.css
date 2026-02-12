@@ -1,8 +1,8 @@
 /* =========================================================
-   conversas.css — CHAT PREMIUM
+   conversas.css — CHAT PREMIUM (v2)
    ✅ scroll interno no chat (#msgs/.msgs)
    ✅ scroll interno na lista (#lista/.list)
-   ✅ min-height:0 (obrigatório em flex)
+   ✅ presentes em estilo "sticker premium" (emoji)
 ========================================================= */
 
 /* Base layout */
@@ -25,9 +25,9 @@
     overflow: hidden;
     box-shadow: 0 18px 80px rgba(0, 0, 0, .35);
     min-width: 0;
-    /* ✅ evita overflow horizontal */
 }
 
+/* Header */
 .panel-header {
     padding: 12px;
     border-bottom: 1px solid rgba(255, 255, 255, .08);
@@ -49,7 +49,7 @@
 }
 
 /* =========================================================
-   LISTA DE CONVERSAS (pega class OU id)
+   LISTA DE CONVERSAS
 ========================================================= */
 .list,
 #lista {
@@ -58,11 +58,9 @@
     flex-direction: column;
     gap: 10px;
 
-    /* ✅ scroll interno da lista */
     max-height: calc(100dvh - 230px);
     overflow: auto;
 
-    /* ✅ melhora rolagem */
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
 }
@@ -112,11 +110,8 @@
     display: flex;
     flex-direction: column;
 
-    /* ✅ altura do painel pra sobrar espaço pro scroll interno */
     height: calc(100dvh - 230px);
     min-height: 520px;
-
-    /* ✅ necessário pro overflow interno funcionar */
     min-height: 0;
 }
 
@@ -186,18 +181,13 @@
 }
 
 /* =========================================================
-   MENSAGENS (pega class OU id)
-   ✅ aqui é onde o scroll do chat acontece
+   MENSAGENS
 ========================================================= */
 .msgs,
 #msgs {
     padding: 14px;
-
-    /* ✅ scroll interno REAL */
     overflow: auto;
     flex: 1;
-
-    /* ✅ obrigatório em flex pra não “empurrar” */
     min-height: 0;
 
     overscroll-behavior: contain;
@@ -242,74 +232,87 @@
 }
 
 /* =========================================================
-   ✅ PRESENTE PREMIUM (SEM IMAGEM — SÓ EMOJI)
-   - aplicado quando a mensagem tem .bubble.gift e conteudo .giftBig
+   ✅ PRESENTE — "STICKER PREMIUM" (SEM IMAGEM, SÓ EMOJI)
+   Objetivo: parecer figurinha, não mensagem.
 ========================================================= */
 
-/* bolha do presente vira um “card/sticker” premium */
+/* remove cara de "mensagem" e vira sticker */
 .bubble.gift {
-    padding: 12px 14px 10px;
-    border-radius: 18px;
-    /* border: 1px solid rgba(255, 255, 255, .14); */
+    padding: 10px 10px 8px;
+    border-radius: 22px;
+    border: 1px solid rgba(255, 255, 255, .10);
 
-    /* background:
-        radial-gradient(140px 90px at 30% 20%, rgba(255, 255, 255, .10), transparent 60%),
-        radial-gradient(160px 120px at 80% 10%, rgba(255, 80, 80, .12), transparent 55%),
-        linear-gradient(180deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .03));
+    /* glass + luz */
+    background:
+        radial-gradient(140px 90px at 25% 20%, rgba(255, 255, 255, .12), transparent 62%),
+        radial-gradient(220px 160px at 80% 0%, rgba(255, 80, 80, .14), transparent 58%),
+        linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .025));
 
     box-shadow:
-        0 14px 40px rgba(0, 0, 0, .48),
-        inset 0 1px 0 rgba(255, 255, 255, .10); */
+        0 18px 45px rgba(0, 0, 0, .55),
+        inset 0 1px 0 rgba(255, 255, 255, .12);
+
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
 }
 
-/* container do presente */
+/* presente do "me" ganha um accent mais bonito */
+.msgRow.me .bubble.gift {
+    border-color: rgba(255, 80, 80, .22);
+    box-shadow:
+        0 18px 45px rgba(0, 0, 0, .55),
+        0 0 0 1px rgba(255, 80, 80, .10) inset,
+        inset 0 1px 0 rgba(255, 255, 255, .10);
+}
+
+/* layout interno */
 .bubble.gift .giftBig {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    display: grid;
+    place-items: center;
     gap: 8px;
-    padding: 6px 4px;
+    padding: 6px 8px 4px;
+    text-align: center;
 }
 
-/* emoji com “volume” e brilho */
+/* emoji: profundidade real */
 .bubble.gift .giftEmoji {
-    font-size: 88px;
-    /* <-- tamanho principal */
+    font-size: 96px;
+    /* tamanho desktop */
     line-height: 1;
     display: inline-block;
-    transform: rotate(-2deg) translateZ(0);
+    transform: translateZ(0) rotate(-2deg);
 
     filter:
-        drop-shadow(0 10px 18px rgba(0, 0, 0, .55)) drop-shadow(0 0 18px rgba(255, 80, 80, .22));
-
-    text-shadow:
-        0 2px 0 rgba(255, 255, 255, .08),
-        0 10px 22px rgba(0, 0, 0, .45);
+        drop-shadow(0 14px 26px rgba(0, 0, 0, .60)) drop-shadow(0 2px 0 rgba(255, 255, 255, .10)) drop-shadow(0 0 18px rgba(255, 80, 80, .18));
 }
 
-/* label vira pill premium */
+/* label: minimal e elegante */
 .bubble.gift .giftLabel {
-    font-size: 12px;
-    letter-spacing: .2px;
-    opacity: .88;
-    text-align: center;
-    line-height: 1.2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 
     padding: 4px 10px;
     border-radius: 999px;
+    font-size: 11px;
+    letter-spacing: .25px;
+    text-transform: none;
+
     border: 1px solid rgba(255, 255, 255, .12);
-    background: rgba(255, 255, 255, .06);
+    background: rgba(0, 0, 0, .25);
+    opacity: .90;
 }
 
-/* meta mais clean no presente */
+/* meta central e discreta */
 .bubble.gift .meta {
     text-align: center;
-    margin-top: 8px;
-    opacity: .65;
+    margin-top: 10px;
+    opacity: .60;
 }
 
-/* Composer */
+/* =========================================================
+   Composer
+========================================================= */
 .composer {
     padding: 12px;
     border-top: 1px solid rgba(255, 255, 255, .08);
@@ -466,9 +469,8 @@
         font-size: 34px;
     }
 
-    /* em telas menores, reduz o emoji gigante */
     .bubble.gift .giftEmoji {
-        font-size: 74px;
+        font-size: 84px;
     }
 }
 
@@ -506,8 +508,7 @@
         flex: 0 0 auto !important;
     }
 
-    /* mobile ainda menor */
     .bubble.gift .giftEmoji {
-        font-size: 66px;
+        font-size: 74px;
     }
 }
