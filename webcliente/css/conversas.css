@@ -1,3 +1,5 @@
+/* public/css/conversas.css */
+
 /* =========================================================
    conversas.css — CHAT PREMIUM (v3 FINAL)
    ✅ scroll interno no chat (#msgs/.msgs)
@@ -239,19 +241,13 @@
 
 /* =========================================================
    ✅ PRESENTE — STICKER 3D PREMIUM (emoji)
-   - MATA a borda preta
-   - card 3D + highlight + inset
-   - emoji com profundidade
-   - override do inline do HTML (tem !important lá)
 ========================================================= */
 .bubble.gift {
     position: relative !important;
     overflow: hidden !important;
 
-    /* remove borda chapada */
     border: 0 !important;
 
-    /* vidro premium */
     background:
         radial-gradient(160px 110px at 25% 18%, rgba(255, 255, 255, .16), transparent 62%),
         radial-gradient(220px 160px at 85% 0%, rgba(255, 80, 80, .16), transparent 58%),
@@ -262,15 +258,12 @@
         0 2px 0 rgba(255, 255, 255, .06) inset,
         0 -12px 30px rgba(0, 0, 0, .35) inset !important;
 
-    /* border-radius: 26px !important; */
-
     backdrop-filter: blur(12px) saturate(140%) !important;
     -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
 
     transform: perspective(900px) rotateX(6deg) !important;
 }
 
-/* highlight / vinheta */
 .bubble.gift::before {
     content: "";
     position: absolute;
@@ -284,7 +277,6 @@
     pointer-events: none;
 }
 
-/* bisel interno (sem “borda preta”) */
 .bubble.gift::after {
     content: "";
     position: absolute;
@@ -295,7 +287,6 @@
     pointer-events: none;
 }
 
-/* layout interno */
 .bubble.gift .giftBig {
     position: relative;
     z-index: 1;
@@ -306,7 +297,6 @@
     text-align: center;
 }
 
-/* emoji 3D */
 .bubble.gift .giftEmoji {
     font-size: 104px !important;
     line-height: 1 !important;
@@ -318,7 +308,6 @@
         drop-shadow(0 26px 26px rgba(255, 255, 255, 0.55)) drop-shadow(0 10px 10px rgba(0, 0, 0, .35)) drop-shadow(0 2px 0 rgba(255, 255, 255, .10)) drop-shadow(0 0 22px rgba(255, 80, 80, .18)) !important;
 }
 
-/* label premium */
 .bubble.gift .giftLabel {
     position: relative;
     z-index: 1;
@@ -337,7 +326,6 @@
     opacity: .92 !important;
 }
 
-/* data central e discreta */
 .bubble.gift .meta {
     position: relative;
     z-index: 1;
@@ -388,7 +376,7 @@
     color: #ff6b6b;
 }
 
-/* ===== HERO PREMIUM (título grande) ===== */
+/* ===== HERO PREMIUM ===== */
 .headRow-premium {
     display: flex;
     align-items: flex-end;
@@ -510,7 +498,6 @@
     }
 }
 
-/* ===== FIX MOBILE: garantir topo e botões ===== */
 @media (max-width: 520px) {
     .chat-top {
         flex-direction: column !important;

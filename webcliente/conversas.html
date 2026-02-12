@@ -1,3 +1,4 @@
+<!-- public/conversas.html -->
 <!doctype html>
 <html lang="pt-br">
 
@@ -16,7 +17,6 @@
       filter: grayscale(.2);
     }
 
-    /* (corrigido: você tinha duplicado .lockedAction e sobrescrevia tudo) */
     .lockedAction::after {
       content: " 🔒";
     }
@@ -388,7 +388,7 @@
       }
     }
 
-    /* ===== FIX MOBILE: garantir que 📞 e 🎁 apareçam ===== */
+    /* ===== FIX MOBILE: garantir 📞 e 🎁 apareçam ===== */
     @media (max-width: 520px) {
       .chat-top {
         flex-direction: column !important;
@@ -433,10 +433,8 @@
     }
 
     /* ==========================================================
-       ✅ MELHORIA PRINCIPAL: SCROLL INTERNO DO CHAT (#msgs)
+       ✅ SCROLL INTERNO DO CHAT (#msgs)
        ========================================================== */
-
-    /* garante que tudo consiga “encolher” dentro do flex/grid */
     .chat-layout,
     .panel,
     .panel.right,
@@ -444,13 +442,11 @@
       min-height: 0;
     }
 
-    /* painel do chat vira coluna */
     .panel.right.chat {
       display: flex;
       flex-direction: column;
     }
 
-    /* topo e composer não crescem */
     .chat-top {
       flex: 0 0 auto;
     }
@@ -459,18 +455,15 @@
       flex: 0 0 auto;
     }
 
-    /* ✅ mensagens crescem e têm scroll */
     #msgs.msgs {
       flex: 1 1 auto;
       min-height: 0;
-      /* ESSENCIAL */
       overflow-y: auto;
       overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
       scroll-behavior: smooth;
     }
 
-    /* composer “grudado” embaixo sem quebrar */
     .composer {
       position: sticky;
       bottom: 0;
@@ -681,7 +674,7 @@
   <script src="/socket.io/socket.io.js"></script>
 
   <!-- ✅ cache-bust -->
-  <script type="module" src="js/conversas.js?v=20260209-4"></script>
+  <script type="module" src="js/conversas.js?v=20260212-1"></script>
 
   <script>
     const navToggle = document.getElementById("navToggle");

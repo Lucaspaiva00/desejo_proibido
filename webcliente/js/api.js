@@ -25,7 +25,8 @@ function normalizePath(path) {
   // Se vier /conversas/:id (rota que NÃO existe no backend),
   // converte para /conversas/:id/status (rota que existe)
   if (path.startsWith("/conversas/")) {
-    const parts = path.split("/").filter(Boolean); // ["conversas", ":id"]
+    const parts = path.split("/").filter(Boolean); // ["conversas", ":id", ...]
+    // somente /conversas/:id (2 partes) vira status
     if (parts.length === 2) {
       const id = parts[1];
       return `/conversas/${id}/status`;
@@ -44,13 +45,16 @@ async function apiFetch(path, options = {}) {
     throw new Error("apiFetch: path inválido → " + path);
   }
 
+  // ✅ normaliza se necessário
   path = normalizePath(path);
 
-  const method = (options.method || "GET").toUpperCase();
+  const method = String(options.method || "GET").toUpperCase();
   const body = options.body;
   const headers = options.headers || {};
 
   const token = getToken();
+
+  // ✅ permite passar URL absoluta no path
   const url = path.indexOf("http") === 0 ? path : API_BASE + path;
 
   const fetchOptions = {
@@ -75,10 +79,12 @@ async function apiFetch(path, options = {}) {
     }
   }
 
+  // ✅ Auth
   if (token) {
     fetchOptions.headers["Authorization"] = "Bearer " + token;
   }
 
+  // ✅ headers custom do caller por cima
   for (const h in headers) {
     fetchOptions.headers[h] = headers[h];
   }

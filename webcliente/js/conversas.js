@@ -59,14 +59,13 @@ const btnMute = document.getElementById("btnMute");
 const btnCam = document.getElementById("btnCam");
 
 // ==============================
-// Scroll helpers (NOVO)
+// Scroll helpers
 // ==============================
 function isNearBottom(el, threshold = 140) {
     if (!el) return true;
     const distance = el.scrollHeight - (el.scrollTop + el.clientHeight);
     return distance <= threshold;
 }
-
 function scrollToBottom(el) {
     if (!el) return;
     el.scrollTop = el.scrollHeight;
@@ -78,7 +77,6 @@ function scrollToBottom(el) {
 function safeJsonParse(v) {
     try { return JSON.parse(v); } catch { return null; }
 }
-
 function getAuth() {
     const keysUser = ["usuarioLogado", "usuario", "user", "authUser"];
     const keysToken = ["token", "authToken", "dp_token", "tokenJwt"];
@@ -111,7 +109,6 @@ function getAuth() {
 
     return { usuario, token };
 }
-
 const auth = getAuth();
 
 // garante token na chave "token"
@@ -160,20 +157,14 @@ if (!state.usuario && !localStorage.getItem("token")) {
 // Socket.IO
 // ==============================
 const token = localStorage.getItem("token") || "";
-const userId = state.usuario?.id;
 
 const socket = window.io({
-    auth: { token }, // ✅ não depende de state.usuario.id
+    auth: { token },
     transports: ["websocket"],
 });
-socket.on("connect", () => {
-    console.log("[socket] conectado", socket.id);
-});
 
-socket.on("connect_error", (err) => {
-    console.error("[socket] connect_error:", err?.message || err);
-});
-
+socket.on("connect", () => console.log("[socket] conectado", socket.id));
+socket.on("connect_error", (err) => console.error("[socket] connect_error:", err?.message || err));
 socket.onAny((event, ...args) => {
     if (String(event).startsWith("call:")) console.log("[socket event]", event, args?.[0]);
 });
@@ -260,9 +251,7 @@ socket.on("call:declined", async () => {
 
 socket.on("call:ended", async (p) => {
     const motivo = p?.motivo || "FINALIZADA";
-    if (motivo === "SALDO_INSUFICIENTE") {
-        alert("Chamada encerrada: saldo insuficiente.");
-    }
+    if (motivo === "SALDO_INSUFICIENTE") alert("Chamada encerrada: saldo insuficiente.");
     await endCallLocal();
 });
 
@@ -324,7 +313,6 @@ function escapeHtml(s) {
 
 /**
  * ✅ Separa "🔥 Fogo" -> { emoji:"🔥", text:"Fogo" }
- * Usa Array.from pra funcionar melhor com emojis.
  */
 function splitEmojiAndText(nome) {
     const chars = Array.from(String(nome || "").trim());
@@ -360,13 +348,11 @@ function showCreditWall() {
     creditwall.classList.add("show");
     creditwall.setAttribute("aria-hidden", "false");
 }
-
 function hideCreditWall() {
     if (!creditwall) return;
     creditwall.classList.remove("show");
     creditwall.setAttribute("aria-hidden", "true");
 }
-
 function setCreditWallInfo({ custoCreditos, saldoCreditos }) {
     state.custoChat = Number(custoCreditos || 0);
     state.saldoCreditos = Number(saldoCreditos || 0);
@@ -381,10 +367,8 @@ function applyChatLockUI() {
         hideCreditWall();
         if (texto) texto.disabled = true;
         if (btnEnviar) btnEnviar.disabled = true;
-
         if (btnGift) btnGift.disabled = true;
         if (btnCall) btnCall.disabled = true;
-
         btnGift?.classList.remove("lockedAction");
         btnCall?.classList.remove("lockedAction");
         return;
@@ -442,13 +426,9 @@ function syncUsuarioPremium(isPremium, saldoCreditos = null) {
         const raw = localStorage.getItem("usuario");
         const fromStorage = raw ? JSON.parse(raw) : null;
 
-        // base SEMPRE vem do state (login/auth)
         const base = state.usuario || {};
-
-        // merge: storage complementa, mas não pode remover id/token
         const u = { ...(fromStorage || {}), ...(base || {}) };
 
-        // garante id/token
         if (!u.id && base.id) u.id = base.id;
         if (!u.token && base.token) u.token = base.token;
 
@@ -505,7 +485,6 @@ function isPremiumBlockedError(e) {
     const m = (e?.message || "").toLowerCase();
     return m.includes("premium") || m.includes("assin") || m.includes("pag");
 }
-
 function enforcePremiumFromError(e) {
     if (isPremiumBlockedError(e)) {
         if (paywall) {
@@ -559,11 +538,7 @@ function renderLista() {
 
     lista.innerHTML = items.map((c) => {
         const nome = c.outro?.perfil?.nome || c.outroNome || c.outro?.email || "Usuário";
-        const sub =
-            c.ultimaMensagem?.textoExibido ||
-            c.ultimaMensagem?.texto ||
-            c.ultimaMensagem ||
-            "";
+        const sub = c.ultimaMensagem?.textoExibido || c.ultimaMensagem?.texto || c.ultimaMensagem || "";
         const active = (state.conversaId === c.id) ? "active" : "";
         const lock = c.chatLiberado ? "" : " 🔒";
 
@@ -683,21 +658,18 @@ async function carregarMensagens({ silent = false } = {}) {
     try {
         if (!silent) chatStatus.textContent = "Carregando...";
 
-        const shouldStick = isNearBottom(msgs); // ✅ NOVO
+        const shouldStick = isNearBottom(msgs);
 
         const data = await apiFetch(API.mensagensDaConversa(state.conversaId));
 
         let items = [];
-        if (Array.isArray(data)) {
-            items = data;
-        } else if (data?.mensagens && Array.isArray(data.mensagens)) {
+        if (Array.isArray(data)) items = data;
+        else if (data?.mensagens && Array.isArray(data.mensagens)) {
             items = data.mensagens;
             if (typeof data.chatLiberado === "boolean") state.chatLiberado = data.chatLiberado;
-        } else {
-            items = (data?.data && Array.isArray(data.data)) ? data.data : [];
-        }
+        } else items = (data?.data && Array.isArray(data.data)) ? data.data : [];
 
-        renderMensagens(items, { stickToBottom: shouldStick }); // ✅ NOVO
+        renderMensagens(items, { stickToBottom: shouldStick });
 
         if (!silent) chatStatus.textContent = "";
 
@@ -735,11 +707,11 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
             const { emoji, text } = splitEmojiAndText(nome);
 
             conteudo = `
-              <div class="giftBig">
-                <div class="giftEmoji">${escapeHtml(emoji)}</div>
-                ${text ? `<div class="giftLabel">${escapeHtml(text)}</div>` : ""}
-              </div>
-            `;
+        <div class="giftBig">
+          <div class="giftEmoji">${escapeHtml(emoji)}</div>
+          ${text ? `<div class="giftLabel">${escapeHtml(text)}</div>` : ""}
+        </div>
+      `;
         } else {
             const textToShow = m.textoExibido ?? m.texto ?? "";
             conteudo = `<div>${escapeHtml(textToShow)}</div>`;
@@ -755,7 +727,6 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
     `;
     }).join("");
 
-    // ✅ só desce se o usuário já estava no final
     if (stickToBottom) scrollToBottom(msgs);
 }
 
@@ -901,7 +872,6 @@ function openCallOverlay(title, sub) {
     if (callTitle) callTitle.textContent = title || "📹 Videochamada";
     if (callSub) callSub.textContent = sub || "Conectando…";
 }
-
 function closeCallOverlay() {
     if (!callOverlay) return;
     callOverlay.classList.remove("show");
