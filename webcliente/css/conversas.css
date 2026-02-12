@@ -252,14 +252,14 @@
     border-radius: 18px;
     /* border: 1px solid rgba(255, 255, 255, .14); */
 
-    background:
+    /* background:
         radial-gradient(140px 90px at 30% 20%, rgba(255, 255, 255, .10), transparent 60%),
         radial-gradient(160px 120px at 80% 10%, rgba(255, 80, 80, .12), transparent 55%),
         linear-gradient(180deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .03));
 
     box-shadow:
         0 14px 40px rgba(0, 0, 0, .48),
-        inset 0 1px 0 rgba(255, 255, 255, .10);
+        inset 0 1px 0 rgba(255, 255, 255, .10); */
 }
 
 /* container do presente */
