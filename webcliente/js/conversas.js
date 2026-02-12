@@ -177,7 +177,7 @@ const token = localStorage.getItem("token") || "";
 const socket = io({
     auth: { token },
     transports: ["websocket"],
-    path: "/api/socket.io",
+    path: "/socket.io",
 });
 
 
