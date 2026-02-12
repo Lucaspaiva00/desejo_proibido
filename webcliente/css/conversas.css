@@ -242,31 +242,71 @@
 }
 
 /* =========================================================
-   ✅ PRESENTE "FIGURINHA" (emoji grande no chat)
+   ✅ PRESENTE PREMIUM (SEM IMAGEM — SÓ EMOJI)
    - aplicado quando a mensagem tem .bubble.gift e conteudo .giftBig
 ========================================================= */
+
+/* bolha do presente vira um “card/sticker” premium */
+.bubble.gift {
+    padding: 12px 14px 10px;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, .14);
+
+    background:
+        radial-gradient(140px 90px at 30% 20%, rgba(255, 255, 255, .10), transparent 60%),
+        radial-gradient(160px 120px at 80% 10%, rgba(255, 80, 80, .12), transparent 55%),
+        linear-gradient(180deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .03));
+
+    box-shadow:
+        0 14px 40px rgba(0, 0, 0, .48),
+        inset 0 1px 0 rgba(255, 255, 255, .10);
+}
+
+/* container do presente */
 .bubble.gift .giftBig {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    padding: 4px 2px;
+    gap: 8px;
+    padding: 6px 4px;
 }
 
+/* emoji com “volume” e brilho */
 .bubble.gift .giftEmoji {
-    font-size: 72px;
-    /* <-- controla o tamanho do emoji */
+    font-size: 88px;
+    /* <-- tamanho principal */
     line-height: 1;
     display: inline-block;
-    transform: translateZ(0);
+    transform: rotate(-2deg) translateZ(0);
+
+    filter:
+        drop-shadow(0 10px 18px rgba(0, 0, 0, .55)) drop-shadow(0 0 18px rgba(255, 80, 80, .22));
+
+    text-shadow:
+        0 2px 0 rgba(255, 255, 255, .08),
+        0 10px 22px rgba(0, 0, 0, .45);
 }
 
+/* label vira pill premium */
 .bubble.gift .giftLabel {
-    font-size: 13px;
-    opacity: .85;
+    font-size: 12px;
+    letter-spacing: .2px;
+    opacity: .88;
     text-align: center;
     line-height: 1.2;
+
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, .12);
+    background: rgba(255, 255, 255, .06);
+}
+
+/* meta mais clean no presente */
+.bubble.gift .meta {
+    text-align: center;
+    margin-top: 8px;
+    opacity: .65;
 }
 
 /* Composer */
@@ -428,7 +468,7 @@
 
     /* em telas menores, reduz o emoji gigante */
     .bubble.gift .giftEmoji {
-        font-size: 64px;
+        font-size: 74px;
     }
 }
 
@@ -468,6 +508,6 @@
 
     /* mobile ainda menor */
     .bubble.gift .giftEmoji {
-        font-size: 58px;
+        font-size: 66px;
     }
 }
