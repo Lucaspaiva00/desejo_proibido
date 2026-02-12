@@ -262,7 +262,7 @@
         0 2px 0 rgba(255, 255, 255, .06) inset,
         0 -12px 30px rgba(0, 0, 0, .35) inset !important;
 
-    border-radius: 26px !important;
+    /* border-radius: 26px !important; */
 
     backdrop-filter: blur(12px) saturate(140%) !important;
     -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
@@ -315,7 +315,7 @@
     transform: translateZ(0) rotate(-4deg) !important;
 
     filter:
-        drop-shadow(0 26px 26px rgba(0, 0, 0, .55)) drop-shadow(0 10px 10px rgba(0, 0, 0, .35)) drop-shadow(0 2px 0 rgba(255, 255, 255, .10)) drop-shadow(0 0 22px rgba(255, 80, 80, .18)) !important;
+        drop-shadow(0 26px 26px rgba(255, 255, 255, 0.55)) drop-shadow(0 10px 10px rgba(0, 0, 0, .35)) drop-shadow(0 2px 0 rgba(255, 255, 255, .10)) drop-shadow(0 0 22px rgba(255, 80, 80, .18)) !important;
 }
 
 /* label premium */
