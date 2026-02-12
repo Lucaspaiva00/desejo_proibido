@@ -746,16 +746,17 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
         </div>
       `;
         } else if (tipo === "FOTO") {
-            const url = m.midiaUrl || meta.url || "";
+            const url = m.mediaPath || "";
             conteudo = url
                 ? `<img src="${escapeHtml(url)}" alt="foto" style="max-width:260px;border-radius:14px;display:block" />`
                 : `<div class="muted">📷 Foto indisponível</div>`;
         } else if (tipo === "AUDIO") {
-            const url = m.midiaUrl || meta.url || "";
+            const url = m.mediaPath || "";
             conteudo = url
                 ? `<audio controls src="${escapeHtml(url)}" style="width:min(320px,100%)"></audio>`
                 : `<div class="muted">🎤 Áudio indisponível</div>`;
-        } else {
+        }
+        else {
             const textToShow = m.textoExibido ?? m.texto ?? "";
             conteudo = `<div>${escapeHtml(textToShow)}</div>`;
         }
