@@ -1,8 +1,10 @@
+// src/routes/busca.routes.js
 import { Router } from "express";
 import { auth } from "../middlewares/auth.middleware.js";
 import { buscar, preferencias, salvarPreferencias } from "../controllers/busca.controller.js";
 
 const router = Router();
+
 router.use(auth);
 
 // GET /busca?...

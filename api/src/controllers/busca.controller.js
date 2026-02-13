@@ -1,3 +1,4 @@
+// src/controllers/busca.controller.js
 import { prisma } from "../prisma.js";
 
 function toStr(v) {
@@ -45,6 +46,23 @@ function orderByFrom(ordenarPor) {
 export async function buscar(req, res) {
     try {
         const userId = req.usuario.id;
+
+        // =========================
+        // 0) NORMALIZA FLAGS (evita NULL matar o feed)
+        // =========================
+        // se no seu banco tiver usuários antigos com ativo/isInvisivel NULL
+        // isso aqui impede que sumam do feed por comparação booleana
+        await prisma.usuario.updateMany({
+            where: { ativo: null },
+            data: { ativo: true },
+        });
+
+        await prisma.usuario.updateMany({
+            where: { isInvisivel: null },
+            data: { isInvisivel: false },
+        });
+
+        // libera invisível expirado
         await prisma.usuario.updateMany({
             where: {
                 invisivelAte: { not: null, lte: new Date() },
@@ -53,11 +71,15 @@ export async function buscar(req, res) {
             data: { isInvisivel: false, invisivelAte: null },
         });
 
+        // expira boost
         await prisma.usuario.updateMany({
             where: { boostAte: { not: null, lte: new Date() } },
             data: { boostAte: null },
         });
 
+        // =========================
+        // 1) QUERY PARAMS
+        // =========================
         const q = toStr(req.query.q).trim();
         const cidade = toStr(req.query.cidade).trim();
         const estado = toStr(req.query.estado).trim().toUpperCase();
@@ -77,8 +99,6 @@ export async function buscar(req, res) {
             req.query.somenteVerificados === "on";
 
         const ordenarPor = toStr(req.query.ordenarPor || "recent");
-
-        // mantém seu parâmetro take
         const take = clamp(toInt(req.query.take, 50) ?? 50, 1, 100);
 
         const nascRange = buildNascimentoRange(
@@ -87,7 +107,7 @@ export async function buscar(req, res) {
         );
 
         // =========================
-        // 1) BLOQUEIOS (já existia)
+        // 2) EXCLUSÕES (bloqueio/curtida/skip/match)
         // =========================
         const bloqueios = await prisma.bloqueio.findMany({
             where: { OR: [{ deUsuarioId: userId }, { paraUsuarioId: userId }] },
@@ -100,25 +120,18 @@ export async function buscar(req, res) {
             if (b.paraUsuarioId === userId) idsBloqueados.add(b.deUsuarioId);
         }
 
-        // =========================
-        // 2) EXCLUSÕES QUE FALTAVAM
-        // =========================
-
-        // 2.1) curtidas enviadas (não repetir quem já curti)
         const curtidos = await prisma.curtida.findMany({
             where: { deUsuarioId: userId },
             select: { paraUsuarioId: true },
         });
         const idsCurtidos = new Set(curtidos.map((c) => c.paraUsuarioId));
 
-        // 2.2) skips enviados (não repetir quem já pulei)
         const pulados = await prisma.skip.findMany({
             where: { deUsuarioId: userId },
             select: { paraUsuarioId: true },
         });
         const idsPulados = new Set(pulados.map((s) => s.paraUsuarioId));
 
-        // 2.3) matches (A↔B) — esse é o seu bug
         const matches = await prisma.match.findMany({
             where: { OR: [{ usuarioAId: userId }, { usuarioBId: userId }] },
             select: { usuarioAId: true, usuarioBId: true },
@@ -127,7 +140,6 @@ export async function buscar(req, res) {
             matches.map((m) => (m.usuarioAId === userId ? m.usuarioBId : m.usuarioAId))
         );
 
-        // junta tudo
         const excluir = new Set([
             userId,
             ...idsBloqueados,
@@ -137,45 +149,51 @@ export async function buscar(req, res) {
         ]);
 
         // =========================
-        // 3) WHERE DA BUSCA (feed real)
+        // 3) PERFIL WHERE (só aplica se houver filtro de perfil)
+        //    <- ESSA era a causa principal do "data: []" quando usuários não tinham perfil.
+        // =========================
+        const perfilWhere = {
+            ...(q
+                ? {
+                    OR: [
+                        { nome: { contains: q, mode: "insensitive" } },
+                        { bio: { contains: q, mode: "insensitive" } },
+                    ],
+                }
+                : {}),
+
+            ...(cidade ? { cidade: { contains: cidade, mode: "insensitive" } } : {}),
+            ...(estado && estado.length === 2 ? { estado } : {}),
+
+            // cobre "QUALQUER" / "Qualquer"
+            ...(genero && genero.toLowerCase() !== "qualquer"
+                ? { genero: { equals: genero, mode: "insensitive" } }
+                : {}),
+
+            ...(somenteVerificados ? { verificado: true } : {}),
+
+            ...(nascRange
+                ? {
+                    nascimento: {
+                        ...(nascRange.gte ? { gte: nascRange.gte } : {}),
+                        ...(nascRange.lte ? { lte: nascRange.lte } : {}),
+                    },
+                }
+                : {}),
+        };
+
+        const temFiltroDePerfil = Object.keys(perfilWhere).length > 0;
+
+        // =========================
+        // 4) WHERE FINAL
         // =========================
         const where = {
+            // importante: não pode ser null
             ativo: true,
             isInvisivel: false,
             id: { notIn: [...excluir] },
 
-            perfil: {
-                is: {
-                    ...(q
-                        ? {
-                            OR: [
-                                { nome: { contains: q, mode: "insensitive" } },
-                                { bio: { contains: q, mode: "insensitive" } },
-                            ],
-                        }
-                        : {}),
-
-                    ...(cidade ? { cidade: { contains: cidade, mode: "insensitive" } } : {}),
-                    ...(estado && estado.length === 2 ? { estado } : {}),
-
-                    // seu front manda "QUALQUER" mas aqui você compara com "Qualquer"
-                    // vamos cobrir os dois
-                    ...(genero && genero.toLowerCase() !== "qualquer"
-                        ? { genero: { equals: genero, mode: "insensitive" } }
-                        : {}),
-
-                    ...(somenteVerificados ? { verificado: true } : {}),
-
-                    ...(nascRange
-                        ? {
-                            nascimento: {
-                                ...(nascRange.gte ? { gte: nascRange.gte } : {}),
-                                ...(nascRange.lte ? { lte: nascRange.lte } : {}),
-                            },
-                        }
-                        : {}),
-                },
-            },
+            ...(temFiltroDePerfil ? { perfil: { is: perfilWhere } } : {}),
 
             ...(somenteComFoto ? { fotos: { some: { principal: true } } } : {}),
         };
@@ -198,7 +216,7 @@ export async function buscar(req, res) {
             },
         });
 
-        // random no server (como você já fazia)
+        // random server-side
         if (!orderBy) {
             rows = rows
                 .map((x) => ({ x, r: Math.random() }))
@@ -209,7 +227,7 @@ export async function buscar(req, res) {
         const out = rows.map((u) => ({
             id: u.id,
             boostAte: u.boostAte,
-            perfil: u.perfil,
+            perfil: u.perfil || null,
             fotoPrincipal: u.fotos?.[0]?.url || null,
         }));
 
@@ -220,7 +238,8 @@ export async function buscar(req, res) {
     }
 }
 
-// Mantive como estava (se você tiver PreferenciaBusca de verdade, eu ajusto depois)
+// Preferências (do jeito que você deixou, mock)
+// Se você tiver tabela de preferências, eu adapto.
 export async function preferencias(req, res) {
     return res.json({
         q: "",
