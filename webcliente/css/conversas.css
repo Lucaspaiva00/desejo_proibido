@@ -243,7 +243,6 @@
 .bubble.gift {
     position: relative !important;
     overflow: hidden !important;
-
     border: 0 !important;
 
     background:
@@ -299,7 +298,6 @@
     font-size: 104px !important;
     line-height: 1 !important;
     display: inline-block !important;
-
     transform: translateZ(0) rotate(-4deg) !important;
 
     filter:
@@ -341,12 +339,6 @@
     display: flex;
     gap: 10px;
     align-items: flex-end;
-    position: sticky;
-    bottom: 0;
-    background: rgba(10, 10, 10, .92);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    z-index: 5;
 }
 
 #texto {
@@ -502,6 +494,7 @@
     }
 }
 
+/* ===== FIX MOBILE: garantir topo e botões ===== */
 @media (max-width: 520px) {
     .chat-top {
         flex-direction: column !important;

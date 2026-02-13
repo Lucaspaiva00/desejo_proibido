@@ -36,63 +36,76 @@ import { langMiddleware } from "./middlewares/lang.middleware.js";
 
 export const app = express();
 
+// proxies / nginx (recomendado)
+app.set("trust proxy", 1);
+
+// middlewares base
 app.use(helmet());
-app.use(cors());
-app.use(express.json());
+app.use(
+    cors({
+        origin: true, // ou ["https://desejoproibido.app"] se quiser travar
+        credentials: true,
+    })
+);
+app.use(express.json({ limit: "2mb" }));
 app.use(morgan("dev"));
 
-// static uploads (arquivos)
+// static uploads (GET /uploads/...)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 
-// router principal
-const api = Router();
+// router principal v1
+const v1 = Router();
 
-// auth primeiro
-api.use("/auth", authRoutes);
-
-// ✅ idioma para o resto do sistema
-api.use(langMiddleware);
-
-// ✅ ROTAS DE UPLOAD (multer) — TEM QUE SER /upload (singular)
-// Assim o front chama: /api/upload/foto e /api/upload/audio
-// uploads (rotas de upload - se existirem endpoints)
-api.use("/upload", uploadRoutes);   // ✅ compat com o front
-api.use("/uploads", uploadRoutes);  // ✅ mantém compat se algo usa plural
-
-
-// demais rotas
-api.use("/perfil", perfilRoutes);
-api.use("/fotos", fotoRoutes);
-api.use("/curtidas", curtidaRoutes);
-api.use("/matches", matchRoutes);
-api.use("/feed", feedRoutes);
-api.use("/conversas", conversaRoutes);
-api.use("/mensagens", mensagemRoutes);
-api.use("/skips", skipRoutes);
-api.use("/bloqueios", bloqueioRoutes);
-api.use("/denuncias", denunciaRoutes);
-api.use("/usuarios", usuarioRoutes);
-api.use("/termos", termosRoutes);
-api.use("/premium", premiumRoutes);
-api.use("/admin", adminRoutes);
-api.use("/presentes", presenteRoutes);
-api.use("/busca", buscaRoutes);
-
-// ✅ SOMENTE VIDEO
-api.use("/ligacoes/video", ligacaoVideoRoutes);
-
-api.use("/lives", livesRoutes);
-api.use("/carteira", carteiraRoutes);
-api.use("/creditos", creditosRoutes);
-
-// ✅ PAGAMENTOS
-api.use("/pagamentos", pagamentosRoutes);
-
-// health
+// health (SEM /api)
 app.get("/health", (req, res) => res.json({ ok: true }));
-app.get("/api/health", (req, res) => res.json({ ok: true }));
 
-// ✅ monta API só em /api (padrão)
-app.use("/api", api);
+// auth primeiro (sem idioma)
+v1.use("/auth", authRoutes);
+
+// idioma pro resto
+v1.use(langMiddleware);
+
+// demais rotas (APENAS UMA VEZ)
+v1.use("/perfil", perfilRoutes);
+v1.use("/fotos", fotoRoutes);
+v1.use("/curtidas", curtidaRoutes);
+v1.use("/matches", matchRoutes);
+v1.use("/feed", feedRoutes);
+
+v1.use("/conversas", conversaRoutes);
+v1.use("/mensagens", mensagemRoutes);
+
+v1.use("/skips", skipRoutes);
+v1.use("/bloqueios", bloqueioRoutes);
+v1.use("/denuncias", denunciaRoutes);
+v1.use("/usuarios", usuarioRoutes);
+v1.use("/termos", termosRoutes);
+
+v1.use("/premium", premiumRoutes);
+v1.use("/admin", adminRoutes);
+
+v1.use("/presentes", presenteRoutes);
+v1.use("/busca", buscaRoutes);
+
+// uploads (rotas de POST etc) - deixe sob /api/uploads
+v1.use("/uploads", uploadRoutes);
+
+// SOMENTE VIDEO
+v1.use("/ligacoes/video", ligacaoVideoRoutes);
+
+v1.use("/lives", livesRoutes);
+v1.use("/carteira", carteiraRoutes);
+v1.use("/creditos", creditosRoutes);
+
+// pagamentos
+v1.use("/pagamentos", pagamentosRoutes);
+
+// monta API (padronizado)
+app.use("/api", v1);
+app.use("/api/v1", v1);
+
+// health com /api
+app.get("/api/health", (req, res) => res.json({ ok: true }));
+app.get("/api/v1/health", (req, res) => res.json({ ok: true }));

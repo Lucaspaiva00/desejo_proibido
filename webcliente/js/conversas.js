@@ -1,19 +1,6 @@
 // public/js/conversas.js
 import { apiFetch, logout } from "./api.js";
 
-/**
- * ✅ AJUSTE AQUI SOMENTE SEU BACKEND FOR DIFERENTE
- * - Coloca a rota REAL do seu upload (foto e áudio).
- * - Ex: "/upload/imagem" ou "/upload/foto" etc.
- */
-const UPLOAD_FOTO_ENDPOINT = "/api/upload/foto";
-const UPLOAD_AUDIO_ENDPOINT = "/api/upload/audio";
-
-// ✅ endpoints REAIS do backend para CRIAR mensagens de mídia
-// (seu backend tem POST /mensagens/foto e POST /mensagens/audio)
-const ENVIAR_FOTO_ENDPOINT = "/mensagens/foto";
-const ENVIAR_AUDIO_ENDPOINT = "/mensagens/audio";
-
 const msg = document.getElementById("msg");
 
 document.getElementById("btnSair").onclick = logout;
@@ -37,11 +24,6 @@ const btnEnviar = document.getElementById("btnEnviar");
 const btnGift = document.getElementById("btnGift");
 const btnCall = document.getElementById("btnCall");
 const minutosPill = document.getElementById("minutosPill");
-
-// ✅ NOVOS: foto / áudio
-const btnFoto = document.getElementById("btnFoto");
-const inpFoto = document.getElementById("inpFoto");
-const btnAudio = document.getElementById("btnAudio");
 
 // botão comprar créditos no topo
 const btnComprarCreditosTopo = document.getElementById("btnComprarCreditosTopo");
@@ -95,6 +77,7 @@ function scrollToBottom(el) {
 function safeJsonParse(v) {
     try { return JSON.parse(v); } catch { return null; }
 }
+
 function getAuth() {
     const keysUser = ["usuarioLogado", "usuario", "user", "authUser"];
     const keysToken = ["token", "authToken", "dp_token", "tokenJwt"];
@@ -124,15 +107,17 @@ function getAuth() {
     }
 
     if (!token && usuario?.token) token = usuario.token;
+
     return { usuario, token };
 }
 
 const auth = getAuth();
+
+// garante token na chave "token"
 if (auth.token && !localStorage.getItem("token")) {
     localStorage.setItem("token", auth.token);
 }
 
-// Estado
 const state = {
     usuario: auth.usuario,
     premiumAtivo: false,
@@ -170,16 +155,18 @@ if (!state.usuario && !localStorage.getItem("token")) {
 }
 
 // ==============================
-// Socket.IO
+// ✅ Socket.IO (CORRIGIDO pro seu /api)
 // ==============================
 const token = localStorage.getItem("token") || "";
 
-const socket = io({
+// se você tá servindo o client por /api/socket.io/socket.io.js,
+// então o PATH do engine é /api/socket.io
+const socket = window.io({
+    path: "/api/socket.io",
     auth: { token },
-    transports: ["websocket"],
-    path: "/socket.io",
+    transports: ["websocket", "polling"], // ✅ fallback ajuda quando proxy bloqueia ws
+    withCredentials: true,
 });
-
 
 socket.on("connect", () => {
     console.log("[socket] conectado", socket.id);
@@ -200,7 +187,7 @@ socket.on("wallet:update", (p) => {
     if (saldoCreditosEl) saldoCreditosEl.textContent = `${saldo}`;
 });
 
-// ✅ READY -> caller só cria offer quando callee avisar
+// READY
 socket.on("call:ready", async ({ sessaoId }) => {
     if (!state.sessaoId || String(sessaoId) !== String(state.sessaoId)) return;
 
@@ -281,7 +268,7 @@ socket.on("call:ended", async (p) => {
     await endCallLocal();
 });
 
-// WebRTC signaling
+// signaling
 socket.on("call:offer", async ({ sdp, sessaoId }) => {
     try {
         if (sessaoId && state.sessaoId && sessaoId !== state.sessaoId) return;
@@ -302,7 +289,6 @@ socket.on("call:answer", async ({ sdp, sessaoId }) => {
     try {
         if (!state.pc) return;
         if (sessaoId && state.sessaoId && sessaoId !== state.sessaoId) return;
-
         await state.pc.setRemoteDescription(new RTCSessionDescription(sdp));
     } catch (e) {
         console.error("Erro ao receber answer:", e);
@@ -380,21 +366,15 @@ function setCreditWallInfo({ custoCreditos, saldoCreditos }) {
     if (unlockCost) unlockCost.textContent = `${state.custoChat} créditos`;
     if (saldoCreditosEl) saldoCreditosEl.textContent = `${state.saldoCreditos}`;
 }
-
 function applyChatLockUI() {
     const hasChat = !!state.conversaId;
 
     if (!hasChat) {
         hideCreditWall();
-
         if (texto) texto.disabled = true;
         if (btnEnviar) btnEnviar.disabled = true;
-        if (btnFoto) btnFoto.disabled = true;
-        if (btnAudio) btnAudio.disabled = true;
-
         if (btnGift) btnGift.disabled = true;
         if (btnCall) btnCall.disabled = true;
-
         btnGift?.classList.remove("lockedAction");
         btnCall?.classList.remove("lockedAction");
         return;
@@ -404,18 +384,12 @@ function applyChatLockUI() {
 
     if (!podeMensagens) {
         showCreditWall();
-
         if (texto) texto.disabled = true;
         if (btnEnviar) btnEnviar.disabled = true;
-        if (btnFoto) btnFoto.disabled = true;
-        if (btnAudio) btnAudio.disabled = true;
     } else {
         hideCreditWall();
-
         if (texto) texto.disabled = false;
         if (btnEnviar) btnEnviar.disabled = false;
-        if (btnFoto) btnFoto.disabled = false;
-        if (btnAudio) btnAudio.disabled = false;
     }
 
     if (btnGift) btnGift.disabled = false;
@@ -457,7 +431,6 @@ function syncUsuarioPremium(isPremium, saldoCreditos = null) {
     try {
         const raw = localStorage.getItem("usuario");
         const fromStorage = raw ? JSON.parse(raw) : null;
-
         const base = state.usuario || {};
         const u = { ...(fromStorage || {}), ...(base || {}) };
 
@@ -517,6 +490,7 @@ function isPremiumBlockedError(e) {
     const m = (e?.message || "").toLowerCase();
     return m.includes("premium") || m.includes("assin") || m.includes("pag");
 }
+
 function enforcePremiumFromError(e) {
     if (isPremiumBlockedError(e)) {
         if (paywall) {
@@ -528,12 +502,14 @@ function enforcePremiumFromError(e) {
     }
     return false;
 }
+
 function isChatLockedError(e) {
     const st = e?.status;
     if (st !== 402) return false;
     const code = e?.data?.code;
     return code === "CHAT_LOCKED";
 }
+
 function isContatoBloqueadoError(e) {
     const st = e?.status;
     if (st !== 400) return false;
@@ -568,7 +544,11 @@ function renderLista() {
 
     lista.innerHTML = items.map((c) => {
         const nome = c.outro?.perfil?.nome || c.outroNome || c.outro?.email || "Usuário";
-        const sub = c.ultimaMensagem?.textoExibido || c.ultimaMensagem?.texto || c.ultimaMensagem || "";
+        const sub =
+            c.ultimaMensagem?.textoExibido ||
+            c.ultimaMensagem?.texto ||
+            c.ultimaMensagem ||
+            "";
         const active = (state.conversaId === c.id) ? "active" : "";
         const lock = c.chatLiberado ? "" : " 🔒";
 
@@ -745,18 +725,7 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
           ${text ? `<div class="giftLabel">${escapeHtml(text)}</div>` : ""}
         </div>
       `;
-        } else if (tipo === "FOTO") {
-            const url = m.mediaPath || "";
-            conteudo = url
-                ? `<img src="${escapeHtml(url)}" alt="foto" style="max-width:260px;border-radius:14px;display:block" />`
-                : `<div class="muted">📷 Foto indisponível</div>`;
-        } else if (tipo === "AUDIO") {
-            const url = m.mediaPath || "";
-            conteudo = url
-                ? `<audio controls src="${escapeHtml(url)}" style="width:min(320px,100%)"></audio>`
-                : `<div class="muted">🎤 Áudio indisponível</div>`;
-        }
-        else {
+        } else {
             const textToShow = m.textoExibido ?? m.texto ?? "";
             conteudo = `<div>${escapeHtml(textToShow)}</div>`;
         }
@@ -790,7 +759,7 @@ async function enviarMensagem() {
     try {
         await apiFetch(API.enviarMensagem, {
             method: "POST",
-            body: { conversaId: state.conversaId, texto: t, tipo: "TEXTO" },
+            body: { conversaId: state.conversaId, texto: t },
         });
 
         await carregarMensagens();
@@ -821,144 +790,6 @@ texto?.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         enviarMensagem();
-    }
-});
-
-// ✅ FOTO: upload e envia como mensagem
-async function uploadArquivo(endpoint, fileOrBlob, filename = "file.bin") {
-    const fd = new FormData();
-    fd.append("file", fileOrBlob, filename);
-
-    const r = await fetch(endpoint, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: fd,
-    });
-
-    const data = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(data?.erro || data?.message || "Falha no upload");
-    if (!data.url) throw new Error("Upload ok, mas não retornou URL");
-    return data.url;
-}
-
-// ✅ FIX: manda mídia para os endpoints corretos do backend
-async function enviarMensagemMidia(tipo, url) {
-    if (!state.conversaId) throw new Error("Sem conversaId");
-
-    if (tipo === "FOTO") {
-        await apiFetch(ENVIAR_FOTO_ENDPOINT, {
-            method: "POST",
-            body: {
-                conversaId: state.conversaId,
-                mediaPath: url,      // ✅ backend espera mediaPath
-                thumbPath: "",       // opcional
-                custoMoedas: null,   // opcional (vai usar DEFAULT_FOTO_UNLOCK_COST)
-            },
-        });
-    } else if (tipo === "AUDIO") {
-        await apiFetch(ENVIAR_AUDIO_ENDPOINT, {
-            method: "POST",
-            body: {
-                conversaId: state.conversaId,
-                mediaPath: url,      // ✅ backend espera mediaPath
-                duracao: null,       // opcional
-            },
-        });
-    } else {
-        throw new Error("Tipo de mídia inválido: " + tipo);
-    }
-
-    await carregarMensagens();
-}
-
-btnFoto?.addEventListener("click", () => {
-    if (!state.conversaId) return;
-    if (!state.premiumAtivo && !state.chatLiberado) {
-        showCreditWall();
-        setMsg("Chat bloqueado. Libere com créditos.", "error");
-        return;
-    }
-    inpFoto?.click();
-});
-
-inpFoto?.addEventListener("change", async () => {
-    const file = inpFoto?.files?.[0];
-    if (!file) return;
-
-    try {
-        btnFoto.disabled = true;
-        setMsg("Enviando foto...", "muted");
-
-        const url = await uploadArquivo(UPLOAD_FOTO_ENDPOINT, file, file.name || "foto.jpg");
-        await enviarMensagemMidia("FOTO", url);
-
-        setMsg("", "muted");
-    } catch (e) {
-        console.error(e);
-        alert("Erro ao enviar foto: " + (e?.message || "erro"));
-    } finally {
-        btnFoto.disabled = false;
-        if (inpFoto) inpFoto.value = "";
-    }
-});
-
-// ✅ ÁUDIO: grava no browser e envia
-let rec = null;
-let recChunks = [];
-
-async function startRecording() {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-    recChunks = [];
-    rec = new MediaRecorder(stream);
-
-    rec.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) recChunks.push(e.data);
-    };
-
-    rec.onstop = async () => {
-        try {
-            setMsg("Enviando áudio...", "muted");
-
-            const blob = new Blob(recChunks, { type: "audio/webm" });
-            const url = await uploadArquivo(UPLOAD_AUDIO_ENDPOINT, blob, "audio.webm");
-
-            await enviarMensagemMidia("AUDIO", url);
-            setMsg("", "muted");
-        } catch (e) {
-            console.error(e);
-            alert("Erro ao enviar áudio: " + (e?.message || "erro"));
-        } finally {
-            try { rec?.stream?.getTracks()?.forEach(t => t.stop()); } catch { }
-            rec = null;
-            recChunks = [];
-            if (btnAudio) btnAudio.textContent = "🎤";
-        }
-    };
-
-    rec.start();
-}
-
-btnAudio?.addEventListener("click", async () => {
-    if (!state.conversaId) return;
-
-    if (!state.premiumAtivo && !state.chatLiberado) {
-        showCreditWall();
-        setMsg("Chat bloqueado. Libere com créditos.", "error");
-        return;
-    }
-
-    try {
-        if (!rec) {
-            if (btnAudio) btnAudio.textContent = "⏹️";
-            setMsg("Gravando… clique novamente para enviar", "muted");
-            await startRecording();
-        } else {
-            rec.stop();
-        }
-    } catch (e) {
-        alert("Não consegui acessar o microfone: " + (e?.message || "erro"));
-        if (btnAudio) btnAudio.textContent = "🎤";
     }
 });
 
@@ -1054,6 +885,7 @@ function openCallOverlay(title, sub) {
     if (callTitle) callTitle.textContent = title || "📹 Videochamada";
     if (callSub) callSub.textContent = sub || "Conectando…";
 }
+
 function closeCallOverlay() {
     if (!callOverlay) return;
     callOverlay.classList.remove("show");
@@ -1069,6 +901,7 @@ btnMute?.addEventListener("click", () => {
     if (state.localStream) state.localStream.getAudioTracks().forEach(t => t.enabled = state.micOn);
     btnMute.textContent = state.micOn ? "🎙️ Mudo" : "🔇 Sem mic";
 });
+
 btnCam?.addEventListener("click", () => {
     state.camOn = !state.camOn;
     if (state.localStream) state.localStream.getVideoTracks().forEach(t => t.enabled = state.camOn);
@@ -1078,6 +911,7 @@ btnCam?.addEventListener("click", () => {
 async function startMedia() {
     if (state.localStream) return;
     state.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+
     if (localVideo) {
         localVideo.srcObject = state.localStream;
         localVideo.muted = true;
@@ -1086,6 +920,7 @@ async function startMedia() {
         await localVideo.play?.().catch(() => { });
     }
 }
+
 function getIceServers() {
     const stun = { urls: "stun:stun.l.google.com:19302" };
     const turn = {
@@ -1098,6 +933,7 @@ function getIceServers() {
     };
     return [stun, turn];
 }
+
 async function createPeerIfNeeded() {
     if (state.pc) return;
 
@@ -1147,6 +983,7 @@ async function ensurePeerAndMedia() {
     await startMedia();
     await createPeerIfNeeded();
 }
+
 function joinRoomNow() {
     if (!state.roomId) return;
     console.log("[socket] joinRoom", state.roomId);
@@ -1169,6 +1006,7 @@ async function createOfferOnce() {
     state.callerOfferSent = true;
     console.log("[webrtc] offer enviado");
 }
+
 function scheduleOfferRetry() {
     clearOfferRetry();
 
@@ -1181,6 +1019,7 @@ function scheduleOfferRetry() {
         }
     }, 2500);
 }
+
 function clearOfferRetry() {
     if (state.offerRetryTimer) clearTimeout(state.offerRetryTimer);
     state.offerRetryTimer = null;

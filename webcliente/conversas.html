@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="css/conversas.css" />
 
   <style>
-    /* === Modal simples (sem bootstrap) === */
+    /* (seu CSS inline inteiro continua igual — não mexi) */
     .lockedAction {
       opacity: .55;
       filter: grayscale(.2);
@@ -161,7 +161,6 @@
       border: 1px solid rgba(255, 255, 255, .18);
     }
 
-    /* ✅ Paywall Créditos (liberar chat) */
     .creditwall {
       position: absolute;
       inset: 0;
@@ -219,9 +218,6 @@
       margin-left: auto;
     }
 
-    /* ==========================================================
-       ✅ OVERLAY VIDEOCHAMADA (FULLSCREEN MOBILE / CARD DESKTOP)
-       ========================================================== */
     .callOverlay {
       position: fixed;
       inset: 0;
@@ -324,7 +320,7 @@
       max-width: 180px;
     }
 
-    @media (min-width:900px) {
+    @media (min-width: 900px) {
       .callOverlay {
         padding: 16px;
         align-items: center;
@@ -383,6 +379,88 @@
         min-width: 140px;
         max-width: none;
       }
+    }
+
+    @media (max-width: 520px) {
+      .chat-top {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
+      }
+
+      .chat-user {
+        width: 100% !important;
+      }
+
+      .chat-actions {
+        width: 100% !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        justify-content: flex-start !important;
+        align-items: center !important;
+        gap: 8px !important;
+        overflow: visible !important;
+      }
+
+      #minutosPill {
+        flex: 1 1 100% !important;
+        justify-content: center !important;
+      }
+
+      #btnComprarCreditosTopo,
+      #btnCall,
+      #btnGift {
+        display: inline-flex !important;
+      }
+
+      .iconbtn {
+        width: 40px !important;
+        height: 40px !important;
+        flex: 0 0 auto !important;
+      }
+
+      #chatStatus {
+        flex: 1 1 100% !important;
+      }
+    }
+
+    .chat-layout,
+    .panel,
+    .panel.right,
+    .panel.right.chat {
+      min-height: 0;
+    }
+
+    .panel.right.chat {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-top {
+      flex: 0 0 auto;
+    }
+
+    .composer {
+      flex: 0 0 auto;
+    }
+
+    #msgs.msgs {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      scroll-behavior: smooth;
+    }
+
+    .composer {
+      position: sticky;
+      bottom: 0;
+      background: rgba(10, 10, 10, .92);
+      border-top: 1px solid rgba(255, 255, 255, .10);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      z-index: 5;
     }
   </style>
 </head>
@@ -535,13 +613,7 @@
           </div>
         </div>
 
-        <!-- ✅ Composer com Foto/Áudio -->
         <div class="composer">
-          <button class="iconbtn" id="btnFoto" type="button" title="Enviar foto" disabled>📷</button>
-          <input id="inpFoto" type="file" accept="image/*" hidden />
-
-          <button class="iconbtn" id="btnAudio" type="button" title="Gravar áudio" disabled>🎤</button>
-
           <textarea id="texto" placeholder="Digite uma mensagem..." disabled></textarea>
           <button id="btnEnviar" class="btn btn-primary" disabled>Enviar</button>
         </div>
@@ -562,7 +634,6 @@
     </div>
   </div>
 
-  <!-- ✅ Overlay da chamada -->
   <div class="callOverlay" id="callOverlay" aria-hidden="true">
     <div class="callCard">
       <div class="callTop">
@@ -587,9 +658,11 @@
     </div>
   </div>
 
+  <!-- ✅ Socket.IO client (CORRETO pro seu backend em /api) -->
   <script src="/api/socket.io/socket.io.js"></script>
-  <script type="module" src="/js/conversas.js"></script>
 
+  <!-- ✅ cache-bust -->
+  <script type="module" src="js/conversas.js?v=20260213-1"></script>
 
   <script>
     const navToggle = document.getElementById("navToggle");
