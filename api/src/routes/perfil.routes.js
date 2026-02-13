@@ -4,8 +4,10 @@ import { me, salvarPerfil, verPerfilPublico } from "../controllers/perfil.contro
 
 const router = Router();
 
-router.get("/me", auth, me);
-router.put("/", auth, salvarPerfil);
-router.get("/publico/:id", auth, verPerfilPublico);
+router.use(auth);
+
+router.get("/me", me);
+router.put("/", salvarPerfil);
+router.get("/publico/:id", verPerfilPublico);
 
 export default router;
