@@ -21,7 +21,7 @@ function buildNascimentoRange(idadeMin, idadeMax) {
         const min = clamp(idadeMin, 18, 99);
         const dt = new Date(now);
         dt.setFullYear(dt.getFullYear() - min);
-        lte = dt;
+        lte = dt; // nasceu até aqui => tem pelo menos idadeMin
     }
 
     if (Number.isFinite(idadeMax)) {
@@ -29,7 +29,7 @@ function buildNascimentoRange(idadeMin, idadeMax) {
         const dt = new Date(now);
         dt.setFullYear(dt.getFullYear() - (max + 1));
         dt.setDate(dt.getDate() + 1);
-        gte = dt;
+        gte = dt; // nasceu depois => é no máximo idadeMax
     }
 
     if (!gte && !lte) return null;
@@ -47,7 +47,7 @@ export async function buscar(req, res) {
     try {
         const userId = req.usuario.id;
 
-        // libera invisível expirado
+        // 0) housekeeping
         await prisma.usuario.updateMany({
             where: {
                 invisivelAte: { not: null, lte: new Date() },
@@ -56,20 +56,25 @@ export async function buscar(req, res) {
             data: { isInvisivel: false, invisivelAte: null },
         });
 
-        // expira boost
         await prisma.usuario.updateMany({
             where: { boostAte: { not: null, lte: new Date() } },
             data: { boostAte: null },
         });
 
-        // ===== params
+        // 1) params (front SEMPRE manda idade 18-99, então isso não pode ser filtro)
         const q = toStr(req.query.q).trim();
         const cidade = toStr(req.query.cidade).trim();
         const estado = toStr(req.query.estado).trim().toUpperCase();
         const genero = toStr(req.query.genero).trim();
 
-        const idadeMin = toInt(req.query.idadeMin, null);
-        const idadeMax = toInt(req.query.idadeMax, null);
+        let idadeMin = toInt(req.query.idadeMin, null);
+        let idadeMax = toInt(req.query.idadeMax, null);
+
+        // ✅ 18–99 = SEM FILTRO (senão você mata todo mundo sem nascimento)
+        if (idadeMin === 18 && idadeMax === 99) {
+            idadeMin = null;
+            idadeMax = null;
+        }
 
         const somenteComFoto =
             req.query.somenteComFoto === "1" ||
@@ -89,7 +94,7 @@ export async function buscar(req, res) {
             Number.isFinite(idadeMax) ? idadeMax : NaN
         );
 
-        // ===== exclusões
+        // 2) exclusões
         const bloqueios = await prisma.bloqueio.findMany({
             where: { OR: [{ deUsuarioId: userId }, { paraUsuarioId: userId }] },
             select: { deUsuarioId: true, paraUsuarioId: true },
@@ -129,7 +134,7 @@ export async function buscar(req, res) {
             ...idsMatch,
         ]);
 
-        // ===== perfilWhere (só aplica se houver filtros de perfil)
+        // 3) PERFIL filtros — SÓ entra se tiver filtro REAL (não default)
         const perfilWhere = {
             ...(q
                 ? {
@@ -147,6 +152,7 @@ export async function buscar(req, res) {
             ...(somenteVerificados ? { verificado: true } : {}),
             ...(nascRange
                 ? {
+                    // ✅ se for filtrar por idade, tem que ter nascimento (ok)
                     nascimento: {
                         ...(nascRange.gte ? { gte: nascRange.gte } : {}),
                         ...(nascRange.lte ? { lte: nascRange.lte } : {}),
@@ -157,15 +163,19 @@ export async function buscar(req, res) {
 
         const temFiltroDePerfil = Object.keys(perfilWhere).length > 0;
 
-        // ===== where FINAL
+        // 4) where FINAL
         const where = {
+            // SEMPRE mostra cadastros visíveis
             ativo: true,
             isInvisivel: false,
+
+            // nunca mostrar o próprio e nem quem já interagiu (se você quiser, depois a gente tira)
             id: { notIn: [...excluir] },
 
-            // ✅ só exige perfil quando realmente está filtrando por perfil
+            // ✅ só exige perfil quando filtra por perfil
             ...(temFiltroDePerfil ? { perfil: { is: perfilWhere } } : {}),
 
+            // ✅ somenteComFoto filtra por relação fotos
             ...(somenteComFoto ? { fotos: { some: { principal: true } } } : {}),
         };
 
@@ -208,6 +218,7 @@ export async function buscar(req, res) {
     }
 }
 
+// Preferências (mock)
 export async function preferencias(req, res) {
     return res.json({
         q: "",
