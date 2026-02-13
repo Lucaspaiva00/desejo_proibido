@@ -1,3 +1,4 @@
+// src/controllers/perfil.controller.js
 import { prisma } from "../prisma.js";
 
 function parseDateOnlyToUTC(dateStr) {
@@ -10,17 +11,44 @@ function parseDateOnlyToUTC(dateStr) {
     return new Date(Date.UTC(y, m - 1, d));
 }
 
-export async function me(req, res) {
-    const usuarioId = req.usuario.id;
-
-    const perfil = await prisma.perfil.findUnique({
-        where: { usuarioId },
-    });
-
-    return res.json(perfil); // pode ser null
+function str(v) {
+    return v == null ? "" : String(v);
 }
 
-// PUT /perfil  (cria ou atualiza)
+// ✅ GET /perfil/me
+export async function me(req, res) {
+    try {
+        const usuarioId = req.usuario.id;
+
+        let perfil = await prisma.perfil.findUnique({
+            where: { usuarioId },
+        });
+
+        // ✅ Se não existir, CRIA um perfil vazio (para nunca ficar null no feed / app)
+        // Obs: esse perfil vazio NÃO aparece no feed se o /busca exigir "perfil mínimo"
+        if (!perfil) {
+            perfil = await prisma.perfil.create({
+                data: {
+                    usuarioId,
+                    nome: "",
+                    bio: null,
+                    cidade: null,
+                    estado: "",
+                    genero: null,
+                    nascimento: null,
+                    // se seu schema tiver "verificado", mantém:
+                    // verificado: false,
+                },
+            });
+        }
+
+        return res.json(perfil);
+    } catch (e) {
+        return res.status(500).json({ erro: "Erro ao carregar perfil", detalhe: e.message });
+    }
+}
+
+// ✅ PUT /perfil (cria ou atualiza)
 export async function salvarPerfil(req, res) {
     try {
         const usuarioId = req.usuario.id;
@@ -30,45 +58,48 @@ export async function salvarPerfil(req, res) {
             bio,
             cidade,
             estado,
-            genero,       // ✅ novo
-            nascimento,   // ✅ novo (YYYY-MM-DD)
+            genero,
+            nascimento, // YYYY-MM-DD
         } = req.body;
 
-        if (!nome) return res.status(400).json({ erro: "nome é obrigatório" });
+        const nomeS = str(nome).trim();
+        const estadoS = str(estado).trim().toUpperCase();
+        const generoS = str(genero).trim();
+        const nascStr = str(nascimento).trim();
 
-        if (!estado || String(estado).trim().length !== 2) {
+        // ✅ Agora: obrigatório (para aparecer no feed)
+        if (!nomeS) return res.status(400).json({ erro: "nome é obrigatório" });
+
+        if (!estadoS || estadoS.length !== 2) {
             return res.status(400).json({ erro: "estado deve ter 2 letras (ex: SP)" });
         }
 
-        const uf = String(estado).trim().toUpperCase();
+        // ✅ obrigatório (se é regra do app)
+        if (!generoS) return res.status(400).json({ erro: "gênero é obrigatório" });
 
-        // nascimento é opcional, mas se vier precisa ser válido
-        const nasc = nascimento ? parseDateOnlyToUTC(String(nascimento).trim()) : null;
-        if (nascimento && !nasc) {
-            return res.status(400).json({ erro: "nascimento inválido. Use YYYY-MM-DD" });
+        // ✅ obrigatório (se é regra do app)
+        const nasc = parseDateOnlyToUTC(nascStr);
+        if (!nasc) {
+            return res.status(400).json({ erro: "nascimento é obrigatório e deve ser YYYY-MM-DD" });
         }
 
         const perfil = await prisma.perfil.upsert({
             where: { usuarioId },
             update: {
-                nome: String(nome).trim(),
-                bio: bio != null && String(bio).trim() !== "" ? String(bio).trim() : null,
-                cidade: cidade != null && String(cidade).trim() !== "" ? String(cidade).trim() : null,
-                estado: uf,
-
-                // ✅ novos campos
-                genero: genero != null && String(genero).trim() !== "" ? String(genero).trim() : null,
+                nome: nomeS,
+                bio: bio != null && str(bio).trim() !== "" ? str(bio).trim() : null,
+                cidade: cidade != null && str(cidade).trim() !== "" ? str(cidade).trim() : null,
+                estado: estadoS,
+                genero: generoS,
                 nascimento: nasc,
             },
             create: {
                 usuarioId,
-                nome: String(nome).trim(),
-                bio: bio != null && String(bio).trim() !== "" ? String(bio).trim() : null,
-                cidade: cidade != null && String(cidade).trim() !== "" ? String(cidade).trim() : null,
-                estado: uf,
-
-                // ✅ novos campos
-                genero: genero != null && String(genero).trim() !== "" ? String(genero).trim() : null,
+                nome: nomeS,
+                bio: bio != null && str(bio).trim() !== "" ? str(bio).trim() : null,
+                cidade: cidade != null && str(cidade).trim() !== "" ? str(cidade).trim() : null,
+                estado: estadoS,
+                genero: generoS,
                 nascimento: nasc,
             },
         });
