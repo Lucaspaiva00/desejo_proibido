@@ -26,7 +26,6 @@ function normalizePath(path) {
   // converte para /conversas/:id/status (rota que existe)
   if (path.startsWith("/conversas/")) {
     const parts = path.split("/").filter(Boolean); // ["conversas", ":id", ...]
-    // somente /conversas/:id (2 partes) vira status
     if (parts.length === 2) {
       const id = parts[1];
       return `/conversas/${id}/status`;
@@ -45,16 +44,13 @@ async function apiFetch(path, options = {}) {
     throw new Error("apiFetch: path inválido → " + path);
   }
 
-  // ✅ normaliza se necessário
   path = normalizePath(path);
 
-  const method = String(options.method || "GET").toUpperCase();
+  const method = (options.method || "GET").toUpperCase();
   const body = options.body;
   const headers = options.headers || {};
 
   const token = getToken();
-
-  // ✅ permite passar URL absoluta no path
   const url = path.indexOf("http") === 0 ? path : API_BASE + path;
 
   const fetchOptions = {
@@ -64,27 +60,38 @@ async function apiFetch(path, options = {}) {
     },
   };
 
+  // ✅ Detecta FormData/Blob (pra upload)
+  const isFormData =
+    typeof FormData !== "undefined" && body instanceof FormData;
+
+  const isBlob =
+    typeof Blob !== "undefined" && body instanceof Blob;
+
   // body em JSON se não for GET/HEAD
   if (method !== "GET" && method !== "HEAD") {
-    // ✅ se o caller passou Content-Type custom (ex: multipart/form-data), respeita
-    if (!("Content-Type" in headers)) {
-      fetchOptions.headers["Content-Type"] = "application/json";
-    }
-
-    // ✅ permite body string/raw sem quebrar
-    if (typeof body === "string") {
+    // ✅ FormData/Blob: não seta Content-Type e não faz stringify
+    if (isFormData || isBlob) {
       fetchOptions.body = body;
     } else {
-      fetchOptions.body = JSON.stringify(body ?? {});
+      // ✅ se o caller passou Content-Type custom (ex: multipart/form-data), respeita
+      if (!("Content-Type" in headers)) {
+        fetchOptions.headers["Content-Type"] = "application/json";
+      }
+
+      // ✅ permite body string/raw sem quebrar
+      if (typeof body === "string") {
+        fetchOptions.body = body;
+      } else {
+        fetchOptions.body = JSON.stringify(body ?? {});
+      }
     }
   }
 
-  // ✅ Auth
   if (token) {
     fetchOptions.headers["Authorization"] = "Bearer " + token;
   }
 
-  // ✅ headers custom do caller por cima
+  // aplica headers extras por cima (sem quebrar Accept)
   for (const h in headers) {
     fetchOptions.headers[h] = headers[h];
   }
