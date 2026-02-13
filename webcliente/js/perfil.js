@@ -1,3 +1,4 @@
+// app/js/perfil.js
 import { apiFetch, logout } from "./api.js";
 
 const msg = document.getElementById("msg");
@@ -92,6 +93,15 @@ function setMsg(text) {
     msg.textContent = text || "";
 }
 
+// ✅ NOVO: aviso quando vem do cadastro / bloqueio do feed
+(function showAfterRegisterHint() {
+    const flag = localStorage.getItem("dp_after_register");
+    if (flag === "complete_perfil") {
+        localStorage.removeItem("dp_after_register");
+        setMsg("✅ Complete seu perfil para aparecer no feed.");
+    }
+})();
+
 function fmtDate(dt) {
     if (!dt) return "";
     const d = new Date(dt);
@@ -117,6 +127,36 @@ function preencherPerfil(p) {
 
     if (elNascimento) elNascimento.value = toDateInputValue(p?.nascimento);
     if (elGenero) elGenero.value = p?.genero ?? "";
+}
+
+// ✅ NOVO: valida perfil mínimo (mesma regra do register/login gate)
+function isPerfilCompletoMinimo(p) {
+    const nome = (p?.nome || "").trim();
+    const estado = (p?.estado || "").trim();
+    const genero = (p?.genero || "").trim();
+    const nascimento = p?.nascimento;
+
+    const nascOk = !!nascimento && !Number.isNaN(new Date(nascimento).getTime());
+
+    return (
+        nome.length >= 2 &&
+        estado.length === 2 &&
+        genero.length >= 2 &&
+        nascOk
+    );
+}
+
+// ✅ NOVO: aplica bloqueio visual + mensagem forte
+function aplicarGatePerfil(p) {
+    if (isPerfilCompletoMinimo(p)) return;
+
+    const faltas = [];
+    if (!((p?.nome || "").trim())) faltas.push("Nome");
+    if (!((p?.estado || "").trim()) || (p?.estado || "").trim().length !== 2) faltas.push("UF");
+    if (!((p?.genero || "").trim())) faltas.push("Gênero");
+    if (!(p?.nascimento)) faltas.push("Nascimento");
+
+    setMsg(`⚠️ Para aparecer no feed, preencha: ${faltas.join(", ")}.`);
 }
 
 function setEstadoPremiumUI(isPremiumAtivo) {
@@ -203,8 +243,13 @@ async function carregarPerfil() {
     try {
         const perfil = await apiFetch("/perfil/me");
         preencherPerfil(perfil);
+
+        // ✅ NOVO: avisa claramente o usuário do que falta
+        aplicarGatePerfil(perfil);
+
+        return perfil;
     } catch {
-        // silencioso
+        return null;
     }
 }
 
@@ -314,15 +359,30 @@ document.getElementById("btnSalvar").onclick = async () => {
             nascimento: elNascimento ? elNascimento.value : "",
         };
 
+        // ✅ agora obriga o mínimo pra aparecer no feed
         if (!body.nome) throw new Error("Nome é obrigatório");
         if (!body.estado || body.estado.length !== 2) throw new Error("Estado deve ter 2 letras (ex: SP)");
+        if (!body.genero) throw new Error("Gênero é obrigatório");
+        if (!body.nascimento) throw new Error("Nascimento é obrigatório");
 
         if (body.nascimento && !/^\d{4}-\d{2}-\d{2}$/.test(body.nascimento)) {
             throw new Error("Nascimento inválido (use a data do seletor).");
         }
 
         await apiFetch("/perfil", { method: "PUT", body });
-        setMsg("✅ Perfil salvo!");
+
+        // ✅ mensagem + opcional: mandar pro feed após salvar
+        setMsg("✅ Perfil salvo! Agora você já aparece no feed.");
+
+        // Recarrega e aplica gate novamente (caso faltou algo)
+        const perfil = await apiFetch("/perfil/me");
+        preencherPerfil(perfil);
+        aplicarGatePerfil(perfil);
+
+        // ✅ se estiver completo, manda pro feed automaticamente (melhora UX)
+        if (isPerfilCompletoMinimo(perfil)) {
+            setTimeout(() => (location.href = "home.html"), 500);
+        }
     } catch (e) {
         setMsg(e.message);
     }

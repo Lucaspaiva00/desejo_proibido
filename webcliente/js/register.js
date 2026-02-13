@@ -16,6 +16,24 @@ function setLoading(loading) {
   btn.textContent = loading ? "Cadastrando..." : "Cadastrar";
 }
 
+// ✅ regra central: define se o perfil está "completo mínimo"
+function isPerfilCompleto(p) {
+  const nome = (p?.nome || "").trim();
+  const estado = (p?.estado || "").trim();
+  const genero = (p?.genero || "").trim();
+  const nascimento = p?.nascimento;
+
+  // nascimento pode vir ISO string "2026-02-10T00:00:00.000Z"
+  const nascOk = !!nascimento && !Number.isNaN(new Date(nascimento).getTime());
+
+  return (
+    nome.length >= 2 &&
+    estado.length === 2 &&
+    genero.length >= 2 &&
+    nascOk
+  );
+}
+
 toggleSenha?.addEventListener("click", () => {
   const input = document.getElementById("senha");
   if (!input) return;
@@ -48,7 +66,24 @@ form?.addEventListener("submit", async (ev) => {
 
     if (r?.token) {
       setToken(r.token);
-      localStorage.setItem("usuario", JSON.stringify(r.usuario));
+      localStorage.setItem("usuario", JSON.stringify(r.usuario || {}));
+
+      // ✅ garante que o perfil existe e decide pra onde ir
+      let perfil = null;
+      try {
+        perfil = await apiFetch("/perfil/me");
+      } catch (e) {
+        // se der erro, joga pro perfil mesmo assim
+        perfil = null;
+      }
+
+      if (!isPerfilCompleto(perfil)) {
+        // mensagem opcional pra dar "ciência"
+        localStorage.setItem("dp_after_register", "complete_perfil");
+        location.href = "perfil.html";
+        return;
+      }
+
       location.href = "home.html";
       return;
     }
