@@ -47,7 +47,7 @@ export async function buscar(req, res) {
     try {
         const userId = req.usuario.id;
 
-        // 0) housekeeping
+        // housekeeping
         await prisma.usuario.updateMany({
             where: {
                 invisivelAte: { not: null, lte: new Date() },
@@ -61,7 +61,7 @@ export async function buscar(req, res) {
             data: { boostAte: null },
         });
 
-        // 1) params (front SEMPRE manda idade 18-99, então isso não pode ser filtro)
+        // params
         const q = toStr(req.query.q).trim();
         const cidade = toStr(req.query.cidade).trim();
         const estado = toStr(req.query.estado).trim().toUpperCase();
@@ -70,7 +70,7 @@ export async function buscar(req, res) {
         let idadeMin = toInt(req.query.idadeMin, null);
         let idadeMax = toInt(req.query.idadeMax, null);
 
-        // ✅ 18–99 = SEM FILTRO (senão você mata todo mundo sem nascimento)
+        // ✅ 18–99 = sem filtro
         if (idadeMin === 18 && idadeMax === 99) {
             idadeMin = null;
             idadeMax = null;
@@ -94,7 +94,7 @@ export async function buscar(req, res) {
             Number.isFinite(idadeMax) ? idadeMax : NaN
         );
 
-        // 2) exclusões
+        // exclusões
         const bloqueios = await prisma.bloqueio.findMany({
             where: { OR: [{ deUsuarioId: userId }, { paraUsuarioId: userId }] },
             select: { deUsuarioId: true, paraUsuarioId: true },
@@ -134,8 +134,17 @@ export async function buscar(req, res) {
             ...idsMatch,
         ]);
 
-        // 3) PERFIL filtros — SÓ entra se tiver filtro REAL (não default)
-        const perfilWhere = {
+        // ✅ PERFIL MÍNIMO OBRIGATÓRIO PARA APARECER NO FEED (sem filtro)
+        // Isso garante: "Preencha seu perfil para aparecer no feed."
+        const perfilMinimo = {
+            nome: { not: "" },
+            estado: { not: "" },
+            nascimento: { not: null },
+            genero: { not: "" },
+        };
+
+        // filtros do usuário
+        const perfilFiltros = {
             ...(q
                 ? {
                     OR: [
@@ -152,7 +161,6 @@ export async function buscar(req, res) {
             ...(somenteVerificados ? { verificado: true } : {}),
             ...(nascRange
                 ? {
-                    // ✅ se for filtrar por idade, tem que ter nascimento (ok)
                     nascimento: {
                         ...(nascRange.gte ? { gte: nascRange.gte } : {}),
                         ...(nascRange.lte ? { lte: nascRange.lte } : {}),
@@ -161,21 +169,21 @@ export async function buscar(req, res) {
                 : {}),
         };
 
-        const temFiltroDePerfil = Object.keys(perfilWhere).length > 0;
+        const temFiltroDePerfil = Object.keys(perfilFiltros).length > 0;
 
-        // 4) where FINAL
+        // ✅ sempre exige perfil mínimo, e se tiver filtros, aplica também
+        const perfilFinal = temFiltroDePerfil
+            ? { AND: [perfilMinimo, perfilFiltros] }
+            : perfilMinimo;
+
         const where = {
-            // SEMPRE mostra cadastros visíveis
             ativo: true,
             isInvisivel: false,
-
-            // nunca mostrar o próprio e nem quem já interagiu (se você quiser, depois a gente tira)
             id: { notIn: [...excluir] },
 
-            // ✅ só exige perfil quando filtra por perfil
-            ...(temFiltroDePerfil ? { perfil: { is: perfilWhere } } : {}),
+            // ✅ AGORA PERFIL É OBRIGATÓRIO SEMPRE (pra aparecer no feed)
+            perfil: { is: perfilFinal },
 
-            // ✅ somenteComFoto filtra por relação fotos
             ...(somenteComFoto ? { fotos: { some: { principal: true } } } : {}),
         };
 
@@ -218,7 +226,6 @@ export async function buscar(req, res) {
     }
 }
 
-// Preferências (mock)
 export async function preferencias(req, res) {
     return res.json({
         q: "",
