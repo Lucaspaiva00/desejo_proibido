@@ -21,7 +21,7 @@ function buildNascimentoRange(idadeMin, idadeMax) {
         const min = clamp(idadeMin, 18, 99);
         const dt = new Date(now);
         dt.setFullYear(dt.getFullYear() - min);
-        lte = dt; // nasceu até aqui => tem pelo menos idadeMin
+        lte = dt;
     }
 
     if (Number.isFinite(idadeMax)) {
@@ -29,7 +29,7 @@ function buildNascimentoRange(idadeMin, idadeMax) {
         const dt = new Date(now);
         dt.setFullYear(dt.getFullYear() - (max + 1));
         dt.setDate(dt.getDate() + 1);
-        gte = dt; // nasceu depois => é no máximo idadeMax
+        gte = dt;
     }
 
     if (!gte && !lte) return null;
@@ -47,21 +47,6 @@ export async function buscar(req, res) {
     try {
         const userId = req.usuario.id;
 
-        // =========================
-        // 0) NORMALIZA FLAGS (evita NULL matar o feed)
-        // =========================
-        // se no seu banco tiver usuários antigos com ativo/isInvisivel NULL
-        // isso aqui impede que sumam do feed por comparação booleana
-        await prisma.usuario.updateMany({
-            where: { ativo: null },
-            data: { ativo: true },
-        });
-
-        await prisma.usuario.updateMany({
-            where: { isInvisivel: null },
-            data: { isInvisivel: false },
-        });
-
         // libera invisível expirado
         await prisma.usuario.updateMany({
             where: {
@@ -77,9 +62,7 @@ export async function buscar(req, res) {
             data: { boostAte: null },
         });
 
-        // =========================
-        // 1) QUERY PARAMS
-        // =========================
+        // ===== params
         const q = toStr(req.query.q).trim();
         const cidade = toStr(req.query.cidade).trim();
         const estado = toStr(req.query.estado).trim().toUpperCase();
@@ -106,9 +89,7 @@ export async function buscar(req, res) {
             Number.isFinite(idadeMax) ? idadeMax : NaN
         );
 
-        // =========================
-        // 2) EXCLUSÕES (bloqueio/curtida/skip/match)
-        // =========================
+        // ===== exclusões
         const bloqueios = await prisma.bloqueio.findMany({
             where: { OR: [{ deUsuarioId: userId }, { paraUsuarioId: userId }] },
             select: { deUsuarioId: true, paraUsuarioId: true },
@@ -148,10 +129,7 @@ export async function buscar(req, res) {
             ...idsMatch,
         ]);
 
-        // =========================
-        // 3) PERFIL WHERE (só aplica se houver filtro de perfil)
-        //    <- ESSA era a causa principal do "data: []" quando usuários não tinham perfil.
-        // =========================
+        // ===== perfilWhere (só aplica se houver filtros de perfil)
         const perfilWhere = {
             ...(q
                 ? {
@@ -161,17 +139,12 @@ export async function buscar(req, res) {
                     ],
                 }
                 : {}),
-
             ...(cidade ? { cidade: { contains: cidade, mode: "insensitive" } } : {}),
             ...(estado && estado.length === 2 ? { estado } : {}),
-
-            // cobre "QUALQUER" / "Qualquer"
             ...(genero && genero.toLowerCase() !== "qualquer"
                 ? { genero: { equals: genero, mode: "insensitive" } }
                 : {}),
-
             ...(somenteVerificados ? { verificado: true } : {}),
-
             ...(nascRange
                 ? {
                     nascimento: {
@@ -184,15 +157,13 @@ export async function buscar(req, res) {
 
         const temFiltroDePerfil = Object.keys(perfilWhere).length > 0;
 
-        // =========================
-        // 4) WHERE FINAL
-        // =========================
+        // ===== where FINAL
         const where = {
-            // importante: não pode ser null
             ativo: true,
             isInvisivel: false,
             id: { notIn: [...excluir] },
 
+            // ✅ só exige perfil quando realmente está filtrando por perfil
             ...(temFiltroDePerfil ? { perfil: { is: perfilWhere } } : {}),
 
             ...(somenteComFoto ? { fotos: { some: { principal: true } } } : {}),
@@ -216,7 +187,6 @@ export async function buscar(req, res) {
             },
         });
 
-        // random server-side
         if (!orderBy) {
             rows = rows
                 .map((x) => ({ x, r: Math.random() }))
@@ -238,8 +208,6 @@ export async function buscar(req, res) {
     }
 }
 
-// Preferências (do jeito que você deixou, mock)
-// Se você tiver tabela de preferências, eu adapto.
 export async function preferencias(req, res) {
     return res.json({
         q: "",
