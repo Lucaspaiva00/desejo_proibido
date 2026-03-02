@@ -614,8 +614,14 @@
         </div>
 
         <div class="composer">
+          <button class="iconbtn" id="btnFoto" title="Enviar foto">📷</button>
+          <button class="iconbtn" id="btnAudio" title="Enviar áudio">🎙️</button>
+
           <textarea id="texto" placeholder="Digite uma mensagem..." disabled></textarea>
           <button id="btnEnviar" class="btn btn-primary" disabled>Enviar</button>
+
+          <input type="file" id="inputFoto" accept="image/*" hidden />
+          <input type="file" id="inputAudio" accept="audio/*" hidden />
         </div>
       </section>
     </div>

@@ -21,6 +21,12 @@ const msgs = document.getElementById("msgs");
 const texto = document.getElementById("texto");
 const btnEnviar = document.getElementById("btnEnviar");
 
+// ✅ Mídia (tem que existir no HTML)
+const btnFoto = document.getElementById("btnFoto");
+const btnAudio = document.getElementById("btnAudio");
+const inputFoto = document.getElementById("inputFoto");
+const inputAudio = document.getElementById("inputAudio");
+
 const btnGift = document.getElementById("btnGift");
 const btnCall = document.getElementById("btnCall");
 const minutosPill = document.getElementById("minutosPill");
@@ -164,7 +170,7 @@ const token = localStorage.getItem("token") || "";
 const socket = window.io({
     path: "/api/socket.io",
     auth: { token },
-    transports: ["websocket", "polling"], // ✅ fallback ajuda quando proxy bloqueia ws
+    transports: ["websocket", "polling"],
     withCredentials: true,
 });
 
@@ -366,6 +372,7 @@ function setCreditWallInfo({ custoCreditos, saldoCreditos }) {
     if (unlockCost) unlockCost.textContent = `${state.custoChat} créditos`;
     if (saldoCreditosEl) saldoCreditosEl.textContent = `${state.saldoCreditos}`;
 }
+
 function applyChatLockUI() {
     const hasChat = !!state.conversaId;
 
@@ -373,23 +380,37 @@ function applyChatLockUI() {
         hideCreditWall();
         if (texto) texto.disabled = true;
         if (btnEnviar) btnEnviar.disabled = true;
+
+        // ✅ mídia
+        if (btnFoto) btnFoto.disabled = true;
+        if (btnAudio) btnAudio.disabled = true;
+
         if (btnGift) btnGift.disabled = true;
         if (btnCall) btnCall.disabled = true;
+
         btnGift?.classList.remove("lockedAction");
         btnCall?.classList.remove("lockedAction");
         return;
     }
 
-    const podeMensagens = !!state.premiumAtivo || !!state.chatLiberado;
+    const podeEnviar = !!state.premiumAtivo || !!state.chatLiberado;
 
-    if (!podeMensagens) {
+    if (!podeEnviar) {
         showCreditWall();
         if (texto) texto.disabled = true;
         if (btnEnviar) btnEnviar.disabled = true;
+
+        // ✅ mídia
+        if (btnFoto) btnFoto.disabled = true;
+        if (btnAudio) btnAudio.disabled = true;
     } else {
         hideCreditWall();
         if (texto) texto.disabled = false;
         if (btnEnviar) btnEnviar.disabled = false;
+
+        // ✅ mídia
+        if (btnFoto) btnFoto.disabled = false;
+        if (btnAudio) btnAudio.disabled = false;
     }
 
     if (btnGift) btnGift.disabled = false;
@@ -695,6 +716,12 @@ async function carregarMensagens({ silent = false } = {}) {
     }
 }
 
+/**
+ * ✅ Render 100% correto:
+ * - sem sobrescrever conteudo de FOTO/AUDIO
+ * - sem querySelector dentro do map
+ * - handler de desbloquear via delegation
+ */
 function renderMensagens(items, { stickToBottom = true } = {}) {
     if (!items?.length) {
         msgs.innerHTML = `<div class="empty">Sem mensagens ainda.</div>`;
@@ -703,10 +730,9 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
 
     const me = state.usuario?.id;
 
-    msgs.innerHTML = items.map((m) => {
-        const isMe = (m.autorId === me);
+    const html = items.map((m) => {
+        const isMe = (String(m.autorId) === String(me));
         const tipo = m.tipo || "TEXTO";
-
         const dt = m.criadoEm ? new Date(m.criadoEm).toLocaleString() : "";
         const meta = m.metaJson || {};
 
@@ -715,7 +741,40 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
         if (tipo === "PRESENTE") extraClass = "gift";
 
         let conteudo = "";
-        if (tipo === "PRESENTE") {
+
+        if (tipo === "FOTO") {
+            if (m.locked) {
+                conteudo = `
+          <div class="mediaLocked" data-mid="${escapeHtml(m.id)}" data-tipo="FOTO">
+            ${m.thumbUrl ? `<img src="${escapeHtml(m.thumbUrl)}" class="thumb" />` : `<div class="thumb fake"></div>`}
+            <div class="lockOverlay">🔒 Desbloquear por ${Number(m.custoMoedas || 0)} créditos</div>
+          </div>
+        `;
+            } else {
+                conteudo = `
+          <a href="${escapeHtml(m.mediaUrl || "")}" target="_blank" rel="noopener">
+            <img src="${escapeHtml(m.mediaUrl || "")}" class="mediaFull" />
+          </a>
+        `;
+            }
+        } else if (tipo === "AUDIO") {
+            // ⚠️ No seu backend atual audio NÃO vem locked.
+            // Se você travar no backend, isso aqui já funciona.
+            if (m.locked) {
+                conteudo = `
+          <div class="mediaLocked audioLocked" data-mid="${escapeHtml(m.id)}" data-tipo="AUDIO">
+            <div class="audioCard">
+              🎙️ Áudio bloqueado
+              <div class="muted">Toque para desbloquear por ${Number(m.custoMoedas || 0)} créditos</div>
+            </div>
+          </div>
+        `;
+            } else {
+                conteudo = `
+          <audio controls preload="metadata" src="${escapeHtml(m.audioUrl || "")}"></audio>
+        `;
+            }
+        } else if (tipo === "PRESENTE") {
             const nome = meta.nome || (m.texto || "🎁 Presente");
             const { emoji, text } = splitEmojiAndText(nome);
 
@@ -740,7 +799,42 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
     `;
     }).join("");
 
+    msgs.innerHTML = html;
+
     if (stickToBottom) scrollToBottom(msgs);
+}
+
+// ✅ Delegation: 1 handler só (não duplica)
+if (msgs && !msgs.__dpMediaHandlerAttached) {
+    msgs.__dpMediaHandlerAttached = true;
+
+    msgs.addEventListener("click", async (ev) => {
+        const box = ev.target?.closest?.(".mediaLocked");
+        if (!box) return;
+
+        const mid = box.getAttribute("data-mid");
+        if (!mid) return;
+
+        try {
+            // debita + registra unlock
+            const r = await apiFetch(`/mensagens/${mid}/desbloquear`, { method: "POST" });
+
+            // atualiza saldo na UI se veio
+            if (typeof r?.saldoCreditos === "number") {
+                state.saldoCreditos = r.saldoCreditos;
+                if (minutosPill) minutosPill.textContent = `💰 Créditos: ${r.saldoCreditos}`;
+                if (saldoCreditosEl) saldoCreditosEl.textContent = `${r.saldoCreditos}`;
+            }
+
+            await carregarMensagens();
+        } catch (e) {
+            if (e?.status === 402) {
+                alert("Saldo insuficiente para desbloquear.");
+                return;
+            }
+            alert("Erro ao desbloquear mídia: " + (e?.message || "erro"));
+        }
+    });
 }
 
 async function enviarMensagem() {
@@ -1128,6 +1222,86 @@ btnCall?.addEventListener("click", async () => {
     } finally {
         btnCall.disabled = false;
         if (chatStatus) chatStatus.textContent = "";
+    }
+});
+
+// ==============================
+// ✅ MÍDIA: Foto / Áudio
+// ==============================
+btnFoto?.addEventListener("click", () => {
+    if (!state.conversaId) return;
+    if (!state.premiumAtivo && !state.chatLiberado) {
+        showCreditWall();
+        return;
+    }
+    inputFoto?.click();
+});
+
+inputFoto?.addEventListener("change", async () => {
+    const file = inputFoto?.files?.[0];
+    if (!file || !state.conversaId) return;
+
+    try {
+        const form = new FormData();
+        form.append("file", file);
+
+        // 1) upload físico
+        const up = await apiFetch("/uploads/foto", { method: "POST", body: form });
+
+        // 2) cria mensagem FOTO (travada)
+        await apiFetch("/mensagens/foto", {
+            method: "POST",
+            body: {
+                conversaId: state.conversaId,
+                mediaPath: up.mediaPath,
+                thumbPath: up.thumbPath,
+                custoMoedas: 5, // ✅ seu preço do unlock
+            }
+        });
+
+        await carregarMensagens();
+    } catch (e) {
+        alert("Erro ao enviar foto: " + (e?.message || "erro"));
+    } finally {
+        if (inputFoto) inputFoto.value = "";
+    }
+});
+
+btnAudio?.addEventListener("click", () => {
+    if (!state.conversaId) return;
+    if (!state.premiumAtivo && !state.chatLiberado) {
+        showCreditWall();
+        return;
+    }
+    inputAudio?.click();
+});
+
+inputAudio?.addEventListener("change", async () => {
+    const file = inputAudio?.files?.[0];
+    if (!file || !state.conversaId) return;
+
+    try {
+        const form = new FormData();
+        form.append("file", file);
+
+        // 1) upload físico
+        const up = await apiFetch("/uploads/audio", { method: "POST", body: form });
+
+        // 2) cria mensagem AUDIO
+        await apiFetch("/mensagens/audio", {
+            method: "POST",
+            body: {
+                conversaId: state.conversaId,
+                mediaPath: up.mediaPath,
+                // se você quiser travar áudio igual foto, você também vai colocar custoMoedas no backend
+            }
+        });
+
+        await carregarMensagens();
+    } catch (e) {
+        alert("Erro ao enviar áudio: " + (e?.message || "erro"));
+    } finally {
+        if (inputAudio) inputAudio.value = "";
     }
 });
 
