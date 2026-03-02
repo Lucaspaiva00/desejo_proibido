@@ -538,141 +538,381 @@
 }
 
 /* =========================================================
-   PREMIUM CINEMATIC MOBILE LEVEL
+   =========================================================
+   ✅ MOBILE PREMIUM OVERRIDE (v4) — NÍVEL “PRINT DO CLIENTE”
+   - Não remove nada do seu CSS: só SOBRESCREVE no mobile
+   - Card do chat vira “perfil premium” dentro
+   - Créditos centralizados estilo “Carteira”
+   - Botões com glow
+   - Composer arredondado premium
+   - Mensagens com glass + borda vinho
+   =========================================================
 ========================================================= */
 
-@media (max-width: 520px) {
+@media (max-width: 720px) {
 
-    body {
-        background:
-            radial-gradient(800px 600px at 50% -10%, rgba(193, 18, 31, .35), transparent 60%),
-            radial-gradient(600px 500px at 0% 40%, rgba(66, 8, 16, .85), transparent 70%),
-            radial-gradient(600px 500px at 100% 40%, rgba(66, 8, 16, .85), transparent 70%),
-            linear-gradient(180deg, #0b0005, #140007 40%, #0b0005 100%);
+    /* Mais “respiro” e cara de app */
+    .wrap {
+        width: min(980px, calc(100% - 18px)) !important;
+        margin: 14px auto 18px !important;
+        padding: 6px 0 16px !important;
     }
 
-    .panel.right.chat {
-        background: transparent;
-        border: none;
-        box-shadow: none;
+    /* HERO do topo igual app */
+    .headRow-premium {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 12px !important;
+        margin: 10px 0 14px !important;
     }
 
-    /* =======================
-       HEADER PREMIUM CARD
-    ======================= */
+    .heroTitle {
+        font-size: 44px !important;
+        letter-spacing: .2px !important;
+        line-height: 1.03 !important;
+    }
 
-    .chat-top {
-        margin: 14px;
-        padding: 18px;
-        border-radius: 22px;
-        border: 1px solid rgba(255, 0, 0, .25);
+    .heroSub {
+        font-size: 15px !important;
+        opacity: .78 !important;
+    }
+
+    .heroRight {
+        width: 100% !important;
+        justify-content: flex-start !important;
+        gap: 10px !important;
+    }
+
+    #premiumBadge {
+        border-radius: 999px !important;
+        padding: 10px 14px !important;
+        background: rgba(255, 255, 255, .06) !important;
+        border: 1px solid rgba(255, 255, 255, .14) !important;
+        box-shadow: 0 12px 28px rgba(0, 0, 0, .35) !important;
+    }
+
+    #btnAssinarTopo {
+        width: auto !important;
+        border-radius: 999px !important;
+        padding: 10px 14px !important;
+    }
+
+    /* Layout vira coluna (lista + chat) */
+    .chat-layout {
+        grid-template-columns: 1fr !important;
+        gap: 14px !important;
+    }
+
+    /* Painéis com cara “glass card premium” */
+    .panel {
+        border-radius: 26px !important;
+        border: 1px solid rgba(255, 255, 255, .11) !important;
         background:
-            radial-gradient(500px 200px at 50% 0%, rgba(255, 0, 0, .18), transparent 60%),
-            rgba(20, 0, 5, .85);
+            radial-gradient(900px 420px at 30% -10%, rgba(193, 18, 31, .22), transparent 60%),
+            radial-gradient(700px 380px at 85% 10%, rgba(255, 255, 255, .06), transparent 55%),
+            rgba(0, 0, 0, .38) !important;
         box-shadow:
-            0 25px 60px rgba(0, 0, 0, .7),
-            0 0 40px rgba(193, 18, 31, .35);
-        backdrop-filter: blur(14px);
+            0 28px 90px rgba(0, 0, 0, .55),
+            0 0 0 1px rgba(255, 255, 255, .06) inset !important;
+        overflow: hidden !important;
+    }
+
+    /* Lista (fica bem “app”) */
+    .panel.left {
+        min-height: 240px !important;
+    }
+
+    .panel-header {
+        padding: 14px !important;
+        border-bottom: 1px solid rgba(255, 255, 255, .08) !important;
+        background: rgba(0, 0, 0, .10) !important;
+        backdrop-filter: blur(10px) !important;
+        -webkit-backdrop-filter: blur(10px) !important;
+    }
+
+    .search {
+        border-radius: 18px !important;
+        padding: 14px 14px !important;
+        background: rgba(255, 255, 255, .06) !important;
+        border: 1px solid rgba(255, 255, 255, .12) !important;
+        box-shadow: 0 14px 28px rgba(0, 0, 0, .25) !important;
+    }
+
+    .list,
+    #lista {
+        max-height: 280px !important;
+        padding: 14px !important;
+        gap: 12px !important;
+    }
+
+    .item {
+        border-radius: 20px !important;
+        padding: 14px !important;
+        background: rgba(255, 255, 255, .05) !important;
+        border: 1px solid rgba(255, 255, 255, .10) !important;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, .35) !important;
+    }
+
+    .item.active {
+        background: rgba(193, 18, 31, .16) !important;
+        border-color: rgba(193, 18, 31, .40) !important;
+        box-shadow:
+            0 18px 46px rgba(193, 18, 31, .16),
+            0 0 0 1px rgba(255, 255, 255, .06) inset !important;
+    }
+
+    .item .title {
+        font-size: 18px !important;
+        font-weight: 950 !important;
+        letter-spacing: .2px !important;
+    }
+
+    .item .row2 {
+        font-size: 14px !important;
+        opacity: .80 !important;
+    }
+
+    /* CHAT: altura “app” com composer colado embaixo */
+    .panel.right.chat {
+        height: auto !important;
+        min-height: calc(100dvh - 420px) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        position: relative !important;
+    }
+
+    /* ====== TOPO DO CHAT vira “CARD PERFIL” ====== */
+    .chat-top {
+        margin: 14px !important;
+        padding: 16px !important;
+        border-radius: 26px !important;
+        border: 1px solid rgba(193, 18, 31, .28) !important;
+
+        background:
+            radial-gradient(620px 220px at 20% 0%, rgba(255, 255, 255, .10), transparent 55%),
+            radial-gradient(780px 340px at 80% 10%, rgba(193, 18, 31, .28), transparent 60%),
+            linear-gradient(180deg, rgba(0, 0, 0, .10), rgba(0, 0, 0, .30)) !important;
+
+        box-shadow:
+            0 26px 70px rgba(0, 0, 0, .55),
+            0 0 0 1px rgba(255, 255, 255, .06) inset,
+            0 0 46px rgba(193, 18, 31, .18) !important;
+
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+
+        backdrop-filter: blur(14px) saturate(140%) !important;
+        -webkit-backdrop-filter: blur(14px) saturate(140%) !important;
+    }
+
+    .chat-user {
+        gap: 14px !important;
+        align-items: center !important;
     }
 
     .avatarWrap {
-        width: 64px;
-        height: 64px;
-        border-radius: 22px;
-        border: 1px solid rgba(255, 255, 255, .18);
+        width: 66px !important;
+        height: 66px !important;
+        border-radius: 22px !important;
+        border: 1px solid rgba(255, 255, 255, .14) !important;
+        box-shadow: 0 18px 40px rgba(0, 0, 0, .35) !important;
+        background: rgba(255, 255, 255, .06) !important;
     }
 
     .userText .title {
-        font-size: 18px;
-        font-weight: 900;
+        font-size: 24px !important;
+        font-weight: 950 !important;
+        letter-spacing: .2px !important;
     }
 
     .userText .sub {
-        font-size: 13px;
-        opacity: .65;
+        font-size: 14px !important;
+        opacity: .70 !important;
+        margin-top: 4px !important;
     }
 
-    /* =======================
-       CARTEIRA VIP
-    ======================= */
-
+    /* Créditos estilo “Carteira” */
     #minutosPill {
-        margin-top: 14px;
-        font-size: 16px;
-        font-weight: 900;
-        padding: 14px;
-        border-radius: 18px;
+        width: 100% !important;
+        justify-content: center !important;
+        padding: 14px 16px !important;
+        border-radius: 999px !important;
+
         background:
-            linear-gradient(180deg, rgba(255, 0, 0, .18), rgba(0, 0, 0, .35));
-        border: 1px solid rgba(255, 0, 0, .35);
+            radial-gradient(220px 90px at 30% 10%, rgba(255, 255, 255, .12), transparent 60%),
+            radial-gradient(380px 140px at 80% 0%, rgba(193, 18, 31, .35), transparent 60%),
+            linear-gradient(180deg, rgba(0, 0, 0, .20), rgba(0, 0, 0, .40)) !important;
+
+        border: 1px solid rgba(193, 18, 31, .35) !important;
+
         box-shadow:
-            0 0 25px rgba(255, 0, 0, .35),
-            inset 0 0 15px rgba(0, 0, 0, .4);
+            0 20px 55px rgba(0, 0, 0, .55),
+            0 0 0 1px rgba(255, 255, 255, .06) inset,
+            0 0 60px rgba(193, 18, 31, .15) !important;
+
+        font-weight: 950 !important;
+        letter-spacing: .3px !important;
     }
 
-    /* =======================
-       BOTÕES PREMIUM
-    ======================= */
-
-    .iconbtn {
-        border: 1px solid rgba(255, 0, 0, .35);
-        background: rgba(20, 0, 5, .85);
-        box-shadow: 0 0 18px rgba(255, 0, 0, .25);
+    /* Botões “pílula premium” (igual print) */
+    .chat-actions {
+        width: 100% !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        justify-content: flex-start !important;
+        gap: 10px !important;
+        margin-top: 2px !important;
     }
 
-    .iconbtn:hover {
-        box-shadow: 0 0 30px rgba(255, 0, 0, .45);
-        transform: translateY(-2px);
+    /* 3 botões em linha, grandes */
+    #btnComprarCreditosTopo,
+    #btnCall,
+    #btnGift {
+        width: 54px !important;
+        height: 54px !important;
+        border-radius: 18px !important;
+        border: 1px solid rgba(255, 255, 255, .14) !important;
+
+        background:
+            radial-gradient(120px 80px at 30% 20%, rgba(255, 255, 255, .10), transparent 60%),
+            linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(0, 0, 0, .28)) !important;
+
+        box-shadow:
+            0 18px 45px rgba(0, 0, 0, .45),
+            0 0 0 1px rgba(255, 255, 255, .06) inset !important;
+
+        backdrop-filter: blur(10px) !important;
+        -webkit-backdrop-filter: blur(10px) !important;
+        font-size: 22px !important;
     }
 
-    /* =======================
-       MENSAGENS
-    ======================= */
+    #btnComprarCreditosTopo:hover,
+    #btnCall:hover,
+    #btnGift:hover {
+        filter: brightness(1.06) !important;
+        box-shadow:
+            0 20px 55px rgba(0, 0, 0, .55),
+            0 0 0 1px rgba(255, 255, 255, .08) inset,
+            0 0 36px rgba(193, 18, 31, .18) !important;
+    }
+
+    #btnCall:disabled,
+    #btnGift:disabled {
+        opacity: .55 !important;
+        filter: grayscale(.25) !important;
+    }
+
+    #chatStatus {
+        flex: 1 1 100% !important;
+        margin-top: 4px !important;
+        opacity: .70 !important;
+        font-size: 13px !important;
+    }
+
+    /* ====== Mensagens (bolhas premium) ====== */
+    #msgs.msgs,
+    .msgs,
+    #msgs {
+        padding: 0 14px 14px !important;
+        margin-top: 0 !important;
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        overflow: auto !important;
+    }
+
+    .msgRow {
+        margin: 12px 0 !important;
+    }
 
     .bubble {
-        border-radius: 24px;
-        padding: 16px;
-        font-size: 15px;
+        max-width: 88% !important;
+        border-radius: 22px !important;
+        padding: 14px 14px 12px !important;
+
         background:
-            linear-gradient(180deg, rgba(255, 0, 0, .12), rgba(0, 0, 0, .4));
-        border: 1px solid rgba(255, 0, 0, .25);
+            radial-gradient(260px 140px at 20% 0%, rgba(255, 255, 255, .09), transparent 62%),
+            linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(0, 0, 0, .24)) !important;
+
+        border: 1px solid rgba(255, 255, 255, .12) !important;
+
         box-shadow:
-            0 15px 40px rgba(0, 0, 0, .6);
+            0 18px 50px rgba(0, 0, 0, .45),
+            0 0 0 1px rgba(255, 255, 255, .05) inset !important;
+
+        backdrop-filter: blur(10px) saturate(130%) !important;
+        -webkit-backdrop-filter: blur(10px) saturate(130%) !important;
     }
 
     .msgRow.me .bubble {
+        border-color: rgba(193, 18, 31, .35) !important;
         background:
-            linear-gradient(180deg, rgba(193, 18, 31, .35), rgba(0, 0, 0, .45));
-        border: 1px solid rgba(255, 0, 0, .45);
+            radial-gradient(260px 140px at 20% 0%, rgba(255, 255, 255, .09), transparent 62%),
+            radial-gradient(360px 180px at 90% 0%, rgba(193, 18, 31, .28), transparent 60%),
+            linear-gradient(180deg, rgba(193, 18, 31, .10), rgba(0, 0, 0, .22)) !important;
+
         box-shadow:
-            0 0 25px rgba(255, 0, 0, .35);
+            0 20px 55px rgba(0, 0, 0, .52),
+            0 0 0 1px rgba(255, 255, 255, .05) inset,
+            0 0 40px rgba(193, 18, 31, .10) !important;
     }
 
-    /* =======================
-       COMPOSER
-    ======================= */
+    .meta {
+        font-size: 12px !important;
+        opacity: .72 !important;
+        margin-top: 8px !important;
+    }
 
+    /* ====== Composer “barra premium” ====== */
     .composer {
-        margin: 14px;
-        border-radius: 20px;
-        padding: 12px;
+        position: sticky !important;
+        bottom: 0 !important;
+        z-index: 12 !important;
+
+        margin: 0 14px 14px !important;
+        border-radius: 22px !important;
+
+        padding: 12px !important;
+        border: 1px solid rgba(255, 255, 255, .12) !important;
+
         background:
-            linear-gradient(180deg, rgba(20, 0, 5, .95), rgba(0, 0, 0, .85));
-        border: 1px solid rgba(255, 0, 0, .25);
+            radial-gradient(520px 200px at 50% 0%, rgba(193, 18, 31, .18), transparent 60%),
+            linear-gradient(180deg, rgba(0, 0, 0, .35), rgba(0, 0, 0, .60)) !important;
+
         box-shadow:
-            0 0 30px rgba(255, 0, 0, .25);
+            0 24px 70px rgba(0, 0, 0, .62),
+            0 0 0 1px rgba(255, 255, 255, .06) inset !important;
+
+        backdrop-filter: blur(14px) !important;
+        -webkit-backdrop-filter: blur(14px) !important;
     }
 
     #texto {
-        background: rgba(0, 0, 0, .5);
-        border: 1px solid rgba(255, 0, 0, .25);
-        border-radius: 16px;
+        border-radius: 18px !important;
+        padding: 14px 14px !important;
+        min-height: 56px !important;
+        max-height: 140px !important;
+
+        background: rgba(255, 255, 255, .06) !important;
+        border: 1px solid rgba(255, 255, 255, .12) !important;
+        box-shadow: 0 14px 30px rgba(0, 0, 0, .30) !important;
     }
 
     #btnEnviar {
-        background: linear-gradient(180deg, #ff1a1a, #8f0000);
-        box-shadow: 0 0 25px rgba(255, 0, 0, .45);
-        border-radius: 16px;
+        border-radius: 18px !important;
+        min-height: 56px !important;
+        padding: 0 18px !important;
+        font-weight: 950 !important;
+        box-shadow: 0 18px 45px rgba(193, 18, 31, .22) !important;
     }
 
+    /* Ajuste presente no mobile (fica ainda mais premium) */
+    .bubble.gift {
+        transform: perspective(900px) rotateX(4deg) !important;
+        border-radius: 26px !important;
+    }
+
+    .bubble.gift .giftEmoji {
+        font-size: 92px !important;
+    }
 }
