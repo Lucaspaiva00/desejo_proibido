@@ -116,7 +116,7 @@ export async function login(req, res) {
         const { email, senha } = req.body;
 
         if (!email || !senha) {
-            await logAcesso(req, {
+            logAcesso(req, {
                 evento: "LOGIN_FALHA",
                 status: 400,
                 email: email || null,
@@ -127,7 +127,7 @@ export async function login(req, res) {
 
         const usuario = await prisma.usuario.findUnique({ where: { email } });
         if (!usuario) {
-            await logAcesso(req, {
+            logAcesso(req, {
                 evento: "LOGIN_FALHA",
                 status: 401,
                 email,
@@ -138,7 +138,7 @@ export async function login(req, res) {
 
         const ok = await bcrypt.compare(senha, usuario.senhaHash);
         if (!ok) {
-            await logAcesso(req, {
+            logAcesso(req, {
                 evento: "LOGIN_FALHA",
                 status: 401,
                 usuarioId: usuario.id,
@@ -149,7 +149,7 @@ export async function login(req, res) {
         }
 
         if (!usuario.ativo) {
-            await logAcesso(req, {
+            logAcesso(req, {
                 evento: "LOGIN_BLOQUEADO",
                 status: 403,
                 usuarioId: usuario.id,
@@ -164,7 +164,7 @@ export async function login(req, res) {
             const agora = new Date();
             const dentroDoPrazo = !ban.ate || new Date(ban.ate) > agora;
             if (dentroDoPrazo) {
-                await logAcesso(req, {
+                logAcesso(req, {
                     evento: "LOGIN_BLOQUEADO",
                     status: 403,
                     usuarioId: usuario.id,
@@ -179,7 +179,8 @@ export async function login(req, res) {
 
         const token = assinarToken({ id: usuario.id, email: usuario.email });
 
-        await logAcesso(req, {
+        // não bloquear resposta
+        logAcesso(req, {
             evento: "LOGIN_OK",
             status: 200,
             usuarioId: usuario.id,
@@ -200,8 +201,9 @@ export async function login(req, res) {
             token,
         });
     } catch (e) {
-        await logAcesso(req, { evento: "LOGIN_ERRO", status: 500, detalhe: e.message });
-        return res.status(500).json({ erro: "Erro ao logar", detalhe: e.message });
+        // também não bloquear aqui (nem arriscar loop por DB)
+        logAcesso(req, { evento: "LOGIN_ERRO", status: 500, detalhe: e?.message || String(e) });
+        return res.status(500).json({ erro: "Erro ao logar" });
     }
 }
 

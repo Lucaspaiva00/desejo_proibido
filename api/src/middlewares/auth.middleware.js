@@ -7,13 +7,13 @@ export async function auth(req, res, next) {
     const header = req.headers.authorization;
 
     if (!header) {
-        await logAcesso(req, { evento: "TOKEN_AUSENTE", status: 401 });
+        logAcesso(req, { evento: "TOKEN_AUSENTE", status: 401 });
         return res.status(401).json({ erro: "Token ausente" });
     }
 
     const [tipo, token] = header.split(" ");
     if (tipo !== "Bearer" || !token) {
-        await logAcesso(req, { evento: "TOKEN_INVALIDO", status: 401, detalhe: "Formato inválido" });
+        logAcesso(req, { evento: "TOKEN_INVALIDO", status: 401, detalhe: "Formato inválido" });
         return res.status(401).json({ erro: "Formato do token inválido" });
     }
 
@@ -32,12 +32,12 @@ export async function auth(req, res, next) {
         });
 
         if (!u) {
-            await logAcesso(req, { evento: "USUARIO_INVALIDO", status: 401, detalhe: "Usuário não encontrado" });
+            logAcesso(req, { evento: "USUARIO_INVALIDO", status: 401, detalhe: "Usuário não encontrado" });
             return res.status(401).json({ erro: "Usuário inválido" });
         }
 
         if (!u.ativo) {
-            await logAcesso(req, { usuarioId: u.id, email: u.email, evento: "DESATIVADO", status: 403 });
+            logAcesso(req, { usuarioId: u.id, email: u.email, evento: "DESATIVADO", status: 403 });
             return res.status(403).json({ erro: "Usuário desativado" });
         }
 
@@ -46,7 +46,7 @@ export async function auth(req, res, next) {
             const agora = new Date();
             const dentroDoPrazo = !ban.ate || new Date(ban.ate) > agora;
             if (dentroDoPrazo) {
-                await logAcesso(req, {
+                logAcesso(req, {
                     usuarioId: u.id,
                     email: u.email,
                     evento: "BANIDO",
@@ -60,7 +60,7 @@ export async function auth(req, res, next) {
         req.usuario = { id: u.id, email: u.email, role: u.role };
         return next();
     } catch (e) {
-        await logAcesso(req, { evento: "TOKEN_INVALIDO", status: 401, detalhe: "expirado ou inválido" });
+        logAcesso(req, { evento: "TOKEN_INVALIDO", status: 401, detalhe: "expirado ou inválido" });
         return res.status(401).json({ erro: "Token inválido ou expirado" });
     }
 }

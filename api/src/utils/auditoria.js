@@ -1,12 +1,13 @@
 // src/utils/auditoria.js
 import { prisma } from "../prisma.js";
 
-export async function logAcesso(
+export function logAcesso(
     req,
     { usuarioId = null, email = null, evento, status = null, detalhe = null } = {}
 ) {
-    try {
-        await prisma.logAcesso.create({
+    // NÃO travar request por auditoria
+    prisma.logAcesso
+        .create({
             data: {
                 usuarioId,
                 email,
@@ -18,13 +19,13 @@ export async function logAcesso(
                 userAgent: req.headers["user-agent"] || null,
                 detalhe,
             },
+        })
+        .catch((e) => {
+            console.error("Falha ao gravar LogAcesso:", e?.message || e);
         });
-    } catch (e) {
-        console.error("Falha ao gravar LogAcesso:", e.message);
-    }
 }
 
-export async function logDenuncia(
+export function logDenuncia(
     req,
     {
         denunciaId = null,
@@ -38,8 +39,8 @@ export async function logDenuncia(
         detalhes = null,
     } = {}
 ) {
-    try {
-        await prisma.logDenuncia.create({
+    prisma.logDenuncia
+        .create({
             data: {
                 denunciaId,
                 denuncianteId,
@@ -53,8 +54,8 @@ export async function logDenuncia(
                 ip: req.ip || null,
                 userAgent: req.headers["user-agent"] || null,
             },
+        })
+        .catch((e) => {
+            console.error("Falha ao gravar LogDenuncia:", e?.message || e);
         });
-    } catch (e) {
-        console.error("Falha ao gravar LogDenuncia:", e.message);
-    }
 }
