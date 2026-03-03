@@ -1,401 +1,164 @@
 /* =========================================================
-   DESEJO PROIBIDO – CHAT APP PREMIUM v10
-   Reconstrução total – visual igual app mobile elite
+   conversas.css — DP CHAT PREMIUM (v11)
+   ✅ Header 1 linha (libera espaço)
+   ✅ Textura adulta (sem infantilizar)
+   ✅ NÃO sobrescreve body (tema fica no dating.css)
 ========================================================= */
 
 :root {
-    --bg-black: #050505;
-    --wine-1: #2b0005;
-    --wine-2: #45000b;
-    --wine-3: #7a0012;
-    --wine-glow: rgba(120, 0, 20, .35);
-    --border: rgba(120, 0, 20, .45);
-    --text: #ffffff;
-    --muted: rgba(255, 255, 255, .6);
+    --wine1: #160006;
+    --wine2: #2a0008;
+    --wine3: #520010;
+    --glow: rgba(193, 18, 31, .20);
+    --border: rgba(193, 18, 31, .26);
+    --borderSoft: rgba(255, 255, 255, .10);
 }
 
-/* =========================================================
-   FUNDO CINEMATOGRÁFICO
-========================================================= */
-
-body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto;
-    background:
-        radial-gradient(1000px 500px at 20% 0%, rgba(120, 0, 20, .3), transparent 60%),
-        radial-gradient(900px 600px at 100% 0%, rgba(60, 0, 10, .4), transparent 60%),
-        linear-gradient(180deg, #090909, #030303 70%, #000);
-    color: var(--text);
-}
-
-/* =========================================================
-   WRAP CENTRALIZADO (ESTILO APP)
-========================================================= */
-
+/* ===== Layout principal ===== */
 .wrap {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 20px;
+    /* usa o container do dating.css, só ajusta densidade do chat */
+    padding-top: 14px;
+    padding-bottom: 14px;
 }
-
-/* =========================================================
-   HERO MAIS COMPACTO
-========================================================= */
-
-.headRow-premium {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
-
-.heroTitle {
-    font-size: 26px;
-    font-weight: 800;
-    letter-spacing: .5px;
-}
-
-.heroSub {
-    font-size: 13px;
-    color: var(--muted);
-}
-
-/* =========================================================
-   GRID PRINCIPAL
-========================================================= */
 
 .chat-layout {
     display: grid;
-    grid-template-columns: 300px 1fr;
-    gap: 18px;
-    height: calc(100vh - 140px);
+    grid-template-columns: 320px 1fr;
+    gap: 14px;
+    height: calc(100dvh - 86px);
+    /* topnav */
+    align-items: stretch;
 }
 
-/* =========================================================
-   PAINÉIS BASE
-========================================================= */
-
+/* ===== Panels ===== */
 .panel {
-    background: linear-gradient(180deg, var(--wine-1), #0a0002);
-    border: 1px solid var(--border);
     border-radius: 22px;
-    box-shadow:
-        0 40px 120px rgba(0, 0, 0, .9),
-        0 0 80px var(--wine-glow);
-    overflow: hidden;
 }
 
-/* =========================================================
-   SIDEBAR
-========================================================= */
-
+/* ===== Sidebar ===== */
 .panel.left {
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 .panel-header {
-    padding: 16px;
-    border-bottom: 1px solid rgba(120, 0, 20, .3);
+    padding: 14px;
+    border-bottom: 1px solid rgba(193, 18, 31, .18);
+    background: rgba(0, 0, 0, .12);
 }
 
 .search {
     width: 100%;
-    padding: 12px;
+    padding: 12px 12px;
     border-radius: 14px;
-    border: 1px solid rgba(120, 0, 20, .4);
-    background: #120002;
+    border: 1px solid rgba(193, 18, 31, .24);
+    background:
+        radial-gradient(120px 80px at 20% 20%, rgba(255, 255, 255, .05), transparent 60%),
+        rgba(0, 0, 0, .26);
     color: #fff;
+    outline: none;
+}
+
+.search:focus {
+    border-color: rgba(193, 18, 31, .45);
+    box-shadow: 0 0 0 3px rgba(193, 18, 31, .14);
 }
 
 .list {
     flex: 1;
-    overflow-y: auto;
+    overflow: auto;
     padding: 14px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
 }
 
+/* item da lista (seu JS injeta .item) */
 .item {
-    padding: 14px;
     border-radius: 18px;
-    background: linear-gradient(180deg, #3b0006, #120002);
-    border: 1px solid rgba(120, 0, 20, .4);
+    border: 1px solid rgba(193, 18, 31, .22);
+    background:
+        radial-gradient(220px 140px at 30% 10%, rgba(255, 255, 255, .06), transparent 60%),
+        linear-gradient(180deg, rgba(30, 0, 8, .72), rgba(8, 0, 3, .92));
+    padding: 14px;
     cursor: pointer;
-    transition: .25s;
+    transition: transform .15s ease, filter .15s ease, box-shadow .15s ease;
 }
 
 .item:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 0 30px var(--wine-glow);
+    transform: translateY(-2px);
+    box-shadow: 0 18px 55px rgba(0, 0, 0, .55), 0 0 35px var(--glow);
 }
 
-/* =========================================================
-   CHAT DIREITO – ESTILO APP
-========================================================= */
+.item.active {
+    border-color: rgba(193, 18, 31, .42);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06), 0 20px 65px rgba(0, 0, 0, .55);
+}
 
+/* ===== Chat right ===== */
 .panel.right.chat {
     display: flex;
     flex-direction: column;
     height: 100%;
-}
-
-/* TOPO DO CHAT */
-
-.chat-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 18px;
-    border-bottom: 1px solid rgba(120, 0, 20, .4);
-    background: linear-gradient(180deg, var(--wine-2), #140003);
-}
-
-.avatarWrap {
-    width: 64px;
-    height: 64px;
-    border-radius: 20px;
     overflow: hidden;
-    border: 1px solid rgba(120, 0, 20, .6);
-}
-
-.chat-actions {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-
-.iconbtn {
-    width: 44px;
-    height: 44px;
-    border-radius: 16px;
-    border: 1px solid rgba(120, 0, 20, .6);
-    background: linear-gradient(180deg, #3b0006, #150003);
-    color: #fff;
-    font-size: 18px;
-    cursor: pointer;
-    transition: .2s;
-}
-
-.iconbtn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 0 25px var(--wine-glow);
 }
 
 /* =========================================================
-   ÁREA DE MENSAGENS
+   HEADER (1 linha + textura)
 ========================================================= */
-
-.msgs {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.msgRow {
-    display: flex;
-}
-
-.msgRow.me {
-    justify-content: flex-end;
-}
-
-.bubble {
-    max-width: 70%;
-    padding: 16px 18px;
-    border-radius: 22px;
-    background: linear-gradient(180deg, #3a0007, #150003);
-    border: 1px solid rgba(120, 0, 20, .35);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, .7);
-}
-
-.msgRow.me .bubble {
-    background: linear-gradient(180deg, #7a0012, #3b0006);
-    border: 1px solid rgba(120, 0, 20, .8);
-}
-
-/* =========================================================
-   PRESENTE ESTILO 3D
-========================================================= */
-
-.bubble.gift {
-    background:
-        radial-gradient(circle at 30% 20%, rgba(255, 255, 255, .15), transparent 60%),
-        linear-gradient(180deg, #7a0012, #3b0006);
-    border: 1px solid rgba(120, 0, 20, .9);
-    box-shadow:
-        0 30px 80px rgba(0, 0, 0, .9),
-        0 0 60px rgba(120, 0, 20, .4);
-}
-
-/* =========================================================
-   COMPOSER FIXO
-========================================================= */
-
-.composer {
-    display: flex;
-    gap: 12px;
-    padding: 16px;
-    border-top: 1px solid rgba(120, 0, 20, .4);
-    background: linear-gradient(180deg, #120002, #070001);
-}
-
-#texto {
-    flex: 1;
-    min-height: 52px;
-    border-radius: 16px;
-    border: 1px solid rgba(120, 0, 20, .4);
-    background: #100002;
-    color: #fff;
-    padding: 14px;
-    resize: none;
-}
-
-#btnEnviar {
-    padding: 0 22px;
-    border-radius: 16px;
-    font-weight: 700;
-    background: linear-gradient(180deg, #7a0012, #3b0006);
-    border: 1px solid rgba(120, 0, 20, .9);
-    box-shadow: 0 0 30px var(--wine-glow);
-}
-
-/* =========================================================
-   RESPONSIVO
-========================================================= */
-
-@media(max-width:980px) {
-
-    .chat-layout {
-        grid-template-columns: 1fr;
-        height: auto;
-    }
-
-    .panel.left {
-        display: none;
-    }
-
-    .bubble {
-        max-width: 85%;
-    }
-}
-
-/* =========================================================
-   PATCH — REMOVER HERO / LANDING e virar APP
-   (não mexe em JS)
-========================================================= */
-
-/* 1) some com o bloco do "CLUBE PRIVADO / CONVERSAS PRIVADAS" */
-.headRow,
-.headRow-premium,
-.hero,
-.heroRight {
-    display: none !important;
-}
-
-/* 2) sobe o chat pra ocupar a tela toda */
-.wrap {
-    margin: 0 auto !important;
-    padding-top: 14px !important;
-}
-
-.chat-layout {
-    height: calc(100dvh - 86px) !important;
-    /* ajusta conforme sua topnav */
-    align-items: stretch;
-}
-
-/* 3) se quiser manter sidebar no desktop, ok.
-   se quiser estilo app (sem sidebar), descomenta abaixo:
-*/
-/*
-.panel.left{
-  display:none !important;
-}
-.chat-layout{
-  grid-template-columns: 1fr !important;
-}
-*/
-
-/* 4) topo do chat vira "header de app" (mais compacto e premium) */
-.panel.right.chat {
-    border-radius: 26px !important;
-    overflow: hidden !important;
-}
-
-.chat-top {
-    margin: 0 !important;
-    border-radius: 0 !important;
-    padding: 14px 14px !important;
-    background:
-        radial-gradient(700px 220px at 20% 0%, rgba(255, 255, 255, .06), transparent 60%),
-        linear-gradient(180deg, rgba(55, 0, 10, .95), rgba(10, 0, 3, 1)) !important;
-    border: 0 !important;
-    border-bottom: 1px solid rgba(120, 0, 20, .35) !important;
-    box-shadow: none !important;
-}
-
-/* 5) deixa o chat mais alto e com cara de app */
-.msgs {
-    padding: 18px 14px 18px !important;
-}
-
-.composer {
-    margin: 0 !important;
-    border-radius: 0 !important;
-    padding: 12px !important;
-}
-
-/* 6) status e pills mais discretos (sem “cara de dashboard”) */
-.dp-pill {
-    font-size: 12px !important;
-    opacity: .9 !important;
-}
-
-/* 7) mobile: chat ocupa 100% e fica igual app */
-@media (max-width: 980px) {
-    .panel.left {
-        display: none !important;
-    }
-
-    .chat-layout {
-        grid-template-columns: 1fr !important;
-        height: calc(100dvh - 78px) !important;
-    }
-
-    .wrap {
-        padding: 10px !important;
-    }
-}
-
-/* =========================================================
-   HEADER APP (igual imagem 1)
-========================================================= */
-
 .dp-appHeader {
-    padding: 16px;
-    border-bottom: 1px solid rgba(120, 0, 20, .35);
+    padding: 12px;
+    border-bottom: 1px solid rgba(193, 18, 31, .18);
     background:
-        radial-gradient(900px 260px at 20% 0%, rgba(255, 255, 255, .06), transparent 60%),
-        linear-gradient(180deg, rgba(55, 0, 10, .95), rgba(10, 0, 3, 1));
+        radial-gradient(900px 240px at 10% 0%, rgba(255, 255, 255, .06), transparent 62%),
+        linear-gradient(180deg, rgba(35, 0, 10, .85), rgba(8, 0, 3, .92));
 }
 
+/* card do usuário */
 .dp-userCard {
+    position: relative;
+    border-radius: 18px;
+    border: 1px solid rgba(193, 18, 31, .28);
+    background:
+        radial-gradient(240px 180px at 18% 35%, rgba(255, 255, 255, .06), transparent 60%),
+        radial-gradient(220px 140px at 92% 10%, rgba(193, 18, 31, .10), transparent 65%),
+        linear-gradient(180deg, rgba(25, 0, 8, .72), rgba(8, 0, 3, .92));
+    box-shadow: 0 22px 70px rgba(0, 0, 0, .65);
+    padding: 12px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 14px;
-    padding: 14px;
-    border-radius: 20px;
-    border: 1px solid rgba(120, 0, 20, .45);
-    background: linear-gradient(180deg, rgba(30, 0, 6, .85), rgba(10, 0, 3, .92));
-    box-shadow: 0 25px 70px rgba(0, 0, 0, .75);
+    gap: 12px;
 }
 
+/* textura extra (adulto) */
+.dp-userCard::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    pointer-events: none;
+    background:
+        repeating-linear-gradient(115deg,
+            rgba(255, 255, 255, .018) 0px,
+            rgba(255, 255, 255, .018) 2px,
+            rgba(0, 0, 0, 0) 10px,
+            rgba(0, 0, 0, 0) 18px);
+    opacity: .35;
+    mix-blend-mode: soft-light;
+}
+
+.dp-userCard::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .05);
+}
+
+/* lado esquerdo */
 .dp-userLeft {
     display: flex;
     align-items: center;
@@ -403,26 +166,36 @@ body {
     min-width: 0;
 }
 
+.avatarWrap {
+    width: 56px;
+    height: 56px;
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid rgba(193, 18, 31, .35);
+    box-shadow: 0 18px 45px rgba(0, 0, 0, .45);
+    background: rgba(255, 255, 255, .04);
+    flex: 0 0 auto;
+}
+
+.avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.avatarFallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    letter-spacing: .5px;
+}
+
 .dp-userText {
     min-width: 0;
-}
-
-.dp-userName {
-    font-weight: 800;
-    font-size: 22px;
-    line-height: 1.1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.dp-userMail {
-    font-size: 13px;
-    opacity: .7;
-    margin-top: 4px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .dp-nameRow {
@@ -431,66 +204,91 @@ body {
     gap: 10px;
 }
 
+.dp-userName {
+    font-weight: 900;
+    font-size: 18px;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dp-userMail {
+    margin-top: 3px;
+    font-size: 12px;
+    opacity: .72;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .dp-onlineDot {
     width: 8px;
     height: 8px;
-    border-radius: 50%;
+    border-radius: 999px;
     background: #21ff6b;
     box-shadow: 0 0 14px rgba(33, 255, 107, .75);
 }
 
+/* lado direito (compacto) */
 .dp-userRight {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 6px;
+    gap: 8px;
+    flex: 0 0 auto;
 }
 
-.dp-wallet {
-    margin-top: 12px;
-    padding: 14px;
-    border-radius: 18px;
-    border: 1px solid rgba(120, 0, 20, .45);
-    background: linear-gradient(180deg, rgba(20, 0, 5, .75), rgba(5, 0, 2, .92));
+.dp-rightTop {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 10px;
-    box-shadow: 0 25px 70px rgba(0, 0, 0, .65);
-}
-
-.dp-walletIcon {
-    font-size: 20px;
-}
-
-.dp-walletText {
-    font-size: 18px;
-    letter-spacing: .2px;
-}
-
-.dp-actionsRow {
-    margin-top: 12px;
-    display: flex;
-    gap: 10px;
+    gap: 8px;
     flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.dp-walletMini {
+    display: inline-flex;
     align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(212, 175, 55, .22);
+    background: rgba(212, 175, 55, .08);
+    color: rgba(255, 255, 255, .95);
+    font-size: 12px;
+    white-space: nowrap;
+    box-shadow: inset 0 0 10px rgba(255, 255, 255, .05);
+}
+
+.dp-walletMini b {
+    color: #D4AF37;
+}
+
+.dp-rightActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .dp-actionBtn {
-    flex: 1 1 180px;
-    min-height: 44px;
-    border-radius: 16px;
-    border: 1px solid rgba(120, 0, 20, .55);
-    background: linear-gradient(180deg, rgba(40, 0, 8, .85), rgba(12, 0, 3, .95));
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(193, 18, 31, .26);
+    background:
+        radial-gradient(140px 90px at 25% 20%, rgba(255, 255, 255, .06), transparent 60%),
+        linear-gradient(180deg, rgba(45, 0, 10, .70), rgba(10, 0, 3, .92));
     color: #fff;
-    font-weight: 800;
+    font-weight: 850;
     cursor: pointer;
-    transition: .2s;
+    transition: transform .14s ease, box-shadow .14s ease, filter .14s ease;
+    white-space: nowrap;
 }
 
 .dp-actionBtn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 0 30px rgba(120, 0, 20, .28);
+    transform: translateY(-1px);
+    box-shadow: 0 16px 45px rgba(0, 0, 0, .55), 0 0 30px var(--glow);
 }
 
 .dp-actionBtn:disabled {
@@ -500,20 +298,123 @@ body {
     box-shadow: none;
 }
 
-/* desktop: mantém sidebar e chat normal */
-@media (min-width: 981px) {
-    .dp-appHeader {
-        border-radius: 0;
+.dp-rightStatus {
+    font-size: 12px;
+    opacity: .7;
+}
+
+/* =========================================================
+   Mensagens (mais espaço)
+========================================================= */
+.msgs {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: 16px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* bolhas (seu JS usa .msgRow e .bubble) */
+.msgRow {
+    display: flex;
+    gap: 10px;
+}
+
+.msgRow.me {
+    justify-content: flex-end;
+}
+
+.msgRow.other {
+    justify-content: flex-start;
+}
+
+.bubble {
+    max-width: min(640px, 86%);
+    padding: 14px 16px;
+    border-radius: 18px;
+    border: 1px solid rgba(193, 18, 31, .18);
+    background:
+        radial-gradient(160px 120px at 20% 15%, rgba(255, 255, 255, .06), transparent 60%),
+        linear-gradient(180deg, rgba(30, 0, 8, .70), rgba(8, 0, 3, .92));
+    box-shadow: 0 18px 55px rgba(0, 0, 0, .55);
+}
+
+.msgRow.me .bubble {
+    border-color: rgba(193, 18, 31, .34);
+    background:
+        radial-gradient(180px 130px at 15% 10%, rgba(255, 255, 255, .07), transparent 60%),
+        linear-gradient(180deg, rgba(193, 18, 31, .42), rgba(139, 0, 0, .30));
+    box-shadow: 0 22px 65px rgba(0, 0, 0, .60), 0 0 34px rgba(193, 18, 31, .12);
+}
+
+/* =========================================================
+   Composer (fixo, adulto)
+========================================================= */
+.composer {
+    display: flex;
+    gap: 10px;
+    padding: 12px;
+    border-top: 1px solid rgba(193, 18, 31, .18);
+    background:
+        radial-gradient(900px 240px at 50% 0%, rgba(255, 255, 255, .04), transparent 62%),
+        linear-gradient(180deg, rgba(10, 0, 3, .92), rgba(0, 0, 0, .55));
+}
+
+#texto {
+    flex: 1;
+    min-height: 52px;
+    border-radius: 16px;
+    border: 1px solid rgba(193, 18, 31, .22);
+    background:
+        radial-gradient(160px 120px at 25% 25%, rgba(255, 255, 255, .05), transparent 60%),
+        rgba(0, 0, 0, .35);
+    color: #fff;
+    padding: 14px;
+    resize: none;
+    outline: none;
+}
+
+#texto:focus {
+    border-color: rgba(193, 18, 31, .45);
+    box-shadow: 0 0 0 3px rgba(193, 18, 31, .14);
+}
+
+/* =========================================================
+   Responsivo
+========================================================= */
+@media (max-width: 980px) {
+    .chat-layout {
+        grid-template-columns: 1fr;
+        height: calc(100dvh - 78px);
+    }
+
+    .panel.left {
+        display: none;
     }
 }
 
-/* mobile: app-like (sidebar some) */
-@media (max-width: 980px) {
-    .panel.left {
-        display: none !important;
+@media (max-width: 520px) {
+    .dp-userCard {
+        flex-direction: column;
+        align-items: stretch;
     }
 
-    .chat-layout {
-        grid-template-columns: 1fr !important;
+    .dp-userRight {
+        align-items: stretch;
+    }
+
+    .dp-rightTop {
+        justify-content: space-between;
+    }
+
+    .dp-rightActions {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .dp-actionBtn {
+        flex: 1 1 160px;
     }
 }

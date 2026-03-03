@@ -116,18 +116,12 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 5px 10px;
+      padding: 6px 10px;
       border-radius: 999px;
       border: 1px solid rgba(255, 255, 255, .12);
       background: rgba(255, 255, 255, .06);
       font-size: 12px;
       white-space: nowrap;
-    }
-
-    .chat-actions {
-      display: flex;
-      align-items: center;
-      gap: 10px;
     }
 
     .iconbtn {
@@ -142,6 +136,7 @@
       align-items: center;
       justify-content: center;
       font-size: 18px;
+      transition: .12s ease;
     }
 
     .iconbtn:hover {
@@ -408,20 +403,6 @@
     .composer {
       flex: 0 0 auto;
     }
-
-    /* mobile topo */
-    @media (max-width: 520px) {
-      .chat-actions {
-        width: 100% !important;
-        flex-wrap: wrap !important;
-        gap: 8px !important;
-      }
-
-      #minutosPill {
-        flex: 1 1 100% !important;
-        justify-content: center !important;
-      }
-    }
   </style>
 </head>
 
@@ -477,8 +458,6 @@
   </aside>
 
   <div class="wrap">
-
-    <!-- ✅ CHAT AREA (desktop continua com sidebar) -->
     <div class="chat-layout">
 
       <!-- SIDEBAR -->
@@ -486,16 +465,16 @@
         <div class="panel-header">
           <input id="q" class="search" placeholder="Buscar conversa..." />
         </div>
-
         <div id="lista" class="list"></div>
       </aside>
 
       <!-- CHAT -->
       <section class="panel right chat" style="position: relative;">
 
-        <!-- ✅ HEADER APP (igual imagem 1) -->
+        <!-- HEADER APP COMPACTO (1 LINHA) -->
         <div class="dp-appHeader">
           <div class="dp-userCard">
+
             <div class="dp-userLeft">
               <div class="avatarWrap">
                 <img id="chatAvatar" class="avatar" alt="avatar" />
@@ -512,23 +491,25 @@
             </div>
 
             <div class="dp-userRight">
-              <span class="dp-pill" id="minutosPill">🔒 Crédito: -</span>
-              <div class="muted" id="chatStatus"></div>
+              <div class="dp-rightTop">
+                <span class="dp-walletMini" title="Carteira VIP">
+                  👑 <b id="saldoCreditos">0</b>
+                </span>
+
+                <span class="dp-pill" id="minutosPill">🔒 Crédito: -</span>
+
+                <button class="iconbtn" id="btnComprarCreditosTopo" title="Comprar créditos">🛒</button>
+              </div>
+
+              <div class="dp-rightActions">
+                <button class="dp-actionBtn" id="btnAssinarTopo" type="button">💎 Upgrade VIP</button>
+                <button class="dp-actionBtn" id="btnGift" type="button" disabled>🎁 Presentear</button>
+                <button class="dp-actionBtn" id="btnCall" type="button" disabled>🔑 Conectar</button>
+              </div>
+
+              <div class="muted dp-rightStatus" id="chatStatus"></div>
             </div>
-          </div>
 
-          <div class="dp-wallet">
-            <span class="dp-walletIcon">👑</span>
-            <span class="dp-walletText">Carteira VIP: <b id="saldoCreditos">0</b></span>
-          </div>
-
-          <div class="dp-actionsRow">
-            <button class="dp-actionBtn" id="btnAssinarTopo" type="button">💎 Upgrade VIP</button>
-            <button class="dp-actionBtn" id="btnGift" type="button" disabled>🎁 Presentear</button>
-            <button class="dp-actionBtn" id="btnCall" type="button" disabled>🔑 Conectar</button>
-
-            <!-- mantém compra topo -->
-            <button class="iconbtn" id="btnComprarCreditosTopo" title="Comprar créditos">🛒</button>
           </div>
         </div>
 
