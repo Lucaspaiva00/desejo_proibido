@@ -344,3 +344,94 @@ body {
     height: 100%;
     background: rgba(120, 0, 20, .25);
 }
+
+/* =======================================
+   APP LAYOUT PREMIUM DENSO
+======================================= */
+
+.app-container {
+    width: 100%;
+    max-width: 1700px;
+    margin: 0 auto;
+    padding: 18px 28px;
+}
+
+/* HEADER */
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.app-header-left {
+    display: flex;
+    flex-direction: column;
+}
+
+.app-title {
+    font-size: 30px;
+    margin: 0;
+    font-weight: 900;
+}
+
+.app-sub {
+    font-size: 13px;
+    opacity: .7;
+    margin-top: 4px;
+}
+
+.app-header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* GRID MAIS IMERSIVO */
+.chat-layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 16px;
+    height: calc(100dvh - 120px);
+}
+
+/* SIDEBAR MAIS FORTE */
+.panel.left {
+    background:
+        linear-gradient(180deg,
+            rgba(30, 0, 6, .95),
+            rgba(8, 0, 2, .98));
+}
+
+/* CHAT FULL HEIGHT */
+.panel.right.chat {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* MENSAGENS MAIS ALTAS */
+.msgs {
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* COMPOSER FIXO */
+.composer {
+    margin: 0;
+    border-radius: 0 0 24px 24px;
+}
+
+/* RESPONSIVO MELHOR */
+@media (max-width: 980px) {
+
+    .chat-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+    }
+
+    .panel.right.chat {
+        min-height: calc(100dvh - 220px);
+    }
+
+}
