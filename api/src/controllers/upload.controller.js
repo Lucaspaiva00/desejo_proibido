@@ -1,17 +1,7 @@
 // src/controllers/upload.controller.js
 import path from "path";
-
-/**
- * Monta URL pública pro arquivo servido por:
- * app.use("/uploads", express.static(...))
- *
- * Ex: https://desejoproibido.app/uploads/arquivo.jpg
- */
-function publicUrl(req, filename) {
-    const proto = (req.headers["x-forwarded-proto"] || req.protocol || "https").split(",")[0].trim();
-    const host = (req.headers["x-forwarded-host"] || req.get("host") || "").split(",")[0].trim();
-    return `${proto}://${host}/uploads/${filename}`;
-}
+import fs from "fs/promises";
+import { uploadPhotoWithThumb, uploadAudio } from "../utils/cloudinary.js";
 
 function assertFile(req) {
     if (!req.file) {
@@ -23,49 +13,67 @@ function assertFile(req) {
 }
 
 export async function uploadFoto(req, res) {
+    let file;
     try {
-        const file = assertFile(req);
+        file = assertFile(req);
 
-        // valida tipo (opcional, mas ajuda)
-        const ext = path.extname(file.filename).toLowerCase();
+        const ext = path.extname(file.originalname || "").toLowerCase();
         const ok = [".jpg", ".jpeg", ".png", ".webp", ".gif"].includes(ext);
-        if (!ok) {
-            return res.status(415).json({ erro: "Formato inválido. Envie imagem (jpg/png/webp/gif)." });
-        }
+        if (!ok) return res.status(415).json({ erro: "Formato inválido. Envie imagem (jpg/png/webp/gif)." });
 
-        const url = publicUrl(req, file.filename);
+        const buffer = await fs.readFile(file.path);
+
+        const { mediaPath, thumbPath } = await uploadPhotoWithThumb({
+            buffer,
+            folder: "desejoproibido/chat/photos",
+            filename: file.originalname || "photo",
+        });
+
         return res.json({
             ok: true,
             tipo: "foto",
-            filename: file.filename,
-            url,
+            mediaPath,
+            thumbPath: thumbPath || mediaPath, // fallback
         });
     } catch (e) {
         const code = e.statusCode || 500;
         return res.status(code).json({ erro: e.message || "Erro no upload de foto" });
+    } finally {
+        // limpa arquivo local salvo pelo multer
+        try {
+            if (file?.path) await fs.unlink(file.path);
+        } catch { }
     }
 }
 
 export async function uploadAudioFile(req, res) {
+    let file;
     try {
-        const file = assertFile(req);
+        file = assertFile(req);
 
-        // valida tipo (opcional)
-        const ext = path.extname(file.filename).toLowerCase();
+        const ext = path.extname(file.originalname || "").toLowerCase();
         const ok = [".mp3", ".wav", ".m4a", ".aac", ".ogg", ".webm"].includes(ext);
-        if (!ok) {
-            return res.status(415).json({ erro: "Formato inválido. Envie áudio (mp3/wav/m4a/aac/ogg/webm)." });
-        }
+        if (!ok) return res.status(415).json({ erro: "Formato inválido. Envie áudio (mp3/wav/m4a/aac/ogg/webm)." });
 
-        const url = publicUrl(req, file.filename);
+        const buffer = await fs.readFile(file.path);
+
+        const { mediaPath } = await uploadAudio({
+            buffer,
+            folder: "desejoproibido/chat/audios",
+            filename: file.originalname || "audio",
+        });
+
         return res.json({
             ok: true,
             tipo: "audio",
-            filename: file.filename,
-            url,
+            mediaPath,
         });
     } catch (e) {
         const code = e.statusCode || 500;
         return res.status(code).json({ erro: e.message || "Erro no upload de áudio" });
+    } finally {
+        try {
+            if (file?.path) await fs.unlink(file.path);
+        } catch { }
     }
 }
