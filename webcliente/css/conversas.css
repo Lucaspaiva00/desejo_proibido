@@ -1,35 +1,36 @@
 /* =========================================================
-   DESEJO PROIBIDO — PREMIUM DARK REFINED
-   Evolução real • Mantém identidade • Adulto elegante
+   DESEJO PROIBIDO — ADULTO PREMIUM RED EDITION
+   Mantém identidade • UX forte • Espaço real
 ========================================================= */
 
 :root {
-    --black-main: #0c0c10;
-    --black-soft: #141419;
-    --black-panel: #1a1a22;
+    --black-deep: #08080c;
+    --black-soft: #12121a;
+    --black-panel: #171720;
 
-    --wine-main: #7a0012;
-    --wine-soft: #5a000c;
-    --wine-dark: #3b0006;
+    --wine-main: #8f0018;
+    --wine-dark: #5a000c;
+    --wine-soft: #b00020;
 
-    --border-subtle: rgba(255, 255, 255, .06);
-    --border-wine: rgba(122, 0, 18, .35);
+    --border-soft: rgba(255, 255, 255, .08);
+    --border-wine: rgba(143, 0, 24, .45);
 
-    --text-main: #f5f5f7;
+    --text-main: #f4f4f7;
     --text-soft: #9a9aa3;
 
-    --radius-xl: 22px;
-    --radius-lg: 16px;
-    --radius-md: 12px;
+    --radius-xl: 24px;
+    --radius-lg: 18px;
+    --radius-md: 14px;
 }
 
 /* ===============================
-   FUNDO — MAIS PRETO, MENOS VINHO
+   FUNDO PROFUNDO ADULTO
 ================================ */
 
 body {
     background:
-        linear-gradient(180deg, #0a0a0f 0%, #06060a 100%);
+        radial-gradient(1200px 800px at 50% -200px, rgba(143, 0, 24, .25), transparent 60%),
+        linear-gradient(180deg, #0a0a10 0%, #050507 100%);
     color: var(--text-main);
 }
 
@@ -38,8 +39,27 @@ body {
 ================================ */
 
 .wrap {
-    width: min(1400px, 95vw);
-    margin: 20px auto 40px;
+    width: min(1500px, 96vw);
+    margin: 24px auto 40px;
+}
+
+/* ===============================
+   HERO MAIS CONTROLADO
+================================ */
+
+.headRow-premium {
+    margin-bottom: 20px;
+}
+
+.heroTitle {
+    font-size: 34px;
+    font-weight: 800;
+    letter-spacing: .5px;
+}
+
+.heroSub {
+    opacity: .65;
+    font-size: 14px;
 }
 
 /* ===============================
@@ -48,19 +68,19 @@ body {
 
 .chat-layout {
     display: grid;
-    grid-template-columns: 320px 1fr;
-    gap: 18px;
+    grid-template-columns: 340px 1fr;
+    gap: 24px;
 }
 
 /* ===============================
-   PAINÉIS — AGORA PRETO REAL
+   PAINÉIS
 ================================ */
 
 .panel {
     border-radius: var(--radius-xl);
     background: var(--black-panel);
-    border: 1px solid var(--border-subtle);
-    box-shadow: 0 30px 80px rgba(0, 0, 0, .8);
+    border: 1px solid var(--border-soft);
+    box-shadow: 0 40px 120px rgba(0, 0, 0, .9);
 }
 
 /* ===============================
@@ -68,21 +88,22 @@ body {
 ================================ */
 
 .panel.left {
-    background: var(--black-soft);
+    background: linear-gradient(180deg, #14141d, #0f0f16);
 }
 
 .panel-header {
-    padding: 16px;
-    border-bottom: 1px solid var(--border-subtle);
+    padding: 18px;
+    border-bottom: 1px solid var(--border-soft);
 }
 
 .search {
     width: 100%;
-    padding: 12px;
+    padding: 14px;
     border-radius: var(--radius-md);
-    border: 1px solid var(--border-subtle);
-    background: var(--black-panel);
+    border: 1px solid var(--border-soft);
+    background: var(--black-soft);
     color: var(--text-main);
+    font-size: 14px;
 }
 
 /* ===============================
@@ -90,25 +111,25 @@ body {
 ================================ */
 
 .list {
-    padding: 14px;
+    padding: 16px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    max-height: calc(100vh - 240px);
+    gap: 14px;
+    max-height: calc(100vh - 260px);
     overflow-y: auto;
 }
 
 .item {
-    padding: 14px;
+    padding: 16px;
     border-radius: var(--radius-lg);
-    background: var(--black-main);
-    border: 1px solid var(--border-subtle);
+    background: #0f0f17;
+    border: 1px solid var(--border-soft);
     transition: .2s ease;
 }
 
 .item:hover {
-    background: #202028;
-    border-color: var(--border-wine);
+    border-color: var(--wine-main);
+    background: #151520;
 }
 
 /* ===============================
@@ -118,20 +139,20 @@ body {
 .panel.right.chat {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 200px);
-    background: var(--black-main);
+    height: calc(100vh - 240px);
+    background: var(--black-deep);
 }
 
 /* ===============================
-   CHAT TOP — SOFISTICADO
+   CHAT TOP
 ================================ */
 
 .chat-top {
-    margin: 16px;
-    padding: 16px;
+    margin: 18px;
+    padding: 18px;
     border-radius: var(--radius-lg);
-    background: var(--black-soft);
-    border: 1px solid var(--border-subtle);
+    background: linear-gradient(180deg, #161621, #12121a);
+    border: 1px solid var(--border-soft);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -142,44 +163,46 @@ body {
 ================================ */
 
 .avatarWrap {
-    width: 56px;
-    height: 56px;
-    border-radius: 18px;
+    width: 64px;
+    height: 64px;
+    border-radius: 20px;
     overflow: hidden;
     border: 1px solid var(--border-wine);
 }
 
 /* ===============================
-   BOTÕES
+   AÇÕES
 ================================ */
 
 .iconbtn {
-    width: 42px;
-    height: 42px;
-    border-radius: 12px;
-    background: var(--black-panel);
-    border: 1px solid var(--border-subtle);
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: #151520;
+    border: 1px solid var(--border-soft);
     color: #fff;
+    font-size: 18px;
     transition: .2s ease;
 }
 
 .iconbtn:hover {
     border-color: var(--wine-main);
-    background: #202028;
+    background: #1c1c27;
 }
 
 /* ===============================
-   MENSAGENS
+   MENSAGENS — AGORA GRANDES
 ================================ */
 
 .msgs {
-    padding: 0 24px 20px;
+    padding: 0 40px 30px;
     overflow-y: auto;
     flex: 1;
+    font-size: 15px;
 }
 
 .msgRow {
-    margin: 12px 0;
+    margin: 16px 0;
     display: flex;
 }
 
@@ -188,12 +211,12 @@ body {
 }
 
 .bubble {
-    max-width: 60%;
-    padding: 14px 18px;
+    max-width: 620px;
+    padding: 16px 20px;
     border-radius: var(--radius-lg);
-    background: var(--black-panel);
-    border: 1px solid var(--border-subtle);
-    font-size: 14px;
+    background: #14141d;
+    border: 1px solid var(--border-soft);
+    line-height: 1.6;
 }
 
 .msgRow.me .bubble {
@@ -201,12 +224,12 @@ body {
     border: none;
 }
 
-/* IMAGENS CONTROLADAS */
+/* IMAGENS MELHORADAS */
 
 .bubble img {
-    max-width: 340px;
-    border-radius: 14px;
-    margin-top: 8px;
+    max-width: 420px;
+    border-radius: 16px;
+    margin-top: 10px;
 }
 
 /* ===============================
@@ -214,54 +237,41 @@ body {
 ================================ */
 
 .composer {
-    margin: 0 20px 20px;
-    padding: 14px;
+    margin: 0 32px 32px;
+    padding: 16px;
     border-radius: var(--radius-xl);
-    background: var(--black-soft);
-    border: 1px solid var(--border-subtle);
+    background: #14141d;
+    border: 1px solid var(--border-soft);
     display: flex;
-    gap: 10px;
+    gap: 12px;
     align-items: center;
 }
 
 #texto {
     flex: 1;
-    min-height: 50px;
-    padding: 12px;
+    min-height: 56px;
+    padding: 14px;
     border-radius: var(--radius-md);
-    border: 1px solid var(--border-subtle);
-    background: var(--black-main);
+    border: 1px solid var(--border-soft);
+    background: #0f0f17;
     color: var(--text-main);
+    font-size: 14px;
 }
 
 #btnEnviar {
-    height: 50px;
-    padding: 0 22px;
+    height: 56px;
+    padding: 0 26px;
     border-radius: var(--radius-md);
     font-weight: 600;
-    background: linear-gradient(135deg, var(--wine-main), var(--wine-dark));
+    background: linear-gradient(135deg, var(--wine-soft), var(--wine-dark));
     border: none;
-}
-
-/* ===============================
-   HERO — MAIS ELEGANTE
-================================ */
-
-.heroTitle {
-    font-size: 34px;
-    font-weight: 800;
-    letter-spacing: .5px;
-}
-
-.heroSub {
-    opacity: .6;
 }
 
 /* ===============================
    RESPONSIVO
 ================================ */
 
-@media (max-width: 980px) {
+@media (max-width: 1000px) {
     .chat-layout {
         grid-template-columns: 1fr;
     }
@@ -272,5 +282,9 @@ body {
 
     .bubble {
         max-width: 85%;
+    }
+
+    .bubble img {
+        max-width: 100%;
     }
 }
