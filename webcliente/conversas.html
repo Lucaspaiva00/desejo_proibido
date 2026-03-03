@@ -516,157 +516,75 @@
     </div>
   </aside>
 
-  <div class="wrap">
+  <div class="app">
 
-    <!-- HEADER PREMIUM MAIS IMERSIVO -->
-    <div class="headRow headRow-premium">
-      
-
-      <div class="heroRight">
-        <div class="premiumBox">
-          <span class="premiumBadge" id="premiumBadge">
-            🔒 Conta Premium Inativa
-          </span>
-
-          <button class="btn btn-primary" id="btnAssinarTopo" type="button">
-            Ativar Premium
-          </button>
-        </div>
+    <!-- SIDEBAR -->
+    <aside class="app-sidebar">
+      <div class="sidebar-top">
+        <input id="q" class="search" placeholder="Buscar conversa..." />
       </div>
-    </div>
+
+      <div id="lista" class="sidebar-list"></div>
+    </aside>
 
     <!-- CHAT AREA -->
-    <div class="chat-layout">
+    <main class="app-chat">
 
-      <!-- SIDEBAR -->
-      <aside class="panel left">
-        <div class="panel-header">
-          <input id="q" class="search" placeholder="Buscar conversa..." />
-        </div>
+      <!-- HEADER DO CHAT -->
+      <div class="chat-header">
 
-        <div id="lista" class="list"></div>
-      </aside>
-
-      <!-- CHAT -->
-      <section class="panel right chat" style="position: relative;">
-
-        <div class="chat-top">
-
-          <div class="chat-user">
-            <div class="avatarWrap">
-              <img id="chatAvatar" class="avatar" alt="avatar" />
-              <div class="avatarFallback" id="chatAvatarFallback">DP</div>
-            </div>
-
-            <div class="userText">
-              <div class="titleRow">
-                <div id="chatNome" class="title">
-                  Selecione uma conversa
-                </div>
-                <div class="user-status-dot"></div>
-              </div>
-
-              <div id="chatSub" class="sub muted"></div>
-            </div>
+        <div class="chat-user">
+          <div class="avatarWrap">
+            <img id="chatAvatar" class="avatar" />
+            <div class="avatarFallback" id="chatAvatarFallback">DP</div>
           </div>
 
-          <div class="chat-actions">
-            <span class="dp-pill" id="minutosPill">
-              🔒 Crédito: -
-            </span>
-
-            <button class="iconbtn" id="btnComprarCreditosTopo" title="Comprar créditos">🛒</button>
-
-            <button class="iconbtn" id="btnCall" title="Ligar" disabled>📞</button>
-
-            <button class="iconbtn" id="btnGift" title="Enviar presente" disabled>🎁</button>
-
-            <div class="muted" id="chatStatus"></div>
-          </div>
-
-        </div>
-
-        <div id="msgs" class="msgs">
-          <div class="empty">
-            Escolha uma conversa à esquerda para iniciar uma interação privada.
+          <div class="chat-user-info">
+            <div class="chat-name" id="chatNome">
+              Selecione uma conversa
+            </div>
+            <div class="chat-sub" id="chatSub"></div>
           </div>
         </div>
 
-        <!-- creditwall (intacto) -->
-        <div class="creditwall" id="creditwall" aria-hidden="true">
-          <div class="creditwallCard">
-            <div class="creditwallTitle">🔒 Acesso restrito</div>
+        <div class="chat-actions">
+          <span class="credit-pill" id="minutosPill">
+            🔒 Crédito: -
+          </span>
 
-            <div class="creditwallText">
-              Para enviar mensagens nesta conversa,
-              você precisa <b>liberar o acesso</b> com créditos.
-            </div>
+          <button class="iconbtn" id="btnComprarCreditosTopo">🛒</button>
+          <button class="iconbtn" id="btnCall" disabled>📞</button>
+          <button class="iconbtn" id="btnGift" disabled>🎁</button>
 
-            <div class="creditwallRow">
-              <button class="btn btn-primary" id="btnLiberarChat" type="button">
-                Liberar por <span id="unlockCost">-</span>
-              </button>
-
-              <button class="btn btn-ghost" id="btnComprarCreditos" type="button">
-                Comprar créditos
-              </button>
-
-              <span class="dp-pill pillSaldo">
-                💰 Saldo: <b id="saldoCreditos">0</b>
-              </span>
-            </div>
-
-            <div class="creditwallNote muted">
-              A liberação é cobrada uma única vez por conversa.
-            </div>
-          </div>
+          <div id="chatStatus" class="chat-status"></div>
         </div>
 
-        <!-- paywall (intacto) -->
-        <div class="paywall" id="paywall" hidden>
-          <div class="paywallCard">
-            <div class="paywallTitle">
-              Área Exclusiva Premium 🔥
-            </div>
+      </div>
 
-            <div class="paywallText">
-              Ligações e presentes são liberados apenas
-              para membros Premium.
-            </div>
-
-            <div class="paywallActions">
-              <button class="btn btn-primary" id="btnAssinar" type="button">
-                Comprar créditos
-              </button>
-
-              <button class="btn btn-ghost" id="btnEntendi" type="button">
-                Entendi
-              </button>
-            </div>
-
-            <div class="paywallNote muted">
-              A ativação ocorre automaticamente após a compra.
-            </div>
-          </div>
+      <!-- MENSAGENS -->
+      <div id="msgs" class="chat-messages">
+        <div class="empty-state">
+          Escolha uma conversa para iniciar.
         </div>
+      </div>
 
-        <!-- composer (intacto) -->
-        <div class="composer">
-          <button class="iconbtn" id="btnFoto" title="Enviar foto">📷</button>
-          <button class="iconbtn" id="btnAudio" title="Enviar áudio">🎙️</button>
+      <!-- COMPOSER -->
+      <div class="chat-composer">
+        <button class="iconbtn" id="btnFoto">📷</button>
+        <button class="iconbtn" id="btnAudio">🎙️</button>
 
-          <textarea id="texto" placeholder="Digite uma mensagem..." disabled></textarea>
+        <textarea id="texto" placeholder="Digite uma mensagem..." disabled></textarea>
 
-          <button id="btnEnviar" class="btn btn-primary" disabled>
-            Enviar
-          </button>
+        <button id="btnEnviar" class="btn-send" disabled>
+          Enviar
+        </button>
 
-          <input type="file" id="inputFoto" accept="image/*" hidden />
-          <input type="file" id="inputAudio" accept="audio/*" hidden />
-        </div>
+        <input type="file" id="inputFoto" accept="image/*" hidden />
+        <input type="file" id="inputAudio" accept="audio/*" hidden />
+      </div>
 
-      </section>
-    </div>
+    </main>
+
   </div>
 
   <div class="dp-modal-overlay" id="giftOverlay" aria-hidden="true">
