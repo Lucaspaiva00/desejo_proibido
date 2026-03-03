@@ -1366,3 +1366,17 @@ textarea {
         border-radius: 14px;
     }
 }
+
+/* PATCH PROIBIDO (reforça vermelho no app inteiro) */
+body::before {
+    opacity: .48;
+    /* era ~.38 */
+}
+
+body {
+    background:
+        radial-gradient(1400px 900px at 50% -10%, rgba(193, 18, 31, .24), transparent 60%),
+        radial-gradient(950px 760px at 0% 50%, rgba(90, 10, 20, .40), transparent 62%),
+        radial-gradient(950px 760px at 100% 50%, rgba(90, 10, 20, .40), transparent 62%),
+        linear-gradient(180deg, var(--bg2), var(--bg0));
+}

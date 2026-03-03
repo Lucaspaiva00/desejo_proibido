@@ -1,22 +1,33 @@
 /* =========================================================
-   conversas.css — DP CHAT PREMIUM (v11)
-   ✅ Header 1 linha (libera espaço)
-   ✅ Textura adulta (sem infantilizar)
-   ✅ NÃO sobrescreve body (tema fica no dating.css)
+   conversas.css — DP CHAT PREMIUM (v12 — PROIBIDO / WINE)
+   ✅ vermelho voltou (proibido)
+   ✅ glow e borda com presença
+   ✅ textura adulta (painéis) sem mexer no body
+   ✅ header 1 linha continua
 ========================================================= */
 
 :root {
-    --wine1: #160006;
-    --wine2: #2a0008;
-    --wine3: #520010;
-    --glow: rgba(193, 18, 31, .20);
-    --border: rgba(193, 18, 31, .26);
+    /* vinho mais presente */
+    --wine1: #120007;
+    --wine2: #2a000a;
+    --wine3: #5b0015;
+
+    /* vermelho assinatura (proibido) */
+    --red: #C1121F;
+    --red2: #8B0000;
+    --redGlow: rgba(193, 18, 31, .38);
+    --redGlow2: rgba(193, 18, 31, .22);
+
+    /* bordas e sombras */
+    --borderRed: rgba(193, 18, 31, .38);
+    --borderRedSoft: rgba(193, 18, 31, .22);
     --borderSoft: rgba(255, 255, 255, .10);
+
+    --shadowDeep: 0 28px 90px rgba(0, 0, 0, .72);
 }
 
 /* ===== Layout principal ===== */
 .wrap {
-    /* usa o container do dating.css, só ajusta densidade do chat */
     padding-top: 14px;
     padding-bottom: 14px;
 }
@@ -30,39 +41,63 @@
     align-items: stretch;
 }
 
-/* ===== Panels ===== */
+/* =========================================================
+   PAINÉIS — textura + vermelho (SEM mexer no body)
+========================================================= */
 .panel {
     border-radius: 22px;
+    overflow: hidden;
+
+    /* textura adulta: mármore + grain + glow lateral */
+    background:
+        radial-gradient(900px 520px at 15% 0%, rgba(193, 18, 31, .22), transparent 60%),
+        radial-gradient(850px 520px at 100% 0%, rgba(90, 10, 20, .26), transparent 62%),
+        radial-gradient(900px 700px at 50% 115%, rgba(0, 0, 0, .72), transparent 55%),
+        repeating-linear-gradient(115deg,
+            rgba(255, 255, 255, .020) 0px,
+            rgba(255, 255, 255, .020) 2px,
+            rgba(0, 0, 0, 0) 10px,
+            rgba(0, 0, 0, 0) 18px),
+        linear-gradient(180deg, rgba(20, 0, 7, .62), rgba(0, 0, 0, .45));
+
+    border: 1px solid rgba(255, 255, 255, .10);
+    box-shadow: var(--shadowDeep), 0 0 70px rgba(193, 18, 31, .10);
+}
+
+/* reforço de borda “proibido” nos painéis do chat */
+.panel.left,
+.panel.right.chat {
+    border-color: var(--borderRedSoft);
+    box-shadow: var(--shadowDeep), 0 0 85px var(--redGlow2);
 }
 
 /* ===== Sidebar ===== */
 .panel.left {
     display: flex;
     flex-direction: column;
-    overflow: hidden;
 }
 
 .panel-header {
     padding: 14px;
-    border-bottom: 1px solid rgba(193, 18, 31, .18);
-    background: rgba(0, 0, 0, .12);
+    border-bottom: 1px solid rgba(193, 18, 31, .22);
+    background: rgba(0, 0, 0, .18);
 }
 
 .search {
     width: 100%;
     padding: 12px 12px;
     border-radius: 14px;
-    border: 1px solid rgba(193, 18, 31, .24);
+    border: 1px solid rgba(193, 18, 31, .30);
     background:
-        radial-gradient(120px 80px at 20% 20%, rgba(255, 255, 255, .05), transparent 60%),
-        rgba(0, 0, 0, .26);
+        radial-gradient(140px 90px at 20% 20%, rgba(255, 255, 255, .06), transparent 60%),
+        rgba(0, 0, 0, .30);
     color: #fff;
     outline: none;
 }
 
 .search:focus {
-    border-color: rgba(193, 18, 31, .45);
-    box-shadow: 0 0 0 3px rgba(193, 18, 31, .14);
+    border-color: rgba(193, 18, 31, .55);
+    box-shadow: 0 0 0 3px rgba(193, 18, 31, .18);
 }
 
 .list {
@@ -74,26 +109,27 @@
     gap: 10px;
 }
 
-/* item da lista (seu JS injeta .item) */
+/* item (seu JS injeta .item) */
 .item {
     border-radius: 18px;
-    border: 1px solid rgba(193, 18, 31, .22);
+    border: 1px solid rgba(193, 18, 31, .26);
     background:
-        radial-gradient(220px 140px at 30% 10%, rgba(255, 255, 255, .06), transparent 60%),
-        linear-gradient(180deg, rgba(30, 0, 8, .72), rgba(8, 0, 3, .92));
+        radial-gradient(280px 170px at 25% 10%, rgba(255, 255, 255, .08), transparent 60%),
+        radial-gradient(220px 140px at 90% 0%, rgba(193, 18, 31, .10), transparent 65%),
+        linear-gradient(180deg, rgba(35, 0, 10, .72), rgba(8, 0, 3, .92));
     padding: 14px;
     cursor: pointer;
-    transition: transform .15s ease, filter .15s ease, box-shadow .15s ease;
+    transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
 }
 
 .item:hover {
     transform: translateY(-2px);
-    box-shadow: 0 18px 55px rgba(0, 0, 0, .55), 0 0 35px var(--glow);
+    box-shadow: 0 18px 55px rgba(0, 0, 0, .55), 0 0 45px var(--redGlow2);
 }
 
 .item.active {
-    border-color: rgba(193, 18, 31, .42);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06), 0 20px 65px rgba(0, 0, 0, .55);
+    border-color: var(--borderRed);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06), 0 22px 70px rgba(0, 0, 0, .60), 0 0 55px var(--redGlow2);
 }
 
 /* ===== Chat right ===== */
@@ -105,26 +141,26 @@
 }
 
 /* =========================================================
-   HEADER (1 linha + textura)
+   HEADER (1 linha) — MAIS VERMELHO / PROIBIDO
 ========================================================= */
 .dp-appHeader {
     padding: 12px;
-    border-bottom: 1px solid rgba(193, 18, 31, .18);
+    border-bottom: 1px solid rgba(193, 18, 31, .26);
     background:
-        radial-gradient(900px 240px at 10% 0%, rgba(255, 255, 255, .06), transparent 62%),
-        linear-gradient(180deg, rgba(35, 0, 10, .85), rgba(8, 0, 3, .92));
+        radial-gradient(1100px 280px at 10% 0%, rgba(193, 18, 31, .22), transparent 62%),
+        linear-gradient(180deg, rgba(45, 0, 12, .82), rgba(8, 0, 3, .92));
 }
 
 /* card do usuário */
 .dp-userCard {
     position: relative;
     border-radius: 18px;
-    border: 1px solid rgba(193, 18, 31, .28);
+    border: 1px solid rgba(193, 18, 31, .34);
     background:
-        radial-gradient(240px 180px at 18% 35%, rgba(255, 255, 255, .06), transparent 60%),
-        radial-gradient(220px 140px at 92% 10%, rgba(193, 18, 31, .10), transparent 65%),
-        linear-gradient(180deg, rgba(25, 0, 8, .72), rgba(8, 0, 3, .92));
-    box-shadow: 0 22px 70px rgba(0, 0, 0, .65);
+        radial-gradient(260px 200px at 14% 35%, rgba(255, 255, 255, .08), transparent 60%),
+        radial-gradient(260px 160px at 92% 8%, rgba(193, 18, 31, .16), transparent 65%),
+        linear-gradient(180deg, rgba(35, 0, 10, .78), rgba(8, 0, 3, .94));
+    box-shadow: 0 24px 80px rgba(0, 0, 0, .68), 0 0 70px rgba(193, 18, 31, .12);
     padding: 12px;
     display: flex;
     align-items: center;
@@ -132,7 +168,7 @@
     gap: 12px;
 }
 
-/* textura extra (adulto) */
+/* textura + glow interno */
 .dp-userCard::before {
     content: "";
     position: absolute;
@@ -141,11 +177,11 @@
     pointer-events: none;
     background:
         repeating-linear-gradient(115deg,
-            rgba(255, 255, 255, .018) 0px,
-            rgba(255, 255, 255, .018) 2px,
+            rgba(255, 255, 255, .020) 0px,
+            rgba(255, 255, 255, .020) 2px,
             rgba(0, 0, 0, 0) 10px,
             rgba(0, 0, 0, 0) 18px);
-    opacity: .35;
+    opacity: .40;
     mix-blend-mode: soft-light;
 }
 
@@ -155,10 +191,12 @@
     inset: 0;
     border-radius: inherit;
     pointer-events: none;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .05);
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, .05),
+        inset 0 0 40px rgba(193, 18, 31, .10);
 }
 
-/* lado esquerdo */
+/* esquerda */
 .dp-userLeft {
     display: flex;
     align-items: center;
@@ -171,8 +209,8 @@
     height: 56px;
     border-radius: 18px;
     overflow: hidden;
-    border: 1px solid rgba(193, 18, 31, .35);
-    box-shadow: 0 18px 45px rgba(0, 0, 0, .45);
+    border: 1px solid rgba(193, 18, 31, .46);
+    box-shadow: 0 18px 45px rgba(0, 0, 0, .45), 0 0 40px rgba(193, 18, 31, .10);
     background: rgba(255, 255, 255, .04);
     flex: 0 0 auto;
 }
@@ -205,7 +243,7 @@
 }
 
 .dp-userName {
-    font-weight: 900;
+    font-weight: 950;
     font-size: 18px;
     line-height: 1.1;
     white-space: nowrap;
@@ -216,7 +254,7 @@
 .dp-userMail {
     margin-top: 3px;
     font-size: 12px;
-    opacity: .72;
+    opacity: .75;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -230,13 +268,12 @@
     box-shadow: 0 0 14px rgba(33, 255, 107, .75);
 }
 
-/* lado direito (compacto) */
+/* direita */
 .dp-userRight {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
     gap: 8px;
-    flex: 0 0 auto;
 }
 
 .dp-rightTop {
@@ -247,24 +284,33 @@
     justify-content: flex-end;
 }
 
+/* carteira e crédito com mais “vida” */
 .dp-walletMini {
     display: inline-flex;
     align-items: center;
     gap: 8px;
     padding: 6px 10px;
     border-radius: 999px;
-    border: 1px solid rgba(212, 175, 55, .22);
-    background: rgba(212, 175, 55, .08);
+    border: 1px solid rgba(212, 175, 55, .26);
+    background: rgba(212, 175, 55, .10);
     color: rgba(255, 255, 255, .95);
     font-size: 12px;
     white-space: nowrap;
-    box-shadow: inset 0 0 10px rgba(255, 255, 255, .05);
+    box-shadow: inset 0 0 12px rgba(255, 255, 255, .06);
 }
 
 .dp-walletMini b {
     color: #D4AF37;
 }
 
+.dp-pill {
+    border: 1px solid rgba(193, 18, 31, .34);
+    background:
+        radial-gradient(140px 90px at 25% 20%, rgba(255, 255, 255, .06), transparent 60%),
+        rgba(0, 0, 0, .20);
+}
+
+/* ações */
 .dp-rightActions {
     display: flex;
     align-items: center;
@@ -275,12 +321,12 @@
     min-height: 40px;
     padding: 0 14px;
     border-radius: 14px;
-    border: 1px solid rgba(193, 18, 31, .26);
+    border: 1px solid rgba(193, 18, 31, .34);
     background:
-        radial-gradient(140px 90px at 25% 20%, rgba(255, 255, 255, .06), transparent 60%),
-        linear-gradient(180deg, rgba(45, 0, 10, .70), rgba(10, 0, 3, .92));
+        radial-gradient(160px 110px at 25% 20%, rgba(255, 255, 255, .08), transparent 60%),
+        linear-gradient(180deg, rgba(65, 0, 16, .75), rgba(10, 0, 3, .92));
     color: #fff;
-    font-weight: 850;
+    font-weight: 900;
     cursor: pointer;
     transition: transform .14s ease, box-shadow .14s ease, filter .14s ease;
     white-space: nowrap;
@@ -288,7 +334,7 @@
 
 .dp-actionBtn:hover {
     transform: translateY(-1px);
-    box-shadow: 0 16px 45px rgba(0, 0, 0, .55), 0 0 30px var(--glow);
+    box-shadow: 0 16px 45px rgba(0, 0, 0, .55), 0 0 42px var(--redGlow2);
 }
 
 .dp-actionBtn:disabled {
@@ -300,11 +346,11 @@
 
 .dp-rightStatus {
     font-size: 12px;
-    opacity: .7;
+    opacity: .75;
 }
 
 /* =========================================================
-   Mensagens (mais espaço)
+   Mensagens — MAIS “PROIBIDO”
 ========================================================= */
 .msgs {
     flex: 1 1 auto;
@@ -316,7 +362,6 @@
     gap: 12px;
 }
 
-/* bolhas (seu JS usa .msgRow e .bubble) */
 .msgRow {
     display: flex;
     gap: 10px;
@@ -334,31 +379,33 @@
     max-width: min(640px, 86%);
     padding: 14px 16px;
     border-radius: 18px;
-    border: 1px solid rgba(193, 18, 31, .18);
+    border: 1px solid rgba(193, 18, 31, .22);
     background:
-        radial-gradient(160px 120px at 20% 15%, rgba(255, 255, 255, .06), transparent 60%),
-        linear-gradient(180deg, rgba(30, 0, 8, .70), rgba(8, 0, 3, .92));
+        radial-gradient(180px 130px at 20% 15%, rgba(255, 255, 255, .06), transparent 60%),
+        radial-gradient(220px 160px at 90% 0%, rgba(193, 18, 31, .08), transparent 65%),
+        linear-gradient(180deg, rgba(28, 0, 10, .78), rgba(8, 0, 3, .94));
     box-shadow: 0 18px 55px rgba(0, 0, 0, .55);
 }
 
+/* minha mensagem com vermelho mais presente */
 .msgRow.me .bubble {
-    border-color: rgba(193, 18, 31, .34);
+    border-color: rgba(193, 18, 31, .48);
     background:
-        radial-gradient(180px 130px at 15% 10%, rgba(255, 255, 255, .07), transparent 60%),
-        linear-gradient(180deg, rgba(193, 18, 31, .42), rgba(139, 0, 0, .30));
-    box-shadow: 0 22px 65px rgba(0, 0, 0, .60), 0 0 34px rgba(193, 18, 31, .12);
+        radial-gradient(220px 160px at 15% 10%, rgba(255, 255, 255, .08), transparent 60%),
+        linear-gradient(180deg, rgba(193, 18, 31, .62), rgba(139, 0, 0, .36));
+    box-shadow: 0 22px 65px rgba(0, 0, 0, .60), 0 0 52px rgba(193, 18, 31, .16);
 }
 
 /* =========================================================
-   Composer (fixo, adulto)
+   Composer — com vermelho e glow
 ========================================================= */
 .composer {
     display: flex;
     gap: 10px;
     padding: 12px;
-    border-top: 1px solid rgba(193, 18, 31, .18);
+    border-top: 1px solid rgba(193, 18, 31, .24);
     background:
-        radial-gradient(900px 240px at 50% 0%, rgba(255, 255, 255, .04), transparent 62%),
+        radial-gradient(1100px 260px at 50% 0%, rgba(193, 18, 31, .14), transparent 62%),
         linear-gradient(180deg, rgba(10, 0, 3, .92), rgba(0, 0, 0, .55));
 }
 
@@ -366,9 +413,9 @@
     flex: 1;
     min-height: 52px;
     border-radius: 16px;
-    border: 1px solid rgba(193, 18, 31, .22);
+    border: 1px solid rgba(193, 18, 31, .28);
     background:
-        radial-gradient(160px 120px at 25% 25%, rgba(255, 255, 255, .05), transparent 60%),
+        radial-gradient(180px 130px at 25% 25%, rgba(255, 255, 255, .06), transparent 60%),
         rgba(0, 0, 0, .35);
     color: #fff;
     padding: 14px;
@@ -377,8 +424,20 @@
 }
 
 #texto:focus {
-    border-color: rgba(193, 18, 31, .45);
-    box-shadow: 0 0 0 3px rgba(193, 18, 31, .14);
+    border-color: rgba(193, 18, 31, .58);
+    box-shadow: 0 0 0 3px rgba(193, 18, 31, .18);
+}
+
+/* botões ícones ficam mais “quentes” */
+.iconbtn {
+    border: 1px solid rgba(193, 18, 31, .26);
+    background:
+        radial-gradient(140px 90px at 25% 20%, rgba(255, 255, 255, .06), transparent 60%),
+        rgba(0, 0, 0, .22);
+}
+
+.iconbtn:hover {
+    box-shadow: 0 0 24px rgba(193, 18, 31, .14);
 }
 
 /* =========================================================
