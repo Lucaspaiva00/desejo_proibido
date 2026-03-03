@@ -444,10 +444,6 @@ const API = {
     listarPresentes: "/presentes",
     enviarPresente: "/presentes/enviar",
     premiumStatus: "/premium/me",
-
-    // ✅ mídia paywall
-    obterMidia: (mid) => `/mensagens/${mid}/midia`,
-    desbloquearMidia: (mid) => `/mensagens/${mid}/desbloquear`,
 };
 
 function syncUsuarioPremium(isPremium, saldoCreditos = null) {
@@ -718,153 +714,12 @@ async function carregarMensagens({ silent = false } = {}) {
     }
 }
 
-// ==============================
-// ✅ PAYWALL MÍDIA (thumb -> unlock -> url real)
-// ==============================
-async function fetchMidia(mid) {
-    return apiFetch(API.obterMidia(mid));
-}
-
-function updateSaldoUIFromResponse(r) {
-    if (typeof r?.saldoCreditos === "number") {
-        state.saldoCreditos = Number(r.saldoCreditos);
-        if (minutosPill) minutosPill.textContent = `💰 Créditos: ${state.saldoCreditos}`;
-        if (saldoCreditosEl) saldoCreditosEl.textContent = `${state.saldoCreditos}`;
-    }
-}
-
-function getMediaBox(mid) {
-    if (!msgs) return null;
-    return msgs.querySelector(`.dpMedia[data-mid="${CSS.escape(String(mid))}"]`);
-}
-
-function hydrateFotoBox(box, data) {
-    if (!box) return;
-
-    const img = box.querySelector("img.dpMediaImg");
-    const overlay = box.querySelector(".lockOverlay");
-    const link = box.querySelector("a.dpMediaLink");
-
-    const custo = Number(data?.custoMoedas ?? 0);
-
-    // thumbUrl pode vir null
-    const thumbUrl = data?.thumbUrl || "";
-    const url = data?.url || "";
-
-    if (data?.locked) {
-        if (img) {
-            if (thumbUrl) img.src = thumbUrl;
-            img.classList.add("isThumb");
-        }
-        if (link) link.removeAttribute("href");
-
-        if (overlay) {
-            overlay.textContent = `🔒 Desbloquear por ${custo} créditos`;
-            overlay.style.display = "flex";
-        }
-        box.dataset.locked = "1";
-        box.dataset.custo = String(custo);
-    } else {
-        if (img) {
-            img.src = url || thumbUrl || img.src;
-            img.classList.remove("isThumb");
-        }
-        if (link && url) {
-            link.setAttribute("href", url);
-        }
-
-        if (overlay) overlay.style.display = "none";
-        box.dataset.locked = "0";
-        box.dataset.custo = "0";
-    }
-}
-
-function hydrateAudioBox(box, data) {
-    if (!box) return;
-
-    const wrap = box.querySelector(".dpAudioWrap");
-    const overlay = box.querySelector(".lockOverlay");
-
-    const custo = Number(data?.custoMoedas ?? 0);
-    const locked = !!data?.locked;
-
-    if (locked) {
-        // mantém card locked
-        if (wrap) {
-            wrap.innerHTML = `
-              <div class="audioCard">
-                🎙️ Áudio bloqueado
-                <div class="muted">Toque para desbloquear por ${custo} créditos</div>
-              </div>
-            `;
-        }
-        if (overlay) {
-            overlay.textContent = `🔒 Desbloquear por ${custo} créditos`;
-            overlay.style.display = "flex";
-        }
-        box.dataset.locked = "1";
-        box.dataset.custo = String(custo);
-    } else {
-        const audioUrl = data?.audioUrl || "";
-        const dur = (data?.duracao ?? null);
-
-        if (wrap) {
-            wrap.innerHTML = `
-              <audio controls preload="metadata" src="${escapeHtml(audioUrl)}"></audio>
-              ${dur !== null ? `<div class="muted" style="margin-top:6px">Duração: ${Number(dur)}s</div>` : ""}
-            `;
-        }
-        if (overlay) overlay.style.display = "none";
-        box.dataset.locked = "0";
-        box.dataset.custo = "0";
-    }
-}
-
-async function hydrateMediaBoxById(mid) {
-    const box = getMediaBox(mid);
-    if (!box) return;
-
-    // evita flood
-    if (box.dataset.loading === "1") return;
-    box.dataset.loading = "1";
-
-    try {
-        const tipo = box.getAttribute("data-tipo") || "";
-        const data = await fetchMidia(mid);
-
-        if (tipo === "FOTO") hydrateFotoBox(box, data);
-        if (tipo === "AUDIO") hydrateAudioBox(box, data);
-    } catch (e) {
-        // se falhar, mantém overlay
-        const overlay = box.querySelector(".lockOverlay");
-        if (overlay) {
-            overlay.textContent = "⚠️ Erro ao carregar. Toque para tentar novamente.";
-            overlay.style.display = "flex";
-        }
-        box.dataset.locked = "1";
-    } finally {
-        box.dataset.loading = "0";
-    }
-}
-
-function hydrateAllMediaBoxes() {
-    if (!msgs) return;
-    const boxes = [...msgs.querySelectorAll(".dpMedia[data-mid][data-tipo]")];
-
-    // hidrata todos (simples). Se quiser otimizar, dá pra hidratar só visíveis.
-    for (const b of boxes) {
-        const mid = b.getAttribute("data-mid");
-        if (mid) hydrateMediaBoxById(mid);
-    }
-}
-
 /**
  * ✅ Render 100% correto:
  * - sem sobrescrever conteudo de FOTO/AUDIO
  * - sem querySelector dentro do map
  * - handler de desbloquear via delegation
  * - ✅ agora com botão encaminhar
- * - ✅ paywall dentro do app usando /mensagens/:id/midia
  */
 function renderMensagens(items, { stickToBottom = true } = {}) {
     if (!items?.length) {
@@ -887,30 +742,39 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
         let conteudo = "";
 
         if (tipo === "FOTO") {
-            // ✅ Sempre renderiza o card igual (imagem + overlay),
-            // e depois hidrata pelo endpoint /mensagens/:id/midia
-            conteudo = `
-              <div class="dpMedia mediaLocked" data-mid="${escapeHtml(m.id)}" data-tipo="FOTO" data-locked="1" data-custo="${Number(m.custoMoedas || 10)}">
-                <a class="dpMediaLink" href="javascript:void(0)" rel="noopener">
-                  <img src="" class="dpMediaImg mediaFull" alt="foto" />
-                </a>
-                <div class="lockOverlay">🔒 Carregando…</div>
-              </div>
-              <button class="btnForward" data-mid="${escapeHtml(m.id)}">↪ Encaminhar</button>
-            `;
+            if (m.locked) {
+                conteudo = `
+          <div class="mediaLocked" data-mid="${escapeHtml(m.id)}" data-tipo="FOTO">
+            ${m.thumbUrl ? `<img src="${escapeHtml(m.thumbUrl)}" class="thumb" />` : `<div class="thumb fake"></div>`}
+            <div class="lockOverlay">🔒 Desbloquear por ${Number(m.custoMoedas || 0)} créditos</div>
+          </div>
+          <button class="btnForward" data-mid="${escapeHtml(m.id)}">↪ Encaminhar</button>
+        `;
+            } else {
+                conteudo = `
+          <a href="${escapeHtml(m.mediaUrl || "")}" target="_blank" rel="noopener">
+            <img src="${escapeHtml(m.mediaUrl || "")}" class="mediaFull" />
+          </a>
+          <button class="btnForward" data-mid="${escapeHtml(m.id)}">↪ Encaminhar</button>
+        `;
+            }
         } else if (tipo === "AUDIO") {
-            conteudo = `
-              <div class="dpMedia mediaLocked audioLocked" data-mid="${escapeHtml(m.id)}" data-tipo="AUDIO" data-locked="1" data-custo="${Number(m.custoMoedas || 10)}">
-                <div class="dpAudioWrap">
-                  <div class="audioCard">
-                    🎙️ Áudio
-                    <div class="muted">Carregando…</div>
-                  </div>
-                </div>
-                <div class="lockOverlay">🔒 Carregando…</div>
-              </div>
-              <button class="btnForward" data-mid="${escapeHtml(m.id)}">↪ Encaminhar</button>
-            `;
+            if (m.locked) {
+                conteudo = `
+          <div class="mediaLocked audioLocked" data-mid="${escapeHtml(m.id)}" data-tipo="AUDIO">
+            <div class="audioCard">
+              🎙️ Áudio bloqueado
+              <div class="muted">Toque para desbloquear por ${Number(m.custoMoedas || 0)} créditos</div>
+            </div>
+          </div>
+          <button class="btnForward" data-mid="${escapeHtml(m.id)}">↪ Encaminhar</button>
+        `;
+            } else {
+                conteudo = `
+          <audio controls preload="metadata" src="${escapeHtml(m.audioUrl || "")}"></audio>
+          <button class="btnForward" data-mid="${escapeHtml(m.id)}">↪ Encaminhar</button>
+        `;
+            }
         } else if (tipo === "PRESENTE") {
             const nome = meta.nome || (m.texto || "🎁 Presente");
             const { emoji, text } = splitEmojiAndText(nome);
@@ -937,9 +801,6 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
     }).join("");
 
     msgs.innerHTML = html;
-
-    // ✅ hidrata mídia (thumb/locked/url real)
-    hydrateAllMediaBoxes();
 
     if (stickToBottom) scrollToBottom(msgs);
 }
@@ -988,26 +849,23 @@ if (msgs && !msgs.__dpMediaHandlerAttached) {
             return;
         }
 
-        // ✅ mídia: click
-        const box = ev.target?.closest?.(".dpMedia[data-mid][data-tipo]");
+        // ✅ desbloquear mídia
+        const box = ev.target?.closest?.(".mediaLocked");
         if (!box) return;
 
         const mid = box.getAttribute("data-mid");
-        const tipo = box.getAttribute("data-tipo") || "";
         if (!mid) return;
 
-        // Se clicou e já está desbloqueado, deixa abrir o link (foto) ou tocar (audio)
-        const locked = box.dataset.locked === "1";
-        if (!locked) return;
-
         try {
-            // tenta desbloquear
-            const r = await apiFetch(API.desbloquearMidia(mid), { method: "POST" });
-            updateSaldoUIFromResponse(r);
+            const r = await apiFetch(`/mensagens/${mid}/desbloquear`, { method: "POST" });
 
-            // re-hidrata só este box (não precisa recarregar tudo)
-            await hydrateMediaBoxById(mid);
+            if (typeof r?.saldoCreditos === "number") {
+                state.saldoCreditos = r.saldoCreditos;
+                if (minutosPill) minutosPill.textContent = `💰 Créditos: ${r.saldoCreditos}`;
+                if (saldoCreditosEl) saldoCreditosEl.textContent = `${r.saldoCreditos}`;
+            }
 
+            await carregarMensagens();
         } catch (e) {
             if (e?.status === 402) {
                 alert("Saldo insuficiente para desbloquear.");
@@ -1439,19 +1297,33 @@ inputFoto?.addEventListener("change", async () => {
     if (!file || !state.conversaId) return;
 
     try {
-        // ✅ 1) upload pro BACKEND (gera thumb)
-        const form = new FormData();
-        form.append("file", file);
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("upload_preset", "desejoproibido"); // unsigned preset
+        formData.append("folder", "desejoproibido/chat");
 
-        const up = await apiFetch("/uploads/foto", { method: "POST", body: form });
+        // 🔥 Upload direto Cloudinary
+        const responseUpload = await fetch(
+            "https://api.cloudinary.com/v1_1/dfdinbti3/image/upload",
+            {
+                method: "POST",
+                body: formData,
+            }
+        ).then((res) => res.json());
 
-        // ✅ 2) cria mensagem FOTO (bloqueada por 10)
+        if (responseUpload.error) {
+            throw new Error(responseUpload.error.message);
+        }
+
+        const mediaPath = responseUpload.public_id + "." + responseUpload.format;
+
+        // 🔥 Agora só cria mensagem no backend
         await apiFetch("/mensagens/foto", {
             method: "POST",
             body: {
                 conversaId: state.conversaId,
-                mediaPath: up.mediaPath,
-                thumbPath: up.thumbPath, // ✅ thumb de verdade agora
+                mediaPath,
+                thumbPath: mediaPath,
                 custoMoedas: 10,
             },
         });
