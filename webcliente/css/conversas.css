@@ -283,3 +283,91 @@ body {
         max-width: 85%;
     }
 }
+
+/* =========================================================
+   PATCH — REMOVER HERO / LANDING e virar APP
+   (não mexe em JS)
+========================================================= */
+
+/* 1) some com o bloco do "CLUBE PRIVADO / CONVERSAS PRIVADAS" */
+.headRow,
+.headRow-premium,
+.hero,
+.heroRight {
+    display: none !important;
+}
+
+/* 2) sobe o chat pra ocupar a tela toda */
+.wrap {
+    margin: 0 auto !important;
+    padding-top: 14px !important;
+}
+
+.chat-layout {
+    height: calc(100dvh - 86px) !important;
+    /* ajusta conforme sua topnav */
+    align-items: stretch;
+}
+
+/* 3) se quiser manter sidebar no desktop, ok.
+   se quiser estilo app (sem sidebar), descomenta abaixo:
+*/
+/*
+.panel.left{
+  display:none !important;
+}
+.chat-layout{
+  grid-template-columns: 1fr !important;
+}
+*/
+
+/* 4) topo do chat vira "header de app" (mais compacto e premium) */
+.panel.right.chat {
+    border-radius: 26px !important;
+    overflow: hidden !important;
+}
+
+.chat-top {
+    margin: 0 !important;
+    border-radius: 0 !important;
+    padding: 14px 14px !important;
+    background:
+        radial-gradient(700px 220px at 20% 0%, rgba(255, 255, 255, .06), transparent 60%),
+        linear-gradient(180deg, rgba(55, 0, 10, .95), rgba(10, 0, 3, 1)) !important;
+    border: 0 !important;
+    border-bottom: 1px solid rgba(120, 0, 20, .35) !important;
+    box-shadow: none !important;
+}
+
+/* 5) deixa o chat mais alto e com cara de app */
+.msgs {
+    padding: 18px 14px 18px !important;
+}
+
+.composer {
+    margin: 0 !important;
+    border-radius: 0 !important;
+    padding: 12px !important;
+}
+
+/* 6) status e pills mais discretos (sem “cara de dashboard”) */
+.dp-pill {
+    font-size: 12px !important;
+    opacity: .9 !important;
+}
+
+/* 7) mobile: chat ocupa 100% e fica igual app */
+@media (max-width: 980px) {
+    .panel.left {
+        display: none !important;
+    }
+
+    .chat-layout {
+        grid-template-columns: 1fr !important;
+        height: calc(100dvh - 78px) !important;
+    }
+
+    .wrap {
+        padding: 10px !important;
+    }
+}
