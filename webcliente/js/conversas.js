@@ -1297,24 +1297,39 @@ inputFoto?.addEventListener("change", async () => {
     if (!file || !state.conversaId) return;
 
     try {
-        const form = new FormData();
-        form.append("file", file);
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("upload_preset", "desejoproibido"); // unsigned preset
+        formData.append("folder", "desejoproibido/chat");
 
-        // 1) upload pro backend -> cloudinary
-        const up = await apiFetch("/uploads/foto", { method: "POST", body: form });
+        // 🔥 Upload direto Cloudinary
+        const responseUpload = await fetch(
+            "https://api.cloudinary.com/v1_1/dfdinbti3/image/upload",
+            {
+                method: "POST",
+                body: formData,
+            }
+        ).then((res) => res.json());
 
-        // 2) cria mensagem FOTO (travada)
+        if (responseUpload.error) {
+            throw new Error(responseUpload.error.message);
+        }
+
+        const mediaPath = responseUpload.public_id + "." + responseUpload.format;
+
+        // 🔥 Agora só cria mensagem no backend
         await apiFetch("/mensagens/foto", {
             method: "POST",
             body: {
                 conversaId: state.conversaId,
-                mediaPath: up.mediaPath,
-                thumbPath: up.thumbPath,
-                custoMoedas: 10, // ✅ combinado: 10 créditos
-            }
+                mediaPath,
+                thumbPath: mediaPath,
+                custoMoedas: 10,
+            },
         });
 
         await carregarMensagens();
+
     } catch (e) {
         alert("Erro ao enviar foto: " + (e?.message || "erro"));
     } finally {
