@@ -187,7 +187,7 @@ socket.onAny((event, ...args) => {
 socket.on("wallet:update", (p) => {
     const saldo = Number(p?.saldoCreditos ?? 0);
     state.saldoCreditos = saldo;
-   
+    if (minutosPill) minutosPill.textContent = `💰 Créditos: ${saldo}`;
     if (saldoCreditosEl) saldoCreditosEl.textContent = `${saldo}`;
 });
 

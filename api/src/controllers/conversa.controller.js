@@ -1,12 +1,12 @@
 // src/controllers/conversa.controller.js
 import { prisma } from "../prisma.js";
 import { getOrCreateTranslation } from "../services/translate.service.js";
-import { buildPublicUrl } from "../utils/cloudinary.js";
+import { buildPublicUrl, buildThumbBlurUrl } from "../utils/cloudinary.js";
 
 const CHAT_UNLOCK_CREDITS = Number(process.env.CHAT_UNLOCK_CREDITS || 10);
 
 // ==============================
-// Wallet helpers (local)
+// Wallet helpers
 // ==============================
 async function ensureWallet(userId) {
     return prisma.wallet.upsert({
@@ -25,7 +25,6 @@ async function getSaldoCreditos(userId) {
 async function isChatLiberadoParaUsuario(conversaId, userId) {
     const tx = await prisma.walletTx.findFirst({
         where: { userId, origem: "CHAT_UNLOCK", tipo: "DEBIT", refId: conversaId },
-        select: { id: true },
     });
     return !!tx;
 }
@@ -38,7 +37,6 @@ async function alreadyUnlockedMedia(userId, mensagemId) {
             tipo: "DEBIT",
             refId: String(mensagemId),
         },
-        select: { id: true },
     });
     return !!tx;
 }
@@ -50,8 +48,7 @@ function assertParteDaConversa(conv, userId) {
 }
 
 function shouldTranslateMessage(m) {
-    const tipo = m?.tipo || "TEXTO";
-    return tipo === "TEXTO";
+    return (m?.tipo || "TEXTO") === "TEXTO";
 }
 
 function splitPath(p) {
@@ -62,13 +59,11 @@ function splitPath(p) {
     return { publicId: s.slice(0, lastDot), format: s.slice(lastDot + 1) };
 }
 
-/**
- * ✅ Mapeia mensagem p/ front
- * - TEXTO: tradução
- * - FOTO: thumbUrl sempre; mediaUrl só se autor OU desbloqueou
- * - AUDIO: audioUrl só se autor OU desbloqueou (✅ corrigido)
- */
+// ==============================
+// MAP MENSAGEM (CORREÇÃO REAL)
+// ==============================
 async function mapMensagemParaUsuario(m, idiomaDestino, viewerId) {
+
     const original = (m.textoOriginal ?? m.texto ?? "").trim();
     const idiomaOriginal = m.idiomaOriginal || "pt";
 
@@ -90,54 +85,57 @@ async function mapMensagemParaUsuario(m, idiomaDestino, viewerId) {
     let mediaUrl = null;
     let audioUrl = null;
 
-    const custoMoedas = (m.custoMoedas ?? null);
-
-    // se for o autor, nunca fica "locked" pra ele
     let locked = !!m.bloqueada;
-    if (String(m.autorId) === String(viewerId)) locked = false;
+    const custoMoedas = m.custoMoedas ?? 10;
 
+    // autor nunca paga
+    if (String(m.autorId) === String(viewerId)) {
+        locked = false;
+    }
+
+    // ================= FOTO =================
     if (tipo === "FOTO") {
-        const { publicId: tId, format: tFmt } = splitPath(m.thumbPath);
-        if (tId) {
-            thumbUrl = buildPublicUrl({
-                publicId: tId,
-                resourceType: "image",
-                format: tFmt || "jpg",
-                transformation: "",
+
+        const { publicId, format } = splitPath(m.mediaPath);
+
+        if (publicId) {
+            // 🔥 SEMPRE gera thumb blur dinâmico
+            thumbUrl = buildThumbBlurUrl({
+                publicId,
+                format: format || "jpg",
             });
         }
 
-        const canSeeOriginal = !locked || (await alreadyUnlockedMedia(viewerId, m.id));
+        const canSeeOriginal =
+            !locked || (await alreadyUnlockedMedia(viewerId, m.id));
 
-        if (canSeeOriginal) {
-            const { publicId, format } = splitPath(m.mediaPath);
-            if (publicId) {
-                mediaUrl = buildPublicUrl({
-                    publicId,
-                    resourceType: "image",
-                    format: format || "jpg",
-                    transformation: "",
-                });
-            }
+        if (canSeeOriginal && publicId) {
+            mediaUrl = buildPublicUrl({
+                publicId,
+                resourceType: "image",
+                format: format || "jpg",
+            });
+            locked = false;
         } else {
             locked = true;
         }
     }
 
-    // ✅ AUDIO corrigido: só manda audioUrl se desbloqueou
+    // ================= AUDIO =================
     if (tipo === "AUDIO") {
-        const canHearOriginal = !locked || (await alreadyUnlockedMedia(viewerId, m.id));
 
-        if (canHearOriginal) {
-            const { publicId, format } = splitPath(m.mediaPath);
-            if (publicId) {
-                audioUrl = buildPublicUrl({
-                    publicId,
-                    resourceType: "video", // cloudinary audio = resource_type video
-                    format: format || "mp3",
-                    transformation: "",
-                });
-            }
+        const { publicId, format } = splitPath(m.mediaPath);
+
+        const canHearOriginal =
+            !locked || (await alreadyUnlockedMedia(viewerId, m.id));
+
+        if (canHearOriginal && publicId) {
+            audioUrl = buildPublicUrl({
+                publicId,
+                resourceType: "video",
+                format: format || "mp3",
+            });
+            locked = false;
         } else {
             locked = true;
         }
@@ -149,12 +147,9 @@ async function mapMensagemParaUsuario(m, idiomaDestino, viewerId) {
         textoOriginal: m.textoOriginal ?? original,
         idiomaOriginal,
         textoExibido,
-
-        // mídia
         thumbUrl,
         mediaUrl,
         audioUrl,
-
         locked,
         custoMoedas,
     };
@@ -173,37 +168,8 @@ export async function listarConversas(req, res) {
         include: { match: true },
     });
 
-    const conversaIds = conversas.map((c) => c.id);
-    if (conversaIds.length === 0) return res.json([]);
-
-    const ultimas = await prisma.mensagem.findMany({
-        where: { conversaId: { in: conversaIds } },
-        orderBy: { criadoEm: "desc" },
-        distinct: ["conversaId"],
-        select: {
-            id: true,
-            conversaId: true,
-            texto: true,
-            textoOriginal: true,
-            idiomaOriginal: true,
-            tipo: true,
-            criadoEm: true,
-        },
-    });
-
-    const outroIds = conversas.map((c) => {
-        const a = c.match.usuarioAId;
-        const b = c.match.usuarioBId;
-        return a === userId ? b : a;
-    });
-
-    const outros = await prisma.usuario.findMany({
-        where: { id: { in: outroIds } },
-        include: { perfil: true, fotos: true },
-    });
-
-    const outroById = new Map();
-    for (const u of outros) outroById.set(u.id, u);
+    const conversaIds = conversas.map(c => c.id);
+    if (!conversaIds.length) return res.json([]);
 
     const unlocks = await prisma.walletTx.findMany({
         where: {
@@ -212,62 +178,31 @@ export async function listarConversas(req, res) {
             tipo: "DEBIT",
             refId: { in: conversaIds },
         },
-        select: { refId: true },
     });
 
-    const liberadasSet = new Set(unlocks.map((u) => u.refId));
+    const liberadas = new Set(unlocks.map(u => u.refId));
 
-    const lastByConversa = new Map();
-    for (const m of ultimas) {
-        const original = (m.textoOriginal ?? m.texto ?? "").trim();
-        const from = m.idiomaOriginal || "pt";
-        let textoExibido = m.texto ?? original;
-
-        if (m.tipo === "TEXTO" && original && idiomaDestino && idiomaDestino !== from) {
-            const t = await getOrCreateTranslation({
-                mensagemId: m.id,
-                idiomaDestino,
-                textoOriginal: original,
-                idiomaOriginal: from,
-            });
-            if (t) textoExibido = t;
-        }
-
-        lastByConversa.set(m.conversaId, {
-            texto: m.texto ?? original,
-            textoExibido,
-            criadoEm: m.criadoEm,
-        });
-    }
-
-    const data = conversas.map((c) => {
-        const outroId = c.match.usuarioAId === userId ? c.match.usuarioBId : c.match.usuarioAId;
-        const outro = outroById.get(outroId) || null;
-        const ultima = lastByConversa.get(c.id) || null;
-
-        return {
-            id: c.id,
-            atualizadoEm: c.atualizadoEm,
-            chatLiberado: liberadasSet.has(c.id),
-            outroUsuarioId: outroId,
-            outro,
-            ultimaMensagem: ultima,
-        };
-    });
-
-    return res.json(data);
+    return res.json(conversas.map(c => ({
+        id: c.id,
+        atualizadoEm: c.atualizadoEm,
+        chatLiberado: liberadas.has(c.id),
+        outroUsuarioId: c.match.usuarioAId === userId
+            ? c.match.usuarioBId
+            : c.match.usuarioAId,
+    })));
 }
 
 // ==============================
 // MENSAGENS DA CONVERSA
 // ==============================
 export async function mensagensDaConversa(req, res) {
+
     const userId = req.usuario.id;
     const idiomaDestino = req.lang || req.usuario?.idioma || "pt";
-    const { id: conversaId } = req.params;
+    const { id } = req.params;
 
     const conv = await prisma.conversa.findUnique({
-        where: { id: conversaId },
+        where: { id },
         include: { match: true },
     });
 
@@ -275,26 +210,8 @@ export async function mensagensDaConversa(req, res) {
     if (!assertParteDaConversa(conv, userId)) return res.status(403).json({ erro: "Sem acesso" });
 
     const mensagens = await prisma.mensagem.findMany({
-        where: { conversaId },
+        where: { conversaId: id },
         orderBy: { criadoEm: "asc" },
-        take: 200,
-        select: {
-            id: true,
-            conversaId: true,
-            autorId: true,
-            tipo: true,
-            texto: true,
-            textoOriginal: true,
-            idiomaOriginal: true,
-            metaJson: true,
-            criadoEm: true,
-
-            mediaPath: true,
-            thumbPath: true,
-            mediaDuracao: true,
-            bloqueada: true,
-            custoMoedas: true,
-        },
     });
 
     const mapped = [];
@@ -302,129 +219,5 @@ export async function mensagensDaConversa(req, res) {
         mapped.push(await mapMensagemParaUsuario(m, idiomaDestino, userId));
     }
 
-    return res.json({ mensagens: mapped, lang: idiomaDestino });
-}
-
-// ==============================
-// ABRIR/CRIAR CONVERSA POR MATCH
-// ==============================
-export async function abrirConversaPorMatch(req, res) {
-    const userId = req.usuario.id;
-    const { matchId } = req.body || {};
-
-    if (!matchId) return res.status(400).json({ erro: "matchId é obrigatório" });
-
-    const match = await prisma.match.findUnique({ where: { id: matchId } });
-    if (!match) return res.status(404).json({ erro: "Match não encontrado" });
-
-    if (match.usuarioAId !== userId && match.usuarioBId !== userId) {
-        return res.status(403).json({ erro: "Sem acesso" });
-    }
-
-    let conversa = await prisma.conversa.findFirst({ where: { matchId } });
-
-    if (!conversa) {
-        conversa = await prisma.conversa.create({ data: { matchId } });
-    }
-
-    return res.json(conversa);
-}
-
-// ==============================
-// STATUS (CRÉDITOS)
-// ==============================
-export async function statusConversa(req, res) {
-    const userId = req.usuario.id;
-    const { id: conversaId } = req.params;
-
-    const conv = await prisma.conversa.findUnique({
-        where: { id: conversaId },
-        include: { match: true },
-    });
-
-    if (!conv) return res.status(404).json({ erro: "Conversa não encontrada" });
-    if (!assertParteDaConversa(conv, userId)) return res.status(403).json({ erro: "Sem acesso" });
-
-    const chatLiberado = await isChatLiberadoParaUsuario(conversaId, userId);
-    const saldoCreditos = await getSaldoCreditos(userId);
-
-    return res.json({
-        chatLiberado,
-        custoCreditos: CHAT_UNLOCK_CREDITS,
-        saldoCreditos,
-    });
-}
-
-// ==============================
-// LIBERAR CHAT (CRÉDITOS)
-// ==============================
-export async function liberarChat(req, res) {
-    const userId = req.usuario.id;
-    const { id: conversaId } = req.params;
-
-    const conv = await prisma.conversa.findUnique({
-        where: { id: conversaId },
-        include: { match: true },
-    });
-
-    if (!conv) return res.status(404).json({ erro: "Conversa não encontrada" });
-    if (!assertParteDaConversa(conv, userId)) return res.status(403).json({ erro: "Sem acesso" });
-
-    await ensureWallet(userId);
-
-    const jaLiberado = await isChatLiberadoParaUsuario(conversaId, userId);
-    const saldo = await getSaldoCreditos(userId);
-
-    if (jaLiberado) {
-        return res.json({ chatLiberado: true, custoCreditos: CHAT_UNLOCK_CREDITS, saldoCreditos: saldo });
-    }
-
-    if (CHAT_UNLOCK_CREDITS <= 0) {
-        await prisma.walletTx.create({
-            data: { userId, tipo: "DEBIT", origem: "CHAT_UNLOCK", valor: 0, refId: conversaId },
-        });
-
-        const saldoCreditos = await getSaldoCreditos(userId);
-        return res.json({ chatLiberado: true, custoCreditos: 0, saldoCreditos });
-    }
-
-    if (saldo < CHAT_UNLOCK_CREDITS) {
-        return res.status(402).json({
-            code: "CHAT_LOCKED",
-            chatLiberado: false,
-            erro: "Saldo insuficiente",
-            custoCreditos: CHAT_UNLOCK_CREDITS,
-            saldoCreditos: saldo,
-        });
-    }
-
-    await prisma.$transaction(async (tx) => {
-        await tx.wallet.update({
-            where: { userId },
-            data: { saldoCreditos: { decrement: CHAT_UNLOCK_CREDITS } },
-        });
-
-        await tx.walletTx.create({
-            data: { userId, tipo: "DEBIT", origem: "CHAT_UNLOCK", valor: CHAT_UNLOCK_CREDITS, refId: conversaId },
-        });
-
-        await tx.mensagem.create({
-            data: {
-                conversaId,
-                autorId: userId,
-                tipo: "SISTEMA",
-                texto: "🔓 Chat liberado com créditos.",
-                textoOriginal: "🔓 Chat liberado com créditos.",
-                idiomaOriginal: String(req.usuario?.idioma || "pt").toLowerCase(),
-            },
-        });
-    });
-
-    const novoSaldo = await getSaldoCreditos(userId);
-
-    return res.json({
-        chatLiberado: true,
-        custoCreditos: CHAT_UNLOCK_CREDITS,
-        saldoCreditos: novoSaldo,
-    });
+    res.json({ mensagens: mapped });
 }
