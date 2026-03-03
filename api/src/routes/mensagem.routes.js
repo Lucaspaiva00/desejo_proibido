@@ -7,6 +7,7 @@ import {
     enviarAudio,
     desbloquearMidia,
     obterMidia,
+    encaminharMidia, // ✅ novo
 } from "../controllers/mensagem.controller.js";
 
 const router = Router();
@@ -18,6 +19,9 @@ router.post("/", enviarMensagem);
 // mídia
 router.post("/foto", enviarFoto);
 router.post("/audio", enviarAudio);
+
+// ✅ encaminhar mídia
+router.post("/encaminhar", encaminharMidia);
 
 // paywall mídia
 router.post("/:id/desbloquear", desbloquearMidia);

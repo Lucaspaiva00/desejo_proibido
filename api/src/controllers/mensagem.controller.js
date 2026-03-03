@@ -1,15 +1,22 @@
 // src/controllers/mensagem.controller.js
 import { prisma } from "../prisma.js";
-import { isChatUnlocked, isPremiumEfetivo, debitWallet, ensureWallet, getSaldoCreditos } from "../utils/wallet.js";
+import {
+    isChatUnlocked,
+    isPremiumEfetivo,
+    debitWallet,
+    ensureWallet,
+    getSaldoCreditos
+} from "../utils/wallet.js";
 import { buildPublicUrl } from "../utils/cloudinary.js";
 
 // ============================
 // Config
 // ============================
-const DEFAULT_FOTO_UNLOCK_COST = Number(process.env.FOTO_UNLOCK_COST || 5);   // ✅ padrão 5
-const DEFAULT_AUDIO_UNLOCK_COST = Number(process.env.AUDIO_UNLOCK_COST || 0);
+// ✅ agora por padrão 10
+const DEFAULT_FOTO_UNLOCK_COST = Number(process.env.FOTO_UNLOCK_COST || 10);
+const DEFAULT_AUDIO_UNLOCK_COST = Number(process.env.AUDIO_UNLOCK_COST || 10);
 
-// ✅ custo por mensagem TEXTO (o que você pediu)
+// ✅ custo por mensagem TEXTO
 const MSG_SEND_COST = Number(process.env.MSG_SEND_COST || 5);
 
 // ============================
@@ -90,7 +97,8 @@ function hasInstagram(text) {
 function hasOtherContact(text) {
     const t = normalizeText(text);
     if (/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/.test(t)) return true;
-    const bad = /(wa\.me|api\.whatsapp|whatsapp|wpp|zap|t\.me|telegram|discord\.gg|discord|facebook|fb\.com|x\.com|twitter|snapchat|tiktok|linktr\.ee)/;
+    const bad =
+        /(wa\.me|api\.whatsapp|whatsapp|wpp|zap|t\.me|telegram|discord\.gg|discord|facebook|fb\.com|x\.com|twitter|snapchat|tiktok|linktr\.ee)/;
     if (bad.test(t)) return true;
     if (/(https?:\/\/|www\.)\S+/i.test(t)) return true;
     return false;
@@ -152,8 +160,6 @@ export async function enviarMensagem(req, res) {
         }
 
         // ✅ COBRANÇA POR MENSAGEM TEXTO (5 créditos)
-        // - se custo 0, não debita
-        // - se não tem saldo, retorna 402
         if (MSG_SEND_COST > 0) {
             try {
                 await debitWallet(userId, MSG_SEND_COST, { origem: "MSG_SEND", refId: conversaId });
@@ -239,9 +245,7 @@ export async function enviarFoto(req, res) {
                 textoOriginal: "📷 Foto",
                 idiomaOriginal,
 
-                // ✅ Cloudinary vindo do FRONT: publicId.format
                 mediaPath: String(mediaPath),
-                // ✅ se não mandar thumbPath, usa o próprio mediaPath
                 thumbPath: String(thumbPath || mediaPath),
 
                 bloqueada: true,
@@ -293,6 +297,7 @@ export async function enviarAudio(req, res) {
         }
 
         const idiomaOriginal = String(req.usuario?.idioma || "pt").toLowerCase();
+        const custo = DEFAULT_AUDIO_UNLOCK_COST;
 
         const msg = await prisma.mensagem.create({
             data: {
@@ -303,13 +308,13 @@ export async function enviarAudio(req, res) {
                 textoOriginal: "🎙️ Áudio",
                 idiomaOriginal,
 
-                // ✅ Cloudinary vindo do FRONT: publicId.format (resource_type video)
                 mediaPath: String(mediaPath),
                 mediaDuracao: Number.isFinite(Number(duracao)) ? Number(duracao) : null,
 
-                bloqueada: false,
-                custoMoedas: DEFAULT_AUDIO_UNLOCK_COST > 0 ? DEFAULT_AUDIO_UNLOCK_COST : 0,
-                metaJson: { kind: "audio" },
+                // ✅ trava e cobra 10
+                bloqueada: true,
+                custoMoedas: custo > 0 ? custo : 0,
+                metaJson: { kind: "audio", locked: true },
             },
         });
 
@@ -442,7 +447,6 @@ export async function obterMidia(req, res) {
                     publicId: tId,
                     resourceType: "image",
                     format: tFmt || "jpg",
-                    // ✅ se quiser blur real: coloque isso no seu buildPublicUrl ou passe transformation aqui
                 })
                 : null;
 
@@ -461,8 +465,20 @@ export async function obterMidia(req, res) {
             return res.json({ tipo: "FOTO", locked: false, url, thumbUrl });
         }
 
-        // AUDIO
+        // AUDIO (✅ AGORA BLOQUEIA E SÓ ENTREGA URL SE DESBLOQUEOU)
         if (m.tipo === "AUDIO") {
+            const isAutor = String(m.autorId) === String(userId);
+            const unlocked = isAutor ? true : await alreadyUnlockedMedia(userId, m.id);
+
+            if (!unlocked) {
+                return res.json({
+                    tipo: "AUDIO",
+                    locked: true,
+                    custoMoedas: Number(m.custoMoedas || 0),
+                    duracao: m.mediaDuracao ?? null,
+                });
+            }
+
             const { publicId, format } = splitPath(m.mediaPath);
             const audioUrl = publicId
                 ? buildPublicUrl({ publicId, resourceType: "video", format: format || "mp3" })
@@ -474,5 +490,95 @@ export async function obterMidia(req, res) {
         return res.status(400).json({ erro: "Mensagem não é mídia" });
     } catch (e) {
         return res.status(500).json({ erro: "Erro ao obter mídia", detalhe: e.message });
+    }
+}
+
+// ============================
+// ENCAMINHAR: POST /mensagens/encaminhar
+// body: { mensagemId, conversaIdDestino }
+// ============================
+export async function encaminharMidia(req, res) {
+    try {
+        const userId = req.usuario.id;
+        const { mensagemId, conversaIdDestino } = req.body || {};
+
+        if (!mensagemId) return res.status(400).json({ erro: "mensagemId é obrigatório" });
+        if (!conversaIdDestino) return res.status(400).json({ erro: "conversaIdDestino é obrigatório" });
+
+        const m = await prisma.mensagem.findUnique({
+            where: { id: String(mensagemId) },
+            select: {
+                id: true,
+                conversaId: true,
+                tipo: true,
+                autorId: true,
+                mediaPath: true,
+                thumbPath: true,
+                mediaDuracao: true,
+            },
+        });
+
+        if (!m) return res.status(404).json({ erro: "Mensagem não encontrada" });
+        if (m.tipo !== "FOTO" && m.tipo !== "AUDIO") {
+            return res.status(400).json({ erro: "Só é possível encaminhar FOTO ou AUDIO" });
+        }
+
+        // valida acesso origem
+        const convOrigem = await prisma.conversa.findUnique({
+            where: { id: m.conversaId },
+            include: { match: true },
+        });
+        if (!convOrigem || !assertParteDaConversa(convOrigem, userId)) {
+            return res.status(403).json({ erro: "Sem acesso à conversa de origem" });
+        }
+
+        // valida acesso destino
+        const convDestino = await prisma.conversa.findUnique({
+            where: { id: String(conversaIdDestino) },
+            include: { match: true },
+        });
+        if (!convDestino || !assertParteDaConversa(convDestino, userId)) {
+            return res.status(403).json({ erro: "Sem acesso à conversa destino" });
+        }
+
+        const idiomaOriginal = String(req.usuario?.idioma || "pt").toLowerCase();
+
+        const custo = (m.tipo === "FOTO") ? DEFAULT_FOTO_UNLOCK_COST : DEFAULT_AUDIO_UNLOCK_COST;
+
+        const nova = await prisma.mensagem.create({
+            data: {
+                conversaId: String(conversaIdDestino),
+                autorId: userId,
+                tipo: m.tipo,
+                texto: m.tipo === "FOTO" ? "📷 Foto" : "🎙️ Áudio",
+                textoOriginal: m.tipo === "FOTO" ? "📷 Foto" : "🎙️ Áudio",
+                idiomaOriginal,
+
+                mediaPath: m.mediaPath,
+                thumbPath: m.thumbPath,
+
+                mediaDuracao: m.mediaDuracao ?? null,
+
+                bloqueada: true,
+                custoMoedas: custo > 0 ? custo : 0,
+
+                metaJson: {
+                    kind: m.tipo === "FOTO" ? "photo" : "audio",
+                    locked: true,
+                    forwarded: true,
+                    forwardedFromMensagemId: String(m.id),
+                    forwardedFromConversaId: String(m.conversaId),
+                },
+            },
+        });
+
+        await prisma.conversa.update({
+            where: { id: String(conversaIdDestino) },
+            data: { atualizadoEm: new Date() },
+        });
+
+        return res.json({ ok: true, mensagem: nova });
+    } catch (e) {
+        return res.status(500).json({ erro: "Erro ao encaminhar", detalhe: e.message });
     }
 }

@@ -66,7 +66,7 @@ function splitPath(p) {
  * ✅ Mapeia mensagem p/ front
  * - TEXTO: tradução
  * - FOTO: thumbUrl sempre; mediaUrl só se autor OU desbloqueou
- * - AUDIO: audioUrl sempre
+ * - AUDIO: audioUrl só se autor OU desbloqueou (✅ corrigido)
  */
 async function mapMensagemParaUsuario(m, idiomaDestino, viewerId) {
     const original = (m.textoOriginal ?? m.texto ?? "").trim();
@@ -119,18 +119,27 @@ async function mapMensagemParaUsuario(m, idiomaDestino, viewerId) {
                     transformation: "",
                 });
             }
+        } else {
+            locked = true;
         }
     }
 
+    // ✅ AUDIO corrigido: só manda audioUrl se desbloqueou
     if (tipo === "AUDIO") {
-        const { publicId, format } = splitPath(m.mediaPath);
-        if (publicId) {
-            audioUrl = buildPublicUrl({
-                publicId,
-                resourceType: "video", // cloudinary audio = resource_type video
-                format: format || "mp3",
-                transformation: "",
-            });
+        const canHearOriginal = !locked || (await alreadyUnlockedMedia(viewerId, m.id));
+
+        if (canHearOriginal) {
+            const { publicId, format } = splitPath(m.mediaPath);
+            if (publicId) {
+                audioUrl = buildPublicUrl({
+                    publicId,
+                    resourceType: "video", // cloudinary audio = resource_type video
+                    format: format || "mp3",
+                    transformation: "",
+                });
+            }
+        } else {
+            locked = true;
         }
     }
 

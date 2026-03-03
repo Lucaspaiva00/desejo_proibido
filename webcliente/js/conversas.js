@@ -165,8 +165,6 @@ if (!state.usuario && !localStorage.getItem("token")) {
 // ==============================
 const token = localStorage.getItem("token") || "";
 
-// se você tá servindo o client por /api/socket.io/socket.io.js,
-// então o PATH do engine é /api/socket.io
 const socket = window.io({
     path: "/api/socket.io",
     auth: { token },
@@ -721,6 +719,7 @@ async function carregarMensagens({ silent = false } = {}) {
  * - sem sobrescrever conteudo de FOTO/AUDIO
  * - sem querySelector dentro do map
  * - handler de desbloquear via delegation
+ * - ✅ agora com botão encaminhar
  */
 function renderMensagens(items, { stickToBottom = true } = {}) {
     if (!items?.length) {
@@ -749,17 +748,17 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
             ${m.thumbUrl ? `<img src="${escapeHtml(m.thumbUrl)}" class="thumb" />` : `<div class="thumb fake"></div>`}
             <div class="lockOverlay">🔒 Desbloquear por ${Number(m.custoMoedas || 0)} créditos</div>
           </div>
+          <button class="btnForward" data-mid="${escapeHtml(m.id)}">↪ Encaminhar</button>
         `;
             } else {
                 conteudo = `
           <a href="${escapeHtml(m.mediaUrl || "")}" target="_blank" rel="noopener">
             <img src="${escapeHtml(m.mediaUrl || "")}" class="mediaFull" />
           </a>
+          <button class="btnForward" data-mid="${escapeHtml(m.id)}">↪ Encaminhar</button>
         `;
             }
         } else if (tipo === "AUDIO") {
-            // ⚠️ No seu backend atual audio NÃO vem locked.
-            // Se você travar no backend, isso aqui já funciona.
             if (m.locked) {
                 conteudo = `
           <div class="mediaLocked audioLocked" data-mid="${escapeHtml(m.id)}" data-tipo="AUDIO">
@@ -768,10 +767,12 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
               <div class="muted">Toque para desbloquear por ${Number(m.custoMoedas || 0)} créditos</div>
             </div>
           </div>
+          <button class="btnForward" data-mid="${escapeHtml(m.id)}">↪ Encaminhar</button>
         `;
             } else {
                 conteudo = `
           <audio controls preload="metadata" src="${escapeHtml(m.audioUrl || "")}"></audio>
+          <button class="btnForward" data-mid="${escapeHtml(m.id)}">↪ Encaminhar</button>
         `;
             }
         } else if (tipo === "PRESENTE") {
@@ -809,6 +810,46 @@ if (msgs && !msgs.__dpMediaHandlerAttached) {
     msgs.__dpMediaHandlerAttached = true;
 
     msgs.addEventListener("click", async (ev) => {
+        // ✅ encaminhar
+        const fwd = ev.target?.closest?.(".btnForward");
+        if (fwd) {
+            const mid = fwd.getAttribute("data-mid");
+            if (!mid) return;
+
+            const listaDestinos = state.conversas
+                .filter(c => c.id !== state.conversaId)
+                .map((c, idx) => {
+                    const nome = c.outro?.perfil?.nome || c.outro?.email || "Usuário";
+                    return `${idx + 1} - ${nome}`;
+                })
+                .join("\n");
+
+            if (!listaDestinos) {
+                alert("Você não tem outra conversa para encaminhar.");
+                return;
+            }
+
+            const escolha = prompt("Encaminhar para qual conversa?\n\n" + listaDestinos);
+            const n = Number(escolha || 0);
+            if (!Number.isFinite(n) || n <= 0) return;
+
+            const destinos = state.conversas.filter(c => c.id !== state.conversaId);
+            const destino = destinos[n - 1];
+            if (!destino) return;
+
+            try {
+                await apiFetch("/mensagens/encaminhar", {
+                    method: "POST",
+                    body: { mensagemId: mid, conversaIdDestino: destino.id },
+                });
+                alert("Encaminhado ✅");
+            } catch (e) {
+                alert("Erro ao encaminhar: " + (e?.message || "erro"));
+            }
+            return;
+        }
+
+        // ✅ desbloquear mídia
         const box = ev.target?.closest?.(".mediaLocked");
         if (!box) return;
 
@@ -816,10 +857,8 @@ if (msgs && !msgs.__dpMediaHandlerAttached) {
         if (!mid) return;
 
         try {
-            // debita + registra unlock
             const r = await apiFetch(`/mensagens/${mid}/desbloquear`, { method: "POST" });
 
-            // atualiza saldo na UI se veio
             if (typeof r?.saldoCreditos === "number") {
                 state.saldoCreditos = r.saldoCreditos;
                 if (minutosPill) minutosPill.textContent = `💰 Créditos: ${r.saldoCreditos}`;
@@ -851,13 +890,11 @@ async function enviarMensagem() {
     btnEnviar.disabled = true;
 
     try {
-        // ✅ pega retorno do backend pra atualizar saldo (msgCost/saldoCreditos)
         const r = await apiFetch(API.enviarMensagem, {
             method: "POST",
             body: { conversaId: state.conversaId, texto: t },
         });
 
-        // ✅ ATUALIZA SALDO NA HORA (pra refletir cobrança por mensagem)
         if (typeof r?.saldoCreditos === "number") {
             state.saldoCreditos = Number(r.saldoCreditos);
             if (minutosPill) minutosPill.textContent = `💰 Créditos: ${state.saldoCreditos}`;
@@ -866,7 +903,6 @@ async function enviarMensagem() {
 
         await carregarMensagens();
     } catch (e) {
-        // ✅ SALDO insuficiente ao enviar mensagem (cobrança por msg)
         if (e?.status === 402 && e?.data?.code === "SALDO_INSUFICIENTE") {
             if (typeof e?.data?.saldoCreditos === "number") {
                 state.saldoCreditos = Number(e.data.saldoCreditos);
@@ -1264,7 +1300,7 @@ inputFoto?.addEventListener("change", async () => {
         const form = new FormData();
         form.append("file", file);
 
-        // 1) upload físico
+        // 1) upload pro backend -> cloudinary
         const up = await apiFetch("/uploads/foto", { method: "POST", body: form });
 
         // 2) cria mensagem FOTO (travada)
@@ -1274,7 +1310,7 @@ inputFoto?.addEventListener("change", async () => {
                 conversaId: state.conversaId,
                 mediaPath: up.mediaPath,
                 thumbPath: up.thumbPath,
-                custoMoedas: 5, // ✅ seu preço do unlock
+                custoMoedas: 10, // ✅ combinado: 10 créditos
             }
         });
 
@@ -1303,16 +1339,15 @@ inputAudio?.addEventListener("change", async () => {
         const form = new FormData();
         form.append("file", file);
 
-        // 1) upload físico
+        // 1) upload pro backend -> cloudinary
         const up = await apiFetch("/uploads/audio", { method: "POST", body: form });
 
-        // 2) cria mensagem AUDIO
+        // 2) cria mensagem AUDIO (✅ agora o backend trava e cobra 10 automaticamente)
         await apiFetch("/mensagens/audio", {
             method: "POST",
             body: {
                 conversaId: state.conversaId,
                 mediaPath: up.mediaPath,
-                // se você quiser travar áudio igual foto, você também vai colocar custoMoedas no backend
             }
         });
 
