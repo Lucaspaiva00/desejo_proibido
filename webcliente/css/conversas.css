@@ -569,3 +569,208 @@ body {
     background: rgba(120, 0, 20, .4);
     border-radius: 6px;
 }
+
+/* =========================================================
+   UPGRADE VISUAL PREMIUM – CLUBE SECRETO
+   Não altera funcionalidade
+========================================================= */
+
+/* ===============================
+   HERO BADGE (CLUBE PRIVADO)
+================================ */
+.hero-badge {
+    display: inline-block;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #5a000c, #3b0006);
+    border: 1px solid rgba(120, 0, 20, .6);
+    color: #fff;
+    margin-bottom: 14px;
+    box-shadow: 0 0 30px rgba(120, 0, 20, .3);
+}
+
+/* ===============================
+   HERO MAIS CINEMATOGRÁFICO
+================================ */
+.hero {
+    position: relative;
+}
+
+.hero::after {
+    content: "";
+    position: absolute;
+    top: -40px;
+    left: -40px;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(120, 0, 20, .25), transparent 70%);
+    filter: blur(60px);
+    pointer-events: none;
+}
+
+/* ===============================
+   PREMIUM BOX
+================================ */
+.premiumBox {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+}
+
+/* ===============================
+   SIDEBAR TITLE
+================================ */
+.panel-title {
+    font-size: 13px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    opacity: .6;
+    margin-bottom: 10px;
+}
+
+/* ===============================
+   STATUS DOT
+================================ */
+.titleRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.user-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #0f0;
+    box-shadow: 0 0 12px #0f0;
+    animation: pulseDot 2s infinite;
+}
+
+@keyframes pulseDot {
+    0% {
+        box-shadow: 0 0 5px #0f0;
+    }
+
+    50% {
+        box-shadow: 0 0 20px #0f0;
+    }
+
+    100% {
+        box-shadow: 0 0 5px #0f0;
+    }
+}
+
+/* ===============================
+   DIVISOR LATERAL MAIS ELEGANTE
+================================ */
+.panel.left::before {
+    content: "";
+    position: absolute;
+    right: -1px;
+    top: 0;
+    height: 100%;
+    width: 1px;
+    background: linear-gradient(to bottom,
+            transparent,
+            rgba(120, 0, 20, .4),
+            transparent);
+}
+
+/* ===============================
+   LISTA MAIS PROFUNDA
+================================ */
+.list {
+    padding-right: 10px;
+}
+
+.item {
+    position: relative;
+}
+
+.item::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle at 80% 0%, rgba(120, 0, 20, .15), transparent 60%);
+    pointer-events: none;
+}
+
+/* ===============================
+   CHAT-TOP COM LUZ AMBIENTE
+================================ */
+.chat-top {
+    position: relative;
+    overflow: hidden;
+}
+
+.chat-top::before {
+    content: "";
+    position: absolute;
+    top: -80px;
+    right: -80px;
+    width: 250px;
+    height: 250px;
+    background: radial-gradient(circle, rgba(120, 0, 20, .25), transparent 70%);
+    filter: blur(70px);
+    pointer-events: none;
+}
+
+/* ===============================
+   BOLHAS COM MICRO GLOW
+================================ */
+.bubble {
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.bubble:hover {
+    transform: translateY(-2px);
+    box-shadow:
+        0 30px 80px rgba(0, 0, 0, .9),
+        0 0 40px rgba(120, 0, 20, .2);
+}
+
+/* ===============================
+   COMPOSER COM LUZ INFERIOR
+================================ */
+.composer::before {
+    content: "";
+    position: absolute;
+    top: -60px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 400px;
+    height: 120px;
+    background: radial-gradient(circle, rgba(120, 0, 20, .15), transparent 70%);
+    filter: blur(60px);
+    pointer-events: none;
+}
+
+/* ===============================
+   BOTÃO PRIMÁRIO MAIS SEXY
+================================ */
+.btn-primary {
+    background: linear-gradient(180deg, #7a0012, #3b0006) !important;
+    border: 1px solid rgba(120, 0, 20, .9) !important;
+    box-shadow: 0 0 30px rgba(120, 0, 20, .4);
+}
+
+.btn-primary:hover {
+    box-shadow: 0 0 50px rgba(120, 0, 20, .6);
+}
+
+/* ===============================
+   SCROLLBAR DARK
+================================ */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(120, 0, 20, .5);
+    border-radius: 6px;
+}
