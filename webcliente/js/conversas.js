@@ -851,13 +851,32 @@ async function enviarMensagem() {
     btnEnviar.disabled = true;
 
     try {
-        await apiFetch(API.enviarMensagem, {
+        // ✅ pega retorno do backend pra atualizar saldo (msgCost/saldoCreditos)
+        const r = await apiFetch(API.enviarMensagem, {
             method: "POST",
             body: { conversaId: state.conversaId, texto: t },
         });
 
+        // ✅ ATUALIZA SALDO NA HORA (pra refletir cobrança por mensagem)
+        if (typeof r?.saldoCreditos === "number") {
+            state.saldoCreditos = Number(r.saldoCreditos);
+            if (minutosPill) minutosPill.textContent = `💰 Créditos: ${state.saldoCreditos}`;
+            if (saldoCreditosEl) saldoCreditosEl.textContent = `${state.saldoCreditos}`;
+        }
+
         await carregarMensagens();
     } catch (e) {
+        // ✅ SALDO insuficiente ao enviar mensagem (cobrança por msg)
+        if (e?.status === 402 && e?.data?.code === "SALDO_INSUFICIENTE") {
+            if (typeof e?.data?.saldoCreditos === "number") {
+                state.saldoCreditos = Number(e.data.saldoCreditos);
+                if (minutosPill) minutosPill.textContent = `💰 Créditos: ${state.saldoCreditos}`;
+                if (saldoCreditosEl) saldoCreditosEl.textContent = `${state.saldoCreditos}`;
+            }
+            setMsg("Saldo insuficiente. Compre créditos para continuar.", "error");
+            return;
+        }
+
         if (isContatoBloqueadoError(e)) {
             setMsg("Por segurança, não é permitido enviar WhatsApp, Instagram, links ou e-mail no chat.", "error");
             return;

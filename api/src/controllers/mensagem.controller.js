@@ -1,31 +1,20 @@
 // src/controllers/mensagem.controller.js
 import { prisma } from "../prisma.js";
-import { isChatUnlocked, isPremiumEfetivo } from "../utils/wallet.js";
+import { isChatUnlocked, isPremiumEfetivo, debitWallet, ensureWallet, getSaldoCreditos } from "../utils/wallet.js";
 import { buildPublicUrl } from "../utils/cloudinary.js";
 
 // ============================
 // Config
 // ============================
-const DEFAULT_FOTO_UNLOCK_COST = Number(process.env.FOTO_UNLOCK_COST || 10);
+const DEFAULT_FOTO_UNLOCK_COST = Number(process.env.FOTO_UNLOCK_COST || 5);   // ✅ padrão 5
 const DEFAULT_AUDIO_UNLOCK_COST = Number(process.env.AUDIO_UNLOCK_COST || 0);
 
-// ============================
-// Helpers Wallet (local)
-// ============================
-async function ensureWallet(userId) {
-    return prisma.wallet.upsert({
-        where: { userId },
-        update: {},
-        create: { userId, saldoCreditos: 0 },
-    });
-}
+// ✅ custo por mensagem TEXTO (o que você pediu)
+const MSG_SEND_COST = Number(process.env.MSG_SEND_COST || 5);
 
-async function getSaldoCreditos(userId) {
-    await ensureWallet(userId);
-    const w = await prisma.wallet.findUnique({ where: { userId } });
-    return w?.saldoCreditos ?? 0;
-}
-
+// ============================
+// Helpers locais
+// ============================
 async function alreadyUnlockedMedia(userId, mensagemId) {
     const tx = await prisma.walletTx.findFirst({
         where: { userId, origem: "MIDIA_UNLOCK", tipo: "DEBIT", refId: String(mensagemId) },
@@ -82,47 +71,34 @@ function splitPath(p) {
 function normalizeText(s = "") {
     return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
-
 function hasPhoneLike(text) {
     const t = normalizeText(text);
     const digits = t.replace(/[^0-9]/g, "");
     if (digits.length >= 9 && digits.length <= 14) return true;
-
     const phonePattern = /(\+?\d{1,3}\s*)?(\(?\d{2,3}\)?\s*)?\d{4,5}[-\s]?\d{4}/;
     return phonePattern.test(t);
 }
-
 function hasInstagram(text) {
     const t = normalizeText(text);
     if (t.includes("instagram.com")) return true;
-
     const hasAtUser = /@[a-z0-9._]{3,}/.test(t);
     const hasContext = /(insta|instagram|ig|segue|follow|perfil|arroba)/.test(t);
     if (hasAtUser && hasContext) return true;
-
     if (/(me chama|chama no|passo|te mando|te passo).*(insta|instagram|ig)/.test(t)) return true;
-
     return false;
 }
-
 function hasOtherContact(text) {
     const t = normalizeText(text);
-
     if (/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/.test(t)) return true;
-
     const bad = /(wa\.me|api\.whatsapp|whatsapp|wpp|zap|t\.me|telegram|discord\.gg|discord|facebook|fb\.com|x\.com|twitter|snapchat|tiktok|linktr\.ee)/;
     if (bad.test(t)) return true;
-
     if (/(https?:\/\/|www\.)\S+/i.test(t)) return true;
-
     return false;
 }
-
 function containsContato(text) {
     if (!text) return false;
     return hasPhoneLike(text) || hasInstagram(text) || hasOtherContact(text);
 }
-
 function contatoReason(text) {
     const t = normalizeText(text || "");
     if (hasPhoneLike(t)) return "telefone/whatsapp";
@@ -164,6 +140,7 @@ export async function enviarMensagem(req, res) {
 
         const premiumEfetivo = await isPremiumEfetivo(userId);
 
+        // se não é premium efetivo, precisa estar com chat liberado
         if (!premiumEfetivo) {
             const unlocked = await isChatUnlocked(conversaId, userId);
             if (!unlocked) {
@@ -171,6 +148,27 @@ export async function enviarMensagem(req, res) {
                     erro: "Chat bloqueado. Libere o chat com créditos para enviar mensagens.",
                     code: "CHAT_LOCKED",
                 });
+            }
+        }
+
+        // ✅ COBRANÇA POR MENSAGEM TEXTO (5 créditos)
+        // - se custo 0, não debita
+        // - se não tem saldo, retorna 402
+        if (MSG_SEND_COST > 0) {
+            try {
+                await debitWallet(userId, MSG_SEND_COST, { origem: "MSG_SEND", refId: conversaId });
+            } catch (e) {
+                const st = e?.status || e?.statusCode;
+                if (st === 402 || e?.code === "SALDO_INSUFICIENTE") {
+                    const saldo = await getSaldoCreditos(userId);
+                    return res.status(402).json({
+                        code: "SALDO_INSUFICIENTE",
+                        erro: "Saldo insuficiente para enviar mensagem.",
+                        custo: MSG_SEND_COST,
+                        saldoCreditos: saldo,
+                    });
+                }
+                throw e;
             }
         }
 
@@ -192,7 +190,8 @@ export async function enviarMensagem(req, res) {
             data: { atualizadoEm: new Date() },
         });
 
-        return res.status(201).json(msg);
+        const saldoCreditos = await getSaldoCreditos(userId);
+        return res.status(201).json({ ...msg, saldoCreditos, msgCost: MSG_SEND_COST });
     } catch (e) {
         return res.status(500).json({ erro: "Erro ao enviar mensagem", detalhe: e.message });
     }
@@ -240,8 +239,11 @@ export async function enviarFoto(req, res) {
                 textoOriginal: "📷 Foto",
                 idiomaOriginal,
 
+                // ✅ Cloudinary vindo do FRONT: publicId.format
                 mediaPath: String(mediaPath),
-                thumbPath: String(thumbPath || ""),
+                // ✅ se não mandar thumbPath, usa o próprio mediaPath
+                thumbPath: String(thumbPath || mediaPath),
+
                 bloqueada: true,
                 custoMoedas: custo > 0 ? custo : 0,
 
@@ -301,12 +303,12 @@ export async function enviarAudio(req, res) {
                 textoOriginal: "🎙️ Áudio",
                 idiomaOriginal,
 
+                // ✅ Cloudinary vindo do FRONT: publicId.format (resource_type video)
                 mediaPath: String(mediaPath),
                 mediaDuracao: Number.isFinite(Number(duracao)) ? Number(duracao) : null,
 
                 bloqueada: false,
                 custoMoedas: DEFAULT_AUDIO_UNLOCK_COST > 0 ? DEFAULT_AUDIO_UNLOCK_COST : 0,
-
                 metaJson: { kind: "audio" },
             },
         });
@@ -435,7 +437,14 @@ export async function obterMidia(req, res) {
             const unlocked = isAutor ? true : await alreadyUnlockedMedia(userId, m.id);
 
             const { publicId: tId, format: tFmt } = splitPath(m.thumbPath);
-            const thumbUrl = tId ? buildPublicUrl({ publicId: tId, resourceType: "image", format: tFmt || "jpg" }) : null;
+            const thumbUrl = tId
+                ? buildPublicUrl({
+                    publicId: tId,
+                    resourceType: "image",
+                    format: tFmt || "jpg",
+                    // ✅ se quiser blur real: coloque isso no seu buildPublicUrl ou passe transformation aqui
+                })
+                : null;
 
             if (!unlocked) {
                 return res.json({
@@ -452,10 +461,12 @@ export async function obterMidia(req, res) {
             return res.json({ tipo: "FOTO", locked: false, url, thumbUrl });
         }
 
-        // AUDIO (público por padrão)
+        // AUDIO
         if (m.tipo === "AUDIO") {
             const { publicId, format } = splitPath(m.mediaPath);
-            const audioUrl = publicId ? buildPublicUrl({ publicId, resourceType: "video", format: format || "mp3" }) : null;
+            const audioUrl = publicId
+                ? buildPublicUrl({ publicId, resourceType: "video", format: format || "mp3" })
+                : null;
 
             return res.json({ tipo: "AUDIO", locked: false, audioUrl, duracao: m.mediaDuracao ?? null });
         }
