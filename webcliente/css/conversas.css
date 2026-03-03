@@ -1,221 +1,186 @@
 /* =========================================================
-   DESEJO PROIBIDO — PREMIUM ADULT CHAT
-   OnlyFans Inspired • Wine Dark Edition
+   conversas.css — v6 LUX DARK
+   Desejo Proibido – Clube Secreto Edition
 ========================================================= */
 
 :root {
-    --black-1: #0b0b0f;
-    --black-2: #121217;
-    --black-3: #18181f;
+    --bg-black: #050505;
+    --bg-deep: #0a0a0a;
+    --wine-dark: #3b0006;
+    --wine-soft: #5a000c;
+    --wine-glow: rgba(120, 0, 20, .35);
 
-    --wine-1: #3b0006;
-    --wine-2: #5a000c;
-    --wine-3: #7a0012;
+    --glass-dark: rgba(20, 0, 5, .65);
+    --glass-soft: rgba(255, 255, 255, .04);
 
-    --accent: #9b0018;
+    --border-dark: rgba(120, 0, 20, .35);
 
-    --border-soft: rgba(255, 255, 255, .06);
-    --border-strong: rgba(120, 0, 20, .5);
-
-    --text-main: #f2f2f4;
-    --text-soft: #a1a1aa;
-
-    --radius-lg: 18px;
-    --radius-md: 14px;
+    --radius-xl: 26px;
+    --radius-lg: 20px;
+    --radius-md: 16px;
 }
 
-/* =========================
-   BASE
-========================= */
-
-body.dp-app {
-    background: linear-gradient(180deg, #0a0a0d, #060607);
-    color: var(--text-main);
-    margin: 0;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+/* ===============================
+   FUNDO CINEMATOGRÁFICO
+================================ */
+body {
+    background:
+        radial-gradient(1200px 600px at 20% 0%, rgba(120, 0, 20, .25), transparent 60%),
+        radial-gradient(900px 500px at 90% 10%, rgba(60, 0, 10, .35), transparent 60%),
+        linear-gradient(180deg, #0a0a0a, #050505 60%, #000);
+    background-attachment: fixed;
 }
 
-/* =========================
-   NAV
-========================= */
-
-.dp-nav {
-    height: 64px;
-    background: var(--black-2);
-    border-bottom: 1px solid var(--border-soft);
-    display: flex;
-    align-items: center;
-    padding: 0 28px;
-    justify-content: space-between;
+/* ===============================
+   WRAP
+================================ */
+.wrap {
+    width: min(1200px, 94vw);
+    margin: 30px auto 60px;
 }
 
-.dp-brand {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-weight: 700;
-}
-
-.dp-logo {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    background: linear-gradient(135deg, var(--wine-3), var(--wine-1));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 800;
-}
-
-.dp-links a {
-    margin: 0 14px;
-    text-decoration: none;
-    color: var(--text-soft);
-    font-size: 14px;
-}
-
-.dp-links a.active {
-    color: #fff;
-}
-
-.dp-right {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-}
-
-.premium-pill {
-    font-size: 12px;
-    background: var(--black-3);
-    border: 1px solid var(--border-soft);
-    padding: 6px 12px;
-    border-radius: 999px;
-}
-
-/* =========================
-   LAYOUT
-========================= */
-
-.dp-container {
+/* ===============================
+   GRID
+================================ */
+.chat-layout {
     display: grid;
-    grid-template-columns: 320px 1fr;
-    height: calc(100vh - 64px);
+    grid-template-columns: 330px 1fr;
+    gap: 20px;
 }
 
-/* =========================
-   SIDEBAR
-========================= */
-
-.dp-sidebar {
-    background: var(--black-2);
-    border-right: 1px solid var(--border-soft);
-    display: flex;
-    flex-direction: column;
+/* ===============================
+   PAINEL BASE
+================================ */
+.panel {
+    border-radius: var(--radius-xl);
+    background:
+        linear-gradient(180deg, rgba(25, 0, 5, .85), rgba(10, 0, 3, .95));
+    border: 1px solid var(--border-dark);
+    box-shadow:
+        0 50px 140px rgba(0, 0, 0, .85),
+        0 0 60px var(--wine-glow);
+    backdrop-filter: blur(18px);
 }
 
-.sidebar-header {
-    padding: 20px;
-}
-
-.sidebar-title {
-    font-size: 14px;
-    color: var(--text-soft);
-    margin-bottom: 10px;
+/* ===============================
+   LISTA
+================================ */
+.panel-header {
+    padding: 14px;
+    border-bottom: 1px solid rgba(120, 0, 20, .2);
 }
 
 .search {
     width: 100%;
-    padding: 10px 14px;
+    padding: 14px;
     border-radius: var(--radius-md);
-    border: 1px solid var(--border-soft);
-    background: var(--black-3);
-    color: white;
+    border: 1px solid rgba(120, 0, 20, .4);
+    background: rgba(10, 0, 3, .8);
+    color: #fff;
+    outline: none;
 }
 
-.sidebar-list {
-    flex: 1;
-    overflow-y: auto;
-    padding: 12px;
-}
-
-/* =========================
-   CHAT
-========================= */
-
-.dp-chat {
+.list {
+    padding: 16px;
     display: flex;
     flex-direction: column;
-    background: var(--black-1);
-}
-
-/* HEADER */
-
-.chat-header {
-    height: 72px;
-    padding: 0 28px;
-    border-bottom: 1px solid var(--border-soft);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.chat-user {
-    display: flex;
-    align-items: center;
     gap: 14px;
-}
-
-.avatarWrap {
-    width: 46px;
-    height: 46px;
-    border-radius: 14px;
-    overflow: hidden;
-    background: var(--black-3);
-}
-
-.avatar {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.chat-name {
-    font-weight: 600;
-}
-
-.chat-sub {
-    font-size: 12px;
-    color: var(--text-soft);
-}
-
-.chat-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.credit-pill {
-    font-size: 12px;
-    background: var(--black-3);
-    padding: 6px 12px;
-    border-radius: 999px;
-    border: 1px solid var(--border-soft);
-}
-
-/* =========================
-   MESSAGES
-========================= */
-
-.chat-messages {
-    flex: 1;
+    max-height: calc(100dvh - 240px);
     overflow-y: auto;
-    padding: 30px 60px;
+}
+
+.item {
+    padding: 16px;
+    border-radius: var(--radius-lg);
+    background:
+        linear-gradient(180deg, rgba(40, 0, 8, .85), rgba(15, 0, 4, .95));
+    border: 1px solid rgba(120, 0, 20, .35);
+    cursor: pointer;
+    transition: .25s ease;
+}
+
+.item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .8);
+}
+
+.item.active {
+    border-color: rgba(120, 0, 20, .8);
+    box-shadow:
+        0 30px 90px rgba(0, 0, 0, .9),
+        0 0 40px rgba(120, 0, 20, .25);
+}
+
+/* ===============================
+   CHAT RIGHT
+================================ */
+.panel.right.chat {
     display: flex;
     flex-direction: column;
+    height: calc(100dvh - 240px);
+}
+
+/* ===============================
+   TOPO CHAT
+================================ */
+.chat-top {
+    margin: 16px;
+    padding: 18px;
+    border-radius: var(--radius-xl);
+    background:
+        linear-gradient(180deg, rgba(30, 0, 6, .9), rgba(12, 0, 3, .95));
+    border: 1px solid rgba(120, 0, 20, .5);
+    box-shadow:
+        0 40px 120px rgba(0, 0, 0, .9),
+        0 0 60px rgba(120, 0, 20, .25);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* ===============================
+   AVATAR
+================================ */
+.avatarWrap {
+    width: 68px;
+    height: 68px;
+    border-radius: 22px;
+    overflow: hidden;
+    border: 1px solid rgba(120, 0, 20, .6);
+    box-shadow: 0 0 30px rgba(120, 0, 20, .2);
+}
+
+/* ===============================
+   AÇÕES
+================================ */
+.iconbtn {
+    width: 48px;
+    height: 48px;
+    border-radius: 18px;
+    background: linear-gradient(180deg, #200004, #120002);
+    border: 1px solid rgba(120, 0, 20, .6);
+    color: #fff;
+    font-size: 20px;
+    cursor: pointer;
+    transition: .2s;
+}
+
+.iconbtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 30px rgba(120, 0, 20, .3);
+}
+
+/* ===============================
+   MENSAGENS
+================================ */
+.msgs {
+    padding: 0 18px 18px;
+    overflow-y: auto;
+    flex: 1;
 }
 
 .msgRow {
-    margin-bottom: 18px;
+    margin: 14px 0;
     display: flex;
 }
 
@@ -224,133 +189,588 @@ body.dp-app {
 }
 
 .bubble {
-    max-width: 520px;
-    padding: 14px 18px;
+    max-width: 70%;
+    padding: 16px;
     border-radius: var(--radius-lg);
-    background: var(--black-3);
-    border: 1px solid var(--border-soft);
-    font-size: 14px;
-    line-height: 1.5;
+    border: 1px solid rgba(120, 0, 20, .35);
+    background:
+        linear-gradient(180deg, rgba(40, 0, 8, .95), rgba(15, 0, 4, .95));
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .7);
 }
 
 .msgRow.me .bubble {
-    background: linear-gradient(135deg, var(--wine-3), var(--wine-1));
-    border: none;
+    background:
+        linear-gradient(180deg, rgba(70, 0, 12, .95), rgba(25, 0, 6, .95));
+    border-color: rgba(120, 0, 20, .8);
 }
 
-/* IMAGES CONTROLADAS */
-
-.bubble img {
-    max-width: 320px;
-    border-radius: 14px;
-    margin-top: 10px;
-}
-
-/* =========================
+/* ===============================
    COMPOSER
-========================= */
-
-.chat-composer {
-    padding: 20px 40px;
-    border-top: 1px solid var(--border-soft);
-    background: var(--black-2);
+================================ */
+.composer {
+    margin: 0 18px 18px;
+    padding: 14px;
+    border-radius: var(--radius-xl);
+    background:
+        linear-gradient(180deg, rgba(25, 0, 5, .95), rgba(10, 0, 3, .95));
+    border: 1px solid rgba(120, 0, 20, .4);
+    box-shadow:
+        0 40px 120px rgba(0, 0, 0, .9);
     display: flex;
-    gap: 14px;
+    gap: 12px;
     align-items: center;
 }
 
 #texto {
     flex: 1;
-    height: 50px;
-    border-radius: 999px;
-    border: 1px solid var(--border-soft);
-    background: var(--black-3);
-    padding: 0 20px;
-    color: white;
+    min-height: 54px;
+    padding: 14px;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(120, 0, 20, .4);
+    background: rgba(10, 0, 3, .8);
+    color: #fff;
     resize: none;
+    outline: none;
 }
 
 #btnEnviar {
-    padding: 0 24px;
-    height: 50px;
-    border-radius: 999px;
-    background: linear-gradient(135deg, var(--wine-3), var(--wine-1));
-    border: none;
-    font-weight: 600;
+    padding: 0 20px;
+    height: 54px;
+    border-radius: var(--radius-md);
+    font-weight: 700;
+    background: linear-gradient(180deg, #5a000c, #3b0006);
+    border: 1px solid rgba(120, 0, 20, .8);
+    box-shadow: 0 0 30px rgba(120, 0, 20, .4);
 }
 
-/* =========================
-   ICON BUTTONS
-========================= */
-
-.iconbtn {
-    width: 42px;
-    height: 42px;
-    border-radius: 12px;
-    border: 1px solid var(--border-soft);
-    background: var(--black-3);
-    color: white;
-    cursor: pointer;
-    transition: .2s ease;
+/* ===============================
+   HERO
+================================ */
+.heroTitle {
+    font-size: 46px;
+    font-weight: 900;
+    letter-spacing: .4px;
 }
 
-.iconbtn:hover {
-    background: var(--wine-2);
+.heroSub {
+    opacity: .8;
+    margin-top: 8px;
 }
 
-/* =========================
-   CREDIT WALL
-========================= */
-
-.creditwall {
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, .85);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.creditwallCard {
-    background: var(--black-2);
-    padding: 28px;
-    border-radius: var(--radius-lg);
-    width: 420px;
-    border: 1px solid var(--border-soft);
-    text-align: center;
-}
-
-.creditwallTitle {
-    font-weight: 600;
-    margin-bottom: 10px;
-}
-
-.creditwallText {
-    font-size: 14px;
-    color: var(--text-soft);
-    margin-bottom: 20px;
-}
-
-.creditwallRow {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-}
-
-/* =========================
+/* ===============================
    RESPONSIVO
-========================= */
-
-@media (max-width: 1000px) {
-    .dp-container {
+================================ */
+@media (max-width: 980px) {
+    .chat-layout {
         grid-template-columns: 1fr;
     }
 
-    .dp-sidebar {
-        display: none;
+    .panel.right.chat {
+        height: auto;
     }
 
-    .chat-messages {
-        padding: 20px;
+    .bubble {
+        max-width: 85%;
     }
+}
+
+/* =========================================================
+   PATCH v7 — MAIS DENSIDADE / MENOS ESPAÇO VAZIO
+========================================================= */
+
+/* 1️⃣ Hero menor e mais compacto */
+.headRow-premium {
+    margin: 0 0 12px !important;
+}
+
+.heroTitle {
+    font-size: 32px !important;
+    margin-bottom: 4px !important;
+}
+
+.heroSub {
+    font-size: 13px !important;
+    margin-top: 4px !important;
+}
+
+/* 2️⃣ Remover espaço extra da wrap */
+.wrap {
+    margin: 18px auto 30px !important;
+}
+
+/* 3️⃣ Chat sobe mais na tela */
+.chat-layout {
+    gap: 14px !important;
+}
+
+/* 4️⃣ Painéis ocupam mais altura */
+.panel.right.chat {
+    height: calc(100dvh - 170px) !important;
+}
+
+/* 5️⃣ Lista ocupa mais altura */
+.list {
+    max-height: calc(100dvh - 190px) !important;
+}
+
+/* 6️⃣ Chat-top menos espaçoso */
+.chat-top {
+    margin: 10px !important;
+    padding: 14px !important;
+}
+
+/* 7️⃣ Composer menos flutuante */
+.composer {
+    margin: 0 10px 10px !important;
+}
+
+/* 8️⃣ Painel esquerdo mais forte visualmente */
+.panel.left {
+    background:
+        linear-gradient(180deg, rgba(35, 0, 6, .95), rgba(10, 0, 3, .98)) !important;
+}
+
+/* 9️⃣ Adicionar linha lateral sutil para dividir melhor */
+.panel.left {
+    position: relative;
+}
+
+.panel.left::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: -7px;
+    width: 1px;
+    height: 100%;
+    background: rgba(120, 0, 20, .25);
+}
+
+/* =======================================
+   APP LAYOUT PREMIUM DENSO
+======================================= */
+
+.app-container {
+    width: 100%;
+    max-width: 1700px;
+    margin: 0 auto;
+    padding: 18px 28px;
+}
+
+/* HEADER */
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.app-header-left {
+    display: flex;
+    flex-direction: column;
+}
+
+.app-title {
+    font-size: 30px;
+    margin: 0;
+    font-weight: 900;
+}
+
+.app-sub {
+    font-size: 13px;
+    opacity: .7;
+    margin-top: 4px;
+}
+
+.app-header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* GRID MAIS IMERSIVO */
+.chat-layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 16px;
+    height: calc(100dvh - 120px);
+}
+
+/* SIDEBAR MAIS FORTE */
+.panel.left {
+    background:
+        linear-gradient(180deg,
+            rgba(30, 0, 6, .95),
+            rgba(8, 0, 2, .98));
+}
+
+/* CHAT FULL HEIGHT */
+.panel.right.chat {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* MENSAGENS MAIS ALTAS */
+.msgs {
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* COMPOSER FIXO */
+.composer {
+    margin: 0;
+    border-radius: 0 0 24px 24px;
+}
+
+/* RESPONSIVO MELHOR */
+@media (max-width: 980px) {
+
+    .chat-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+    }
+
+    .panel.right.chat {
+        min-height: calc(100dvh - 220px);
+    }
+
+}
+
+/* =========================================================
+   PATCH FINAL — ADULTO PREMIUM (SEM MEXER EM FUNCIONALIDADE)
+   Apenas visual. Não altera estrutura.
+========================================================= */
+
+/* 1️⃣ FUNDO MAIS PROFUNDO */
+body {
+    background:
+        radial-gradient(1400px 700px at 15% -10%, rgba(120, 0, 20, .35), transparent 60%),
+        radial-gradient(1000px 600px at 95% 0%, rgba(60, 0, 10, .35), transparent 60%),
+        linear-gradient(180deg, #060606 0%, #030303 60%, #000 100%) !important;
+}
+
+/* 2️⃣ HERO MAIS LUXUOSO */
+.heroTitle {
+    letter-spacing: .8px !important;
+    font-weight: 900 !important;
+    text-transform: uppercase;
+}
+
+.heroSub {
+    opacity: .55 !important;
+}
+
+/* 3️⃣ PAINÉIS MAIS PROFUNDOS */
+.panel {
+    box-shadow:
+        0 80px 200px rgba(0, 0, 0, .95),
+        0 0 120px rgba(120, 0, 20, .12) !important;
+    border: 1px solid rgba(120, 0, 20, .45) !important;
+}
+
+/* 4️⃣ SIDEBAR MAIS FECHADA */
+.panel.left {
+    background:
+        linear-gradient(180deg,
+            rgba(25, 0, 6, .98),
+            rgba(8, 0, 2, 1)) !important;
+}
+
+/* 5️⃣ CHAT-TOP MAIS SEXY */
+.chat-top {
+    background:
+        radial-gradient(600px 200px at 50% 0%, rgba(255, 255, 255, .05), transparent 60%),
+        linear-gradient(180deg,
+            rgba(35, 0, 8, .98),
+            rgba(10, 0, 3, 1)) !important;
+
+    box-shadow:
+        0 50px 140px rgba(0, 0, 0, .95),
+        0 0 80px rgba(120, 0, 20, .18) !important;
+}
+
+/* 6️⃣ BOLHAS MAIS ADULTAS */
+.bubble {
+    background:
+        linear-gradient(180deg,
+            rgba(35, 0, 8, .98),
+            rgba(12, 0, 4, 1)) !important;
+
+    border: 1px solid rgba(120, 0, 20, .25) !important;
+
+    box-shadow:
+        0 25px 60px rgba(0, 0, 0, .85),
+        0 0 40px rgba(120, 0, 20, .08) !important;
+}
+
+.msgRow.me .bubble {
+    background:
+        linear-gradient(180deg,
+            rgba(70, 0, 12, .98),
+            rgba(30, 0, 8, 1)) !important;
+
+    border: 1px solid rgba(120, 0, 20, .55) !important;
+
+    box-shadow:
+        0 30px 80px rgba(0, 0, 0, .9),
+        0 0 60px rgba(120, 0, 20, .15) !important;
+}
+
+/* 7️⃣ ÍCONES MENOS CLAROS */
+.iconbtn {
+    background:
+        linear-gradient(180deg,
+            rgba(30, 0, 6, .95),
+            rgba(12, 0, 3, 1)) !important;
+
+    border: 1px solid rgba(120, 0, 20, .5) !important;
+}
+
+.iconbtn:hover {
+    box-shadow:
+        0 0 40px rgba(120, 0, 20, .35) !important;
+}
+
+/* 8️⃣ PILL MAIS PREMIUM */
+.dp-pill {
+    background:
+        linear-gradient(180deg,
+            rgba(30, 0, 6, .95),
+            rgba(12, 0, 3, 1)) !important;
+
+    border: 1px solid rgba(120, 0, 20, .5) !important;
+}
+
+/* 9️⃣ COMPOSER MAIS FECHADO */
+.composer {
+    background:
+        linear-gradient(180deg,
+            rgba(20, 0, 5, 1),
+            rgba(5, 0, 2, 1)) !important;
+
+    border-top: 1px solid rgba(120, 0, 20, .4) !important;
+
+    box-shadow:
+        0 -30px 80px rgba(0, 0, 0, .9) !important;
+}
+
+/* 🔟 INPUT MAIS ESCURO */
+#texto {
+    background: rgba(0, 0, 0, .6) !important;
+    border: 1px solid rgba(120, 0, 20, .35) !important;
+}
+
+/* 11️⃣ SCROLLBAR MAIS DISCRETA */
+#msgs::-webkit-scrollbar {
+    width: 6px;
+}
+
+#msgs::-webkit-scrollbar-thumb {
+    background: rgba(120, 0, 20, .4);
+    border-radius: 6px;
+}
+
+/* =========================================================
+   UPGRADE VISUAL PREMIUM – CLUBE SECRETO
+   Não altera funcionalidade
+========================================================= */
+
+/* ===============================
+   HERO BADGE (CLUBE PRIVADO)
+================================ */
+.hero-badge {
+    display: inline-block;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #5a000c, #3b0006);
+    border: 1px solid rgba(120, 0, 20, .6);
+    color: #fff;
+    margin-bottom: 14px;
+    box-shadow: 0 0 30px rgba(120, 0, 20, .3);
+}
+
+/* ===============================
+   HERO MAIS CINEMATOGRÁFICO
+================================ */
+.hero {
+    position: relative;
+}
+
+.hero::after {
+    content: "";
+    position: absolute;
+    top: -40px;
+    left: -40px;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(120, 0, 20, .25), transparent 70%);
+    filter: blur(60px);
+    pointer-events: none;
+}
+
+/* ===============================
+   PREMIUM BOX
+================================ */
+.premiumBox {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+}
+
+/* ===============================
+   SIDEBAR TITLE
+================================ */
+.panel-title {
+    font-size: 13px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    opacity: .6;
+    margin-bottom: 10px;
+}
+
+/* ===============================
+   STATUS DOT
+================================ */
+.titleRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.user-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #0f0;
+    box-shadow: 0 0 12px #0f0;
+    animation: pulseDot 2s infinite;
+}
+
+@keyframes pulseDot {
+    0% {
+        box-shadow: 0 0 5px #0f0;
+    }
+
+    50% {
+        box-shadow: 0 0 20px #0f0;
+    }
+
+    100% {
+        box-shadow: 0 0 5px #0f0;
+    }
+}
+
+/* ===============================
+   DIVISOR LATERAL MAIS ELEGANTE
+================================ */
+.panel.left::before {
+    content: "";
+    position: absolute;
+    right: -1px;
+    top: 0;
+    height: 100%;
+    width: 1px;
+    background: linear-gradient(to bottom,
+            transparent,
+            rgba(120, 0, 20, .4),
+            transparent);
+}
+
+/* ===============================
+   LISTA MAIS PROFUNDA
+================================ */
+.list {
+    padding-right: 10px;
+}
+
+.item {
+    position: relative;
+}
+
+.item::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle at 80% 0%, rgba(120, 0, 20, .15), transparent 60%);
+    pointer-events: none;
+}
+
+/* ===============================
+   CHAT-TOP COM LUZ AMBIENTE
+================================ */
+.chat-top {
+    position: relative;
+    overflow: hidden;
+}
+
+.chat-top::before {
+    content: "";
+    position: absolute;
+    top: -80px;
+    right: -80px;
+    width: 250px;
+    height: 250px;
+    background: radial-gradient(circle, rgba(120, 0, 20, .25), transparent 70%);
+    filter: blur(70px);
+    pointer-events: none;
+}
+
+/* ===============================
+   BOLHAS COM MICRO GLOW
+================================ */
+.bubble {
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.bubble:hover {
+    transform: translateY(-2px);
+    box-shadow:
+        0 30px 80px rgba(0, 0, 0, .9),
+        0 0 40px rgba(120, 0, 20, .2);
+}
+
+/* ===============================
+   COMPOSER COM LUZ INFERIOR
+================================ */
+.composer::before {
+    content: "";
+    position: absolute;
+    top: -60px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 400px;
+    height: 120px;
+    background: radial-gradient(circle, rgba(120, 0, 20, .15), transparent 70%);
+    filter: blur(60px);
+    pointer-events: none;
+}
+
+/* ===============================
+   BOTÃO PRIMÁRIO MAIS SEXY
+================================ */
+.btn-primary {
+    background: linear-gradient(180deg, #7a0012, #3b0006) !important;
+    border: 1px solid rgba(120, 0, 20, .9) !important;
+    box-shadow: 0 0 30px rgba(120, 0, 20, .4);
+}
+
+.btn-primary:hover {
+    box-shadow: 0 0 50px rgba(120, 0, 20, .6);
+}
+
+/* ===============================
+   SCROLLBAR DARK
+================================ */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(120, 0, 20, .5);
+    border-radius: 6px;
 }

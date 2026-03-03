@@ -8,18 +8,471 @@
 
   <link rel="stylesheet" href="css/dating.css" />
   <link rel="stylesheet" href="css/conversas.css" />
+
+  <style>
+    /* (seu CSS inline inteiro continua igual — não mexi) */
+    .lockedAction {
+      opacity: .55;
+      filter: grayscale(.2);
+    }
+
+    .lockedAction::after {
+      content: " 🔒";
+    }
+
+    .dp-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 9999;
+    }
+
+    .dp-modal-overlay.show {
+      display: flex;
+    }
+
+    .dp-modal {
+      width: min(520px, 100%);
+      background: #111;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 18px 60px rgba(0, 0, 0, .6);
+    }
+
+    .dp-modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, .10);
+    }
+
+    .dp-modal-title {
+      font-weight: 700;
+    }
+
+    .dp-modal-close {
+      background: transparent;
+      border: 0;
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer;
+      opacity: .85;
+    }
+
+    .dp-modal-close:hover {
+      opacity: 1;
+    }
+
+    .dp-modal-body {
+      padding: 12px 14px;
+    }
+
+    .dp-gifts {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .dp-gift {
+      width: 100%;
+      text-align: left;
+      border: 1px solid rgba(255, 255, 255, .12);
+      background: rgba(255, 255, 255, .04);
+      color: #fff;
+      padding: 10px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .dp-gift:hover {
+      background: rgba(255, 255, 255, .08);
+    }
+
+    .dp-gift .name {
+      font-weight: 700;
+      display: block;
+    }
+
+    .dp-gift .sub {
+      opacity: .75;
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    .dp-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, .12);
+      background: rgba(255, 255, 255, .06);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .chat-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .iconbtn {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, .12);
+      background: rgba(255, 255, 255, .06);
+      color: #fff;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .iconbtn:hover {
+      background: rgba(255, 255, 255, .10);
+    }
+
+    .iconbtn:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+
+    .bubble.system {
+      background: rgba(255, 255, 255, .08) !important;
+      border: 1px dashed rgba(255, 255, 255, .18);
+    }
+
+    .bubble.gift {
+      background: rgba(255, 255, 255, .10) !important;
+      border: 1px solid rgba(255, 255, 255, .18);
+    }
+
+    .creditwall {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(0, 0, 0, .65);
+      z-index: 1200;
+    }
+
+    .creditwall.show {
+      display: flex;
+    }
+
+    .creditwallCard {
+      width: min(520px, 100%);
+      background: #111;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 14px;
+      box-shadow: 0 18px 60px rgba(0, 0, 0, .6);
+      padding: 14px;
+    }
+
+    .creditwallTitle {
+      font-weight: 800;
+      font-size: 18px;
+    }
+
+    .creditwallText {
+      opacity: .9;
+      margin-top: 8px;
+      line-height: 1.35;
+    }
+
+    .creditwallRow {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+      align-items: center;
+    }
+
+    .creditwallNote {
+      margin-top: 10px;
+      opacity: .7;
+      font-size: 12px;
+    }
+
+    .creditwall .btn {
+      min-width: 160px;
+    }
+
+    .pillSaldo {
+      margin-left: auto;
+    }
+
+    .callOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .85);
+      display: none;
+      align-items: stretch;
+      justify-content: stretch;
+      padding: 0;
+      z-index: 99999;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+    }
+
+    .callOverlay.show {
+      display: flex;
+    }
+
+    .callCard {
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      background: #0b0b0b;
+      border: 0;
+      border-radius: 0;
+      overflow: hidden;
+      box-shadow: none;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .callTop {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, .10);
+    }
+
+    .callTitle {
+      font-weight: 800;
+    }
+
+    .callSub {
+      opacity: .75;
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    .callGrid {
+      flex: 1 1 auto;
+      position: relative;
+      background: #000;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    #remoteVideo {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      background: #000;
+      z-index: 1;
+    }
+
+    #localVideo {
+      position: absolute;
+      right: 12px;
+      top: 12px;
+      width: min(34vw, 180px);
+      height: min(22vw, 120px);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, .18);
+      object-fit: cover;
+      z-index: 5;
+      background: #000;
+    }
+
+    .callActions {
+      flex: 0 0 auto;
+      display: flex;
+      gap: 10px;
+      padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+      border-top: 1px solid rgba(255, 255, 255, .10);
+      align-items: center;
+      justify-content: center;
+      background: rgba(10, 10, 10, .92);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    .callActions .btn {
+      min-width: 0;
+      flex: 1;
+      max-width: 180px;
+    }
+
+    @media (min-width: 900px) {
+      .callOverlay {
+        padding: 16px;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .callCard {
+        width: min(980px, 100%);
+        height: auto;
+        border: 1px solid rgba(255, 255, 255, .12);
+        border-radius: 16px;
+        box-shadow: 0 20px 70px rgba(0, 0, 0, .7);
+      }
+
+      .callGrid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        padding: 12px;
+        position: static;
+        background: transparent;
+      }
+
+      .callVideoBox {
+        aspect-ratio: 16/9;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, .12);
+        overflow: hidden;
+        background: #000;
+        position: relative;
+      }
+
+      .callVideoBox video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      #remoteVideo,
+      #localVideo {
+        position: static;
+        inset: auto;
+        width: 100%;
+        height: 100%;
+        border: 0;
+        border-radius: 0;
+      }
+
+      .callActions {
+        justify-content: flex-end;
+      }
+
+      .callActions .btn {
+        flex: 0;
+        min-width: 140px;
+        max-width: none;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .chat-top {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
+      }
+
+      .chat-user {
+        width: 100% !important;
+      }
+
+      .chat-actions {
+        width: 100% !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        justify-content: flex-start !important;
+        align-items: center !important;
+        gap: 8px !important;
+        overflow: visible !important;
+      }
+
+      #minutosPill {
+        flex: 1 1 100% !important;
+        justify-content: center !important;
+      }
+
+      #btnComprarCreditosTopo,
+      #btnCall,
+      #btnGift {
+        display: inline-flex !important;
+      }
+
+      .iconbtn {
+        width: 40px !important;
+        height: 40px !important;
+        flex: 0 0 auto !important;
+      }
+
+      #chatStatus {
+        flex: 1 1 100% !important;
+      }
+    }
+
+    .chat-layout,
+    .panel,
+    .panel.right,
+    .panel.right.chat {
+      min-height: 0;
+    }
+
+    .panel.right.chat {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-top {
+      flex: 0 0 auto;
+    }
+
+    .composer {
+      flex: 0 0 auto;
+    }
+
+    #msgs.msgs {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      scroll-behavior: smooth;
+    }
+
+    .composer {
+      position: sticky;
+      bottom: 0;
+      background: rgba(10, 10, 10, .92);
+      border-top: 1px solid rgba(255, 255, 255, .10);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      z-index: 5;
+    }
+  </style>
 </head>
 
-<body class="dp-app">
-
-  <!-- NAV -->
-  <nav class="dp-nav">
-    <div class="dp-brand">
-      <div class="dp-logo">DP</div>
-      <span>Desejo Proibido</span>
+<body>
+  <nav class="topnav" role="navigation" aria-label="Navegação principal">
+    <div class="brand">
+      <div class="brand-badge">DP</div>
+      <span class="brand-name">Desejo Proibido</span>
     </div>
 
-    <div class="dp-links">
+    <div class="navlinks navlinks-desktop" aria-label="Links do menu">
       <a href="home.html">Feed</a>
       <a href="perfil.html">Perfil</a>
       <a href="fotos.html">Fotos</a>
@@ -27,131 +480,295 @@
       <a href="conversas.html" class="active">Chat</a>
     </div>
 
-    <div class="dp-right">
-      <span id="premiumBadge" class="premium-pill">✔ Conta Premium Ativa</span>
-      <button id="btnSair" class="btn btn-ghost">Sair</button>
-    </div>
+    <div class="spacer"></div>
+
+    <button id="btnSair" class="btn btn-ghost">Sair</button>
+
+    <button class="nav-toggle" id="navToggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="navDrawer">
+      <span></span><span></span><span></span>
+    </button>
   </nav>
 
-  <!-- APP -->
-  <div class="dp-container">
+  <div class="nav-overlay" id="navOverlay" aria-hidden="true"></div>
 
-    <!-- SIDEBAR -->
-    <aside class="dp-sidebar">
-
-      <div class="sidebar-header">
-        <div class="sidebar-title">Conversas</div>
-        <input id="q" class="search" placeholder="Buscar conversa..." />
+  <aside class="nav-drawer" id="navDrawer" aria-hidden="true">
+    <div class="nav-drawer-head">
+      <div class="brand">
+        <div class="brand-badge">DP</div>
+        <span class="brand-name">Desejo Proibido</span>
       </div>
 
-      <div id="lista" class="sidebar-list"></div>
+      <button class="iconbtn" id="navClose" aria-label="Fechar menu">
+        <span class="xicon"></span>
+      </button>
+    </div>
 
-    </aside>
+    <div class="nav-drawer-links">
+      <a href="home.html">Feed</a>
+      <a href="perfil.html">Perfil</a>
+      <a href="fotos.html">Fotos</a>
+      <a href="matches.html">Matches</a>
+      <a href="conversas.html" class="active">Chat</a>
+    </div>
 
-    <!-- CHAT -->
-    <section class="dp-chat" style="position:relative;">
+    <div class="nav-drawer-foot">
+      <button id="btnSairMobile" class="btn btn-ghost w100">Sair</button>
+    </div>
+  </aside>
 
-      <!-- TOP -->
-      <div class="chat-header">
+  <div class="wrap">
 
-        <div class="chat-user">
-          <div class="avatarWrap">
-            <img id="chatAvatar" class="avatar" />
-            <div class="avatarFallback" id="chatAvatarFallback">DP</div>
-          </div>
+    <!-- HEADER PREMIUM MAIS IMERSIVO -->
+    <div class="headRow headRow-premium">
+      <div class="hero">
+        <div class="hero-badge">CLUBE PRIVADO</div>
 
-          <div class="chat-user-info">
-            <div id="chatNome" class="chat-name">
-              Selecione uma conversa
-            </div>
-            <div id="chatSub" class="chat-sub muted"></div>
-          </div>
+        <h2 class="heroTitle">
+          Conversas Privadas <span class="spark">✦</span>
+        </h2>
+
+        <div class="heroSub">
+          Conexões exclusivas em tempo real para membros selecionados.
         </div>
 
-        <div class="chat-actions">
-          <span class="credit-pill" id="minutosPill">
-            💰 Crédito: -
+        <div id="msg" class="msgline muted"></div>
+      </div>
+
+      <div class="heroRight">
+        <div class="premiumBox">
+          <span class="premiumBadge" id="premiumBadge">
+            🔒 Conta Premium Inativa
           </span>
 
-          <button class="iconbtn" id="btnComprarCreditosTopo">🛒</button>
-          <button class="iconbtn" id="btnCall" disabled>📞</button>
-          <button class="iconbtn" id="btnGift" disabled>🎁</button>
-        </div>
-
-      </div>
-
-      <!-- MESSAGES -->
-      <div id="msgs" class="chat-messages">
-        <div class="empty-state">
-          Escolha uma conversa à esquerda.
+          <button class="btn btn-primary" id="btnAssinarTopo" type="button">
+            Ativar Premium
+          </button>
         </div>
       </div>
+    </div>
 
-      <!-- CREDIT WALL -->
-      <div class="creditwall" id="creditwall">
-        <div class="creditwallCard">
-          <div class="creditwallTitle">🔒 Acesso restrito</div>
+    <!-- CHAT AREA -->
+    <div class="chat-layout">
 
-          <div class="creditwallText">
-            Para enviar mensagens você precisa liberar com créditos.
+      <!-- SIDEBAR -->
+      <aside class="panel left">
+        <div class="panel-header">
+          <div class="panel-title">Suas Conexões</div>
+          <input id="q" class="search" placeholder="Buscar conversa..." />
+        </div>
+
+        <div id="lista" class="list"></div>
+      </aside>
+
+      <!-- CHAT -->
+      <section class="panel right chat" style="position: relative;">
+
+        <div class="chat-top">
+
+          <div class="chat-user">
+            <div class="avatarWrap">
+              <img id="chatAvatar" class="avatar" alt="avatar" />
+              <div class="avatarFallback" id="chatAvatarFallback">DP</div>
+            </div>
+
+            <div class="userText">
+              <div class="titleRow">
+                <div id="chatNome" class="title">
+                  Selecione uma conversa
+                </div>
+                <div class="user-status-dot"></div>
+              </div>
+
+              <div id="chatSub" class="sub muted"></div>
+            </div>
           </div>
 
-          <div class="creditwallRow">
-            <button class="btn btn-primary" id="btnLiberarChat">
-              Liberar por <span id="unlockCost">-</span>
-            </button>
-
-            <button class="btn btn-ghost" id="btnComprarCreditos">
-              Comprar créditos
-            </button>
-
-            <span class="credit-pill">
-              Saldo: <b id="saldoCreditos">0</b>
+          <div class="chat-actions">
+            <span class="dp-pill" id="minutosPill">
+              🔒 Crédito: -
             </span>
+
+            <button class="iconbtn" id="btnComprarCreditosTopo" title="Comprar créditos">🛒</button>
+
+            <button class="iconbtn" id="btnCall" title="Ligar" disabled>📞</button>
+
+            <button class="iconbtn" id="btnGift" title="Enviar presente" disabled>🎁</button>
+
+            <div class="muted" id="chatStatus"></div>
+          </div>
+
+        </div>
+
+        <div id="msgs" class="msgs">
+          <div class="empty">
+            Escolha uma conversa à esquerda para iniciar uma interação privada.
           </div>
         </div>
-      </div>
 
-      <!-- PAYWALL -->
-      <div class="paywall" id="paywall" hidden>
-        <div class="paywallCard">
-          <div class="paywallTitle">Área Premium 🔥</div>
-          <div class="paywallText">
-            Ligações e presentes disponíveis apenas para membros Premium.
-          </div>
-          <div class="paywallActions">
-            <button class="btn btn-primary" id="btnAssinar">
-              Comprar créditos
-            </button>
-            <button class="btn btn-ghost" id="btnEntendi">
-              Entendi
-            </button>
+        <!-- creditwall (intacto) -->
+        <div class="creditwall" id="creditwall" aria-hidden="true">
+          <div class="creditwallCard">
+            <div class="creditwallTitle">🔒 Acesso restrito</div>
+
+            <div class="creditwallText">
+              Para enviar mensagens nesta conversa,
+              você precisa <b>liberar o acesso</b> com créditos.
+            </div>
+
+            <div class="creditwallRow">
+              <button class="btn btn-primary" id="btnLiberarChat" type="button">
+                Liberar por <span id="unlockCost">-</span>
+              </button>
+
+              <button class="btn btn-ghost" id="btnComprarCreditos" type="button">
+                Comprar créditos
+              </button>
+
+              <span class="dp-pill pillSaldo">
+                💰 Saldo: <b id="saldoCreditos">0</b>
+              </span>
+            </div>
+
+            <div class="creditwallNote muted">
+              A liberação é cobrada uma única vez por conversa.
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- COMPOSER -->
-      <div class="chat-composer">
-        <button class="iconbtn" id="btnFoto">📷</button>
-        <button class="iconbtn" id="btnAudio">🎙️</button>
+        <!-- paywall (intacto) -->
+        <div class="paywall" id="paywall" hidden>
+          <div class="paywallCard">
+            <div class="paywallTitle">
+              Área Exclusiva Premium 🔥
+            </div>
 
-        <textarea id="texto" placeholder="Digite uma mensagem..." disabled></textarea>
+            <div class="paywallText">
+              Ligações e presentes são liberados apenas
+              para membros Premium.
+            </div>
 
-        <button id="btnEnviar" class="btn btn-primary" disabled>
-          Enviar
-        </button>
+            <div class="paywallActions">
+              <button class="btn btn-primary" id="btnAssinar" type="button">
+                Comprar créditos
+              </button>
 
-        <input type="file" id="inputFoto" accept="image/*" hidden />
-        <input type="file" id="inputAudio" accept="audio/*" hidden />
-      </div>
+              <button class="btn btn-ghost" id="btnEntendi" type="button">
+                Entendi
+              </button>
+            </div>
 
-    </section>
+            <div class="paywallNote muted">
+              A ativação ocorre automaticamente após a compra.
+            </div>
+          </div>
+        </div>
+
+        <!-- composer (intacto) -->
+        <div class="composer">
+          <button class="iconbtn" id="btnFoto" title="Enviar foto">📷</button>
+          <button class="iconbtn" id="btnAudio" title="Enviar áudio">🎙️</button>
+
+          <textarea id="texto" placeholder="Digite uma mensagem..." disabled></textarea>
+
+          <button id="btnEnviar" class="btn btn-primary" disabled>
+            Enviar
+          </button>
+
+          <input type="file" id="inputFoto" accept="image/*" hidden />
+          <input type="file" id="inputAudio" accept="audio/*" hidden />
+        </div>
+
+      </section>
+    </div>
   </div>
 
-  <!-- SOCKET -->
-  <script src="/api/socket.io/socket.io.js"></script>
-  <script type="module" src="js/conversas.js?v=20260213-3"></script>
+  <div class="dp-modal-overlay" id="giftOverlay" aria-hidden="true">
+    <div class="dp-modal" role="dialog" aria-modal="true" aria-label="Enviar presente">
+      <div class="dp-modal-head">
+        <div class="dp-modal-title">Enviar presente 🎁</div>
+        <button class="dp-modal-close" id="giftClose" aria-label="Fechar">✕</button>
+      </div>
+      <div class="dp-modal-body">
+        <div class="muted">Escolha um presente para enviar nesta conversa.</div>
+        <div id="giftList" class="dp-gifts">Carregando...</div>
+      </div>
+    </div>
+  </div>
 
+  <div class="callOverlay" id="callOverlay" aria-hidden="true">
+    <div class="callCard">
+      <div class="callTop">
+        <div>
+          <div class="callTitle" id="callTitle">📹 Videochamada</div>
+          <div class="callSub" id="callSub">Conectando…</div>
+        </div>
+        <button class="iconbtn" id="btnCallClose" title="Fechar">✕</button>
+      </div>
+
+      <div class="callGrid" id="callGrid">
+        <video id="remoteVideo" autoplay playsinline></video>
+        <video id="localVideo" autoplay playsinline muted></video>
+        <div class="callVideoBox" style="display:none;"></div>
+      </div>
+
+      <div class="callActions">
+        <button class="btn btn-ghost" id="btnMute" type="button">🎙️ Mudo</button>
+        <button class="btn btn-ghost" id="btnCam" type="button">📷 Câmera</button>
+        <button class="btn btn-primary" id="btnHangup" type="button">Encerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ✅ Socket.IO client (CORRETO pro seu backend em /api) -->
+  <script src="/api/socket.io/socket.io.js"></script>
+
+  <!-- ✅ cache-bust -->
+  <script type="module" src="js/conversas.js?v=20260213-1"></script>
+
+  <script>
+    const navToggle = document.getElementById("navToggle");
+    const navDrawer = document.getElementById("navDrawer");
+    const navOverlay = document.getElementById("navOverlay");
+    const navClose = document.getElementById("navClose");
+
+    function openNav() {
+      navDrawer.classList.add("open");
+      navOverlay.classList.add("show");
+      navToggle.classList.add("open");
+      navToggle.setAttribute("aria-expanded", "true");
+      navDrawer.setAttribute("aria-hidden", "false");
+      navOverlay.setAttribute("aria-hidden", "false");
+      document.body.classList.add("no-scroll");
+    }
+
+    function closeNav() {
+      navDrawer.classList.remove("open");
+      navOverlay.classList.remove("show");
+      navToggle.classList.remove("open");
+      navToggle.setAttribute("aria-expanded", "false");
+      navDrawer.setAttribute("aria-hidden", "true");
+      navOverlay.setAttribute("aria-hidden", "true");
+      document.body.classList.remove("no-scroll");
+    }
+
+    navToggle?.addEventListener("click", () => {
+      if (navDrawer.classList.contains("open")) closeNav();
+      else openNav();
+    });
+
+    navOverlay?.addEventListener("click", closeNav);
+    navClose?.addEventListener("click", closeNav);
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeNav();
+    });
+
+    const btnSair = document.getElementById("btnSair");
+    const btnSairMobile = document.getElementById("btnSairMobile");
+    if (btnSair && btnSairMobile) {
+      btnSairMobile.addEventListener("click", () => btnSair.click());
+    }
+  </script>
 </body>
 
 </html>
