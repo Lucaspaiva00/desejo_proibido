@@ -371,3 +371,149 @@ body {
         padding: 10px !important;
     }
 }
+
+/* =========================================================
+   HEADER APP (igual imagem 1)
+========================================================= */
+
+.dp-appHeader {
+    padding: 16px;
+    border-bottom: 1px solid rgba(120, 0, 20, .35);
+    background:
+        radial-gradient(900px 260px at 20% 0%, rgba(255, 255, 255, .06), transparent 60%),
+        linear-gradient(180deg, rgba(55, 0, 10, .95), rgba(10, 0, 3, 1));
+}
+
+.dp-userCard {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 14px;
+    border-radius: 20px;
+    border: 1px solid rgba(120, 0, 20, .45);
+    background: linear-gradient(180deg, rgba(30, 0, 6, .85), rgba(10, 0, 3, .92));
+    box-shadow: 0 25px 70px rgba(0, 0, 0, .75);
+}
+
+.dp-userLeft {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.dp-userText {
+    min-width: 0;
+}
+
+.dp-userName {
+    font-weight: 800;
+    font-size: 22px;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dp-userMail {
+    font-size: 13px;
+    opacity: .7;
+    margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dp-nameRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.dp-onlineDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #21ff6b;
+    box-shadow: 0 0 14px rgba(33, 255, 107, .75);
+}
+
+.dp-userRight {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+}
+
+.dp-wallet {
+    margin-top: 12px;
+    padding: 14px;
+    border-radius: 18px;
+    border: 1px solid rgba(120, 0, 20, .45);
+    background: linear-gradient(180deg, rgba(20, 0, 5, .75), rgba(5, 0, 2, .92));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: 0 25px 70px rgba(0, 0, 0, .65);
+}
+
+.dp-walletIcon {
+    font-size: 20px;
+}
+
+.dp-walletText {
+    font-size: 18px;
+    letter-spacing: .2px;
+}
+
+.dp-actionsRow {
+    margin-top: 12px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.dp-actionBtn {
+    flex: 1 1 180px;
+    min-height: 44px;
+    border-radius: 16px;
+    border: 1px solid rgba(120, 0, 20, .55);
+    background: linear-gradient(180deg, rgba(40, 0, 8, .85), rgba(12, 0, 3, .95));
+    color: #fff;
+    font-weight: 800;
+    cursor: pointer;
+    transition: .2s;
+}
+
+.dp-actionBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 30px rgba(120, 0, 20, .28);
+}
+
+.dp-actionBtn:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* desktop: mantém sidebar e chat normal */
+@media (min-width: 981px) {
+    .dp-appHeader {
+        border-radius: 0;
+    }
+}
+
+/* mobile: app-like (sidebar some) */
+@media (max-width: 980px) {
+    .panel.left {
+        display: none !important;
+    }
+
+    .chat-layout {
+        grid-template-columns: 1fr !important;
+    }
+}
