@@ -273,3 +273,74 @@ body {
         max-width: 85%;
     }
 }
+
+/* =========================================================
+   PATCH v7 — MAIS DENSIDADE / MENOS ESPAÇO VAZIO
+========================================================= */
+
+/* 1️⃣ Hero menor e mais compacto */
+.headRow-premium {
+    margin: 0 0 12px !important;
+}
+
+.heroTitle {
+    font-size: 32px !important;
+    margin-bottom: 4px !important;
+}
+
+.heroSub {
+    font-size: 13px !important;
+    margin-top: 4px !important;
+}
+
+/* 2️⃣ Remover espaço extra da wrap */
+.wrap {
+    margin: 18px auto 30px !important;
+}
+
+/* 3️⃣ Chat sobe mais na tela */
+.chat-layout {
+    gap: 14px !important;
+}
+
+/* 4️⃣ Painéis ocupam mais altura */
+.panel.right.chat {
+    height: calc(100dvh - 170px) !important;
+}
+
+/* 5️⃣ Lista ocupa mais altura */
+.list {
+    max-height: calc(100dvh - 190px) !important;
+}
+
+/* 6️⃣ Chat-top menos espaçoso */
+.chat-top {
+    margin: 10px !important;
+    padding: 14px !important;
+}
+
+/* 7️⃣ Composer menos flutuante */
+.composer {
+    margin: 0 10px 10px !important;
+}
+
+/* 8️⃣ Painel esquerdo mais forte visualmente */
+.panel.left {
+    background:
+        linear-gradient(180deg, rgba(35, 0, 6, .95), rgba(10, 0, 3, .98)) !important;
+}
+
+/* 9️⃣ Adicionar linha lateral sutil para dividir melhor */
+.panel.left {
+    position: relative;
+}
+
+.panel.left::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: -7px;
+    width: 1px;
+    height: 100%;
+    background: rgba(120, 0, 20, .25);
+}
