@@ -10,7 +10,9 @@
   <link rel="stylesheet" href="css/conversas.css" />
 
   <style>
-    /* (seu CSS inline inteiro continua igual — não mexi) */
+    /* ===============================
+       INLINE (mantive seus componentes)
+       =============================== */
     .lockedAction {
       opacity: .55;
       filter: grayscale(.2);
@@ -381,49 +383,7 @@
       }
     }
 
-    @media (max-width: 520px) {
-      .chat-top {
-        flex-direction: column !important;
-        align-items: stretch !important;
-        gap: 10px !important;
-      }
-
-      .chat-user {
-        width: 100% !important;
-      }
-
-      .chat-actions {
-        width: 100% !important;
-        display: flex !important;
-        flex-wrap: wrap !important;
-        justify-content: flex-start !important;
-        align-items: center !important;
-        gap: 8px !important;
-        overflow: visible !important;
-      }
-
-      #minutosPill {
-        flex: 1 1 100% !important;
-        justify-content: center !important;
-      }
-
-      #btnComprarCreditosTopo,
-      #btnCall,
-      #btnGift {
-        display: inline-flex !important;
-      }
-
-      .iconbtn {
-        width: 40px !important;
-        height: 40px !important;
-        flex: 0 0 auto !important;
-      }
-
-      #chatStatus {
-        flex: 1 1 100% !important;
-      }
-    }
-
+    /* scroll interno chat */
     .chat-layout,
     .panel,
     .panel.right,
@@ -436,14 +396,6 @@
       flex-direction: column;
     }
 
-    .chat-top {
-      flex: 0 0 auto;
-    }
-
-    .composer {
-      flex: 0 0 auto;
-    }
-
     #msgs.msgs {
       flex: 1 1 auto;
       min-height: 0;
@@ -454,13 +406,21 @@
     }
 
     .composer {
-      position: sticky;
-      bottom: 0;
-      background: rgba(10, 10, 10, .92);
-      border-top: 1px solid rgba(255, 255, 255, .10);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      z-index: 5;
+      flex: 0 0 auto;
+    }
+
+    /* mobile topo */
+    @media (max-width: 520px) {
+      .chat-actions {
+        width: 100% !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+      }
+
+      #minutosPill {
+        flex: 1 1 100% !important;
+        justify-content: center !important;
+      }
     }
   </style>
 </head>
@@ -518,42 +478,13 @@
 
   <div class="wrap">
 
-    <!-- HEADER PREMIUM MAIS IMERSIVO -->
-    <div class="headRow headRow-premium">
-      <div class="hero">
-        <div class="hero-badge">CLUBE PRIVADO</div>
-
-        <h2 class="heroTitle">
-          Conversas Privadas <span class="spark">✦</span>
-        </h2>
-
-        <div class="heroSub">
-          Conexões exclusivas em tempo real para membros selecionados.
-        </div>
-
-        <div id="msg" class="msgline muted"></div>
-      </div>
-
-      <div class="heroRight">
-        <div class="premiumBox">
-          <span class="premiumBadge" id="premiumBadge">
-            🔒 Conta Premium Inativa
-          </span>
-
-          <button class="btn btn-primary" id="btnAssinarTopo" type="button">
-            Ativar Premium
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- CHAT AREA -->
+    <!-- ✅ CHAT AREA (desktop continua com sidebar) -->
     <div class="chat-layout">
 
       <!-- SIDEBAR -->
       <aside class="panel left">
         <div class="panel-header">
-          <div class="panel-title">Suas Conexões</div>
+          <div class="panel-title">Suas Conversas</div>
           <input id="q" class="search" placeholder="Buscar conversa..." />
         </div>
 
@@ -563,42 +494,46 @@
       <!-- CHAT -->
       <section class="panel right chat" style="position: relative;">
 
-        <div class="chat-top">
-
-          <div class="chat-user">
-            <div class="avatarWrap">
-              <img id="chatAvatar" class="avatar" alt="avatar" />
-              <div class="avatarFallback" id="chatAvatarFallback">DP</div>
-            </div>
-
-            <div class="userText">
-              <div class="titleRow">
-                <div id="chatNome" class="title">
-                  Selecione uma conversa
-                </div>
-                <div class="user-status-dot"></div>
+        <!-- ✅ HEADER APP (igual imagem 1) -->
+        <div class="dp-appHeader">
+          <div class="dp-userCard">
+            <div class="dp-userLeft">
+              <div class="avatarWrap">
+                <img id="chatAvatar" class="avatar" alt="avatar" />
+                <div class="avatarFallback" id="chatAvatarFallback">DP</div>
               </div>
 
-              <div id="chatSub" class="sub muted"></div>
+              <div class="dp-userText">
+                <div class="dp-nameRow">
+                  <div id="chatNome" class="dp-userName">Selecione uma conversa</div>
+                  <span class="dp-onlineDot" aria-hidden="true"></span>
+                </div>
+                <div id="chatSub" class="dp-userMail muted"></div>
+              </div>
+            </div>
+
+            <div class="dp-userRight">
+              <span class="dp-pill" id="minutosPill">🔒 Crédito: -</span>
+              <div class="muted" id="chatStatus"></div>
             </div>
           </div>
 
-          <div class="chat-actions">
-            <span class="dp-pill" id="minutosPill">
-              🔒 Crédito: -
-            </span>
-
-            <button class="iconbtn" id="btnComprarCreditosTopo" title="Comprar créditos">🛒</button>
-
-            <button class="iconbtn" id="btnCall" title="Ligar" disabled>📞</button>
-
-            <button class="iconbtn" id="btnGift" title="Enviar presente" disabled>🎁</button>
-
-            <div class="muted" id="chatStatus"></div>
+          <div class="dp-wallet">
+            <span class="dp-walletIcon">👑</span>
+            <span class="dp-walletText">Carteira VIP: <b id="saldoCreditos">0</b></span>
           </div>
 
+          <div class="dp-actionsRow">
+            <button class="dp-actionBtn" id="btnAssinarTopo" type="button">💎 Upgrade VIP</button>
+            <button class="dp-actionBtn" id="btnGift" type="button" disabled>🎁 Presentear</button>
+            <button class="dp-actionBtn" id="btnCall" type="button" disabled>🔑 Conectar</button>
+
+            <!-- mantém compra topo -->
+            <button class="iconbtn" id="btnComprarCreditosTopo" title="Comprar créditos">🛒</button>
+          </div>
         </div>
 
+        <!-- MENSAGENS -->
         <div id="msgs" class="msgs">
           <div class="empty">
             Escolha uma conversa à esquerda para iniciar uma interação privada.
@@ -719,10 +654,7 @@
     </div>
   </div>
 
-  <!-- ✅ Socket.IO client (CORRETO pro seu backend em /api) -->
   <script src="/api/socket.io/socket.io.js"></script>
-
-  <!-- ✅ cache-bust -->
   <script type="module" src="js/conversas.js?v=20260213-1"></script>
 
   <script>
