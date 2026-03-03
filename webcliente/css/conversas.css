@@ -1,44 +1,52 @@
-/* ===============================
-   APP LAYOUT PROFISSIONAL
-=============================== */
+:root {
+    --wine: #8f0018;
+    --wine-dark: #3a0008;
+    --wine-border: rgba(143, 0, 24, .6);
+    --bg-black: #050505;
+    --bg-soft: #111116;
+    --bg-panel: #1a0006;
+    --text: #f5f5f5;
+    --text-soft: #a0a0aa;
+}
 
 body {
     margin: 0;
-    background: linear-gradient(180deg, #080808, #000);
+    background:
+        radial-gradient(1200px 600px at 20% 0%, rgba(143, 0, 24, .35), transparent 60%),
+        linear-gradient(180deg, #0a0a0a, #000);
+    color: var(--text);
     font-family: system-ui, -apple-system, sans-serif;
-    color: #f2f2f2;
 }
 
-.app {
+/* ================= APP LAYOUT ================= */
+
+.chat-app {
     display: grid;
-    grid-template-columns: 320px 1fr;
+    grid-template-columns: 340px 1fr;
     height: calc(100vh - 70px);
 }
 
-/* ===============================
-   SIDEBAR
-=============================== */
+/* ================= SIDEBAR ================= */
 
-.app-sidebar {
-    background: #0e0e12;
-    border-right: 1px solid rgba(120, 0, 20, .4);
+.chat-sidebar {
+    background: linear-gradient(180deg, #1a0006, #0a0003);
+    border-right: 1px solid var(--wine-border);
     display: flex;
     flex-direction: column;
 }
 
-.sidebar-top {
-    padding: 16px;
-    border-bottom: 1px solid rgba(120, 0, 20, .4);
+.sidebar-header {
+    padding: 18px;
+    border-bottom: 1px solid var(--wine-border);
 }
 
 .search {
     width: 100%;
-    padding: 12px;
-    background: #16161c;
-    border: 1px solid rgba(120, 0, 20, .4);
-    border-radius: 12px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid var(--wine-border);
+    background: #140004;
     color: white;
-    font-size: 14px;
 }
 
 .sidebar-list {
@@ -47,29 +55,26 @@ body {
     padding: 14px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
 }
 
-/* ===============================
-   CHAT AREA
-=============================== */
+/* ================= CHAT ================= */
 
-.app-chat {
+.chat-main {
     display: flex;
     flex-direction: column;
-    background: #050505;
+    background: linear-gradient(180deg, #0d0003, #000);
 }
 
 /* HEADER */
 
 .chat-header {
-    height: 80px;
-    padding: 0 24px;
+    padding: 20px 28px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid rgba(120, 0, 20, .4);
-    background: #111116;
+    background: linear-gradient(180deg, #200007, #120004);
+    border-bottom: 1px solid var(--wine-border);
 }
 
 .chat-user {
@@ -79,57 +84,55 @@ body {
 }
 
 .avatarWrap {
-    width: 52px;
-    height: 52px;
-    border-radius: 14px;
+    width: 58px;
+    height: 58px;
+    border-radius: 16px;
     overflow: hidden;
-    border: 1px solid rgba(120, 0, 20, .5);
+    border: 1px solid var(--wine-border);
 }
 
 .chat-name {
-    font-size: 16px;
-    font-weight: 600;
+    font-size: 18px;
+    font-weight: 700;
 }
 
 .chat-sub {
     font-size: 13px;
-    opacity: .6;
+    opacity: .7;
 }
 
 .chat-actions {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
 }
 
 .iconbtn {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    border: 1px solid rgba(120, 0, 20, .5);
-    background: #16161c;
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: #190005;
+    border: 1px solid var(--wine-border);
     color: white;
-    font-size: 16px;
+    font-size: 18px;
+    cursor: pointer;
 }
 
 .iconbtn:hover {
-    background: #1e1e24;
+    box-shadow: 0 0 20px rgba(143, 0, 24, .5);
 }
 
-/* ===============================
-   MESSAGES
-=============================== */
+/* ================= MESSAGES ================= */
 
 .chat-messages {
     flex: 1;
     overflow-y: auto;
-    padding: 30px 80px;
-    font-size: 14px;
+    padding: 40px 90px;
     line-height: 1.6;
 }
 
 .msgRow {
-    margin-bottom: 20px;
+    margin-bottom: 22px;
     display: flex;
 }
 
@@ -138,66 +141,59 @@ body {
 }
 
 .bubble {
-    max-width: 500px;
-    padding: 14px 18px;
-    border-radius: 16px;
-    background: #141419;
-    border: 1px solid rgba(120, 0, 20, .4);
+    max-width: 520px;
+    padding: 16px 20px;
+    border-radius: 18px;
+    background: #1a0006;
+    border: 1px solid var(--wine-border);
 }
 
 .msgRow.me .bubble {
-    background: linear-gradient(180deg, #7a0012, #3b0006);
-    border: 1px solid rgba(120, 0, 20, .8);
+    background: linear-gradient(180deg, var(--wine), var(--wine-dark));
 }
 
 .bubble img {
-    max-width: 280px;
-    border-radius: 12px;
+    max-width: 320px;
+    border-radius: 14px;
     margin-top: 8px;
 }
 
-/* ===============================
-   COMPOSER
-=============================== */
+/* ================= COMPOSER ================= */
 
 .chat-composer {
-    height: 70px;
-    padding: 0 24px;
-    border-top: 1px solid rgba(120, 0, 20, .4);
+    padding: 18px 28px;
     display: flex;
+    gap: 14px;
     align-items: center;
-    gap: 12px;
-    background: #111116;
+    background: linear-gradient(180deg, #200007, #120004);
+    border-top: 1px solid var(--wine-border);
 }
 
 #texto {
     flex: 1;
-    height: 44px;
-    padding: 8px 14px;
-    border-radius: 12px;
-    border: 1px solid rgba(120, 0, 20, .4);
-    background: #16161c;
+    height: 50px;
+    padding: 10px 14px;
+    border-radius: 14px;
+    border: 1px solid var(--wine-border);
+    background: #140004;
     color: white;
     resize: none;
-    font-size: 14px;
 }
 
 .btn-send {
-    height: 44px;
-    padding: 0 18px;
-    border-radius: 12px;
-    background: linear-gradient(180deg, #7a0012, #3b0006);
-    border: 1px solid rgba(120, 0, 20, .9);
-    color: white;
+    height: 50px;
+    padding: 0 20px;
+    border-radius: 14px;
+    background: linear-gradient(180deg, var(--wine), var(--wine-dark));
+    border: 1px solid var(--wine-border);
     font-weight: 600;
+    cursor: pointer;
 }
 
-/* ===============================
-   RESPONSIVO
-=============================== */
+/* ================= RESPONSIVO ================= */
 
-@media (max-width: 1000px) {
-    .app {
+@media(max-width:1000px) {
+    .chat-app {
         grid-template-columns: 1fr;
     }
 
