@@ -759,7 +759,7 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
             ${m.thumbUrl ? `<img src="${escapeHtml(m.thumbUrl)}" class="thumb" />` : `<div class="thumb fake"></div>`}
             <div class="lockOverlay">🔒 Desbloquear por ${Number(m.custoMoedas || 0)} créditos</div>
           </div>
-          <button class="btnForward" data-mid="${escapeHtml(m.id)}">↪ Encaminhar</button>
+        
         `;
             } else {
                 conteudo = `
