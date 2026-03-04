@@ -452,7 +452,6 @@
 
     .chat-layout {
         display: block;
-        height: calc(100dvh - var(--topnav-h));
     }
 
     /* Lista ocupa a tela */
