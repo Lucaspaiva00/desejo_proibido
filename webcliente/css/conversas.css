@@ -502,20 +502,21 @@
    RESPONSIVO
 ========================================================= */
 
-@media (max-width:980px) {
+@media (max-width: 980px) {
 
     .chat-layout {
-
         grid-template-columns: 1fr;
-
         height: calc(100dvh - 78px);
-
     }
 
+    /* mostra a lista no mobile */
     .panel.left {
+        display: flex;
+    }
 
+    /* esconde o chat até selecionar */
+    .panel.right.chat {
         display: none;
-
     }
 
 }
