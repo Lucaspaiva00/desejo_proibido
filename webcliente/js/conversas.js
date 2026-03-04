@@ -730,34 +730,36 @@ async function unlockMedia(mensagemId) {
 
         const r = await apiFetch(`/mensagens/${mensagemId}/desbloquear`, {
             method: "POST"
-        })
+        });
 
         if (typeof r?.saldoCreditos === "number") {
 
-            state.saldoCreditos = r.saldoCreditos
+            state.saldoCreditos = r.saldoCreditos;
 
             if (minutosPill)
-                minutosPill.textContent = `💰 Créditos: ${r.saldoCreditos}`
+                minutosPill.textContent = `💰 Créditos: ${r.saldoCreditos}`;
 
             if (saldoCreditosEl)
-                saldoCreditosEl.textContent = `${r.saldoCreditos}`
-
+                saldoCreditosEl.textContent = `${r.saldoCreditos}`;
         }
 
-        await carregarMensagens()
+        await carregarMensagens();
 
     } catch (e) {
 
         if (e?.status === 402) {
-            alert("Saldo insuficiente para desbloquear.")
-            return
+            alert("Saldo insuficiente para desbloquear.");
+            return;
         }
 
-        alert("Erro ao desbloquear mídia")
+        alert("Erro ao desbloquear mídia");
 
     }
 
 }
+
+// 🔥 deixar função global para o onclick
+window.unlockMedia = unlockMedia;
 /**
  * ✅ Render 100% correto:
  * - sem sobrescrever conteudo de FOTO/AUDIO
