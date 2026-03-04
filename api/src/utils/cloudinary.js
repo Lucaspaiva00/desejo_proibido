@@ -100,14 +100,13 @@ export async function uploadAudio({
     const r = await uploadBuffer({
         buffer,
         folder,
-        resourceType: "video",
-        filename
+        resourceType: "video", // Cloudinary trata áudio como video
+        filename: `${Date.now()}`
     });
 
     const publicId = r.public_id;
-    const format = r.format || "mp3";
 
     return {
-        mediaPath: `${publicId}.${format}`
+        mediaPath: publicId + "." + (r.format || "webm")
     };
 }
