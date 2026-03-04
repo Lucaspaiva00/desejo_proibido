@@ -752,23 +752,25 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
 
         let conteudo = "";
 
-        if (tipo === "FOTO") {
-            if (m.locked) {
-                conteudo = `
-          <div class="mediaLocked" data-mid="${escapeHtml(m.id)}" data-tipo="FOTO">
-            ${m.thumbUrl ? `<img src="${escapeHtml(m.thumbUrl)}" class="thumb" />` : `<div class="thumb fake"></div>`}
-            <div class="lockOverlay">🔒 Desbloquear por ${Number(m.custoMoedas || 0)} créditos</div>
-          </div>
-        
-        `;
-            } else {
-                conteudo = `
-          <a href="${escapeHtml(m.mediaUrl || "")}" target="_blank" rel="noopener">
-            <img src="${escapeHtml(m.mediaUrl || "")}" class="mediaFull" />
-          </a>
-          <button class="btnForward" data-mid="${escapeHtml(m.id)}">↪ Encaminhar</button>
-        `;
-            }
+        if (m.tipo === "FOTO") {
+
+            const imgSrc = m.mediaUrl || m.thumbUrl
+
+            html += `
+    <div class="bubble foto ${m.locked ? "locked" : ""}" 
+         data-id="${m.id}"
+         ${m.locked ? 'onclick="unlockMedia(\'' + m.id + '\')"' : ""}>
+
+      <img src="${imgSrc}" />
+
+      ${m.locked ? `
+        <div class="media-lock">
+          🔒 Desbloquear por ${m.custoMoedas || 10} créditos
+        </div>
+      ` : ""}
+
+    </div>
+  `
         } else if (tipo === "AUDIO") {
             if (m.locked) {
                 conteudo = `
