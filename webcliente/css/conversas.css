@@ -515,3 +515,9 @@
     }
 
 }
+
+.btnAudio.gravando {
+    background: #C1121F;
+    transform: scale(1.1);
+    box-shadow: 0 0 10px #C1121F;
+}

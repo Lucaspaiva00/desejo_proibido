@@ -1385,42 +1385,89 @@ inputFoto?.addEventListener("change", async () => {
     }
 });
 
-btnAudio?.addEventListener("click", () => {
+let mediaRecorder = null;
+let audioChunks = [];
+
+btnAudio?.addEventListener("mousedown", iniciarGravacao);
+btnAudio?.addEventListener("mouseup", pararGravacao);
+
+btnAudio?.addEventListener("touchstart", iniciarGravacao);
+btnAudio?.addEventListener("touchend", pararGravacao);
+
+async function iniciarGravacao() {
+
     if (!state.conversaId) return;
+
     if (!state.premiumAtivo && !state.chatLiberado) {
         showCreditWall();
         return;
     }
-    inputAudio?.click();
-});
-
-inputAudio?.addEventListener("change", async () => {
-    const file = inputAudio?.files?.[0];
-    if (!file || !state.conversaId) return;
 
     try {
-        const form = new FormData();
-        form.append("file", file);
 
-        // 1) upload pro backend -> cloudinary
-        const up = await apiFetch("/uploads/audio", { method: "POST", body: form });
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-        // 2) cria mensagem AUDIO (✅ agora o backend trava e cobra 10 automaticamente)
-        await apiFetch("/mensagens/audio", {
-            method: "POST",
-            body: {
-                conversaId: state.conversaId,
-                mediaPath: up.mediaPath,
-            }
-        });
+        mediaRecorder = new MediaRecorder(stream);
 
-        await carregarMensagens();
+        audioChunks = [];
+
+        mediaRecorder.ondataavailable = (e) => {
+            audioChunks.push(e.data);
+        };
+
+        mediaRecorder.start();
+
+        btnAudio.classList.add("gravando");
+
     } catch (e) {
-        alert("Erro ao enviar áudio: " + (e?.message || "erro"));
-    } finally {
-        if (inputAudio) inputAudio.value = "";
+        alert("Erro ao acessar microfone");
     }
-});
+
+}
+
+async function pararGravacao() {
+
+    if (!mediaRecorder) return;
+
+    mediaRecorder.stop();
+
+    btnAudio.classList.remove("gravando");
+
+    mediaRecorder.onstop = async () => {
+
+        try {
+
+            const blob = new Blob(audioChunks, { type: "audio/webm" });
+
+            const file = new File([blob], "audio.webm", { type: "audio/webm" });
+
+            const form = new FormData();
+            form.append("file", file);
+
+            const up = await apiFetch("/uploads/audio", {
+                method: "POST",
+                body: form
+            });
+
+            await apiFetch("/mensagens/audio", {
+                method: "POST",
+                body: {
+                    conversaId: state.conversaId,
+                    mediaPath: up.mediaPath
+                }
+            });
+
+            await carregarMensagens();
+
+        } catch (e) {
+
+            alert("Erro ao enviar áudio");
+
+        }
+
+    };
+
+}
 
 // ==============================
 // Init
