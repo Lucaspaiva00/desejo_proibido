@@ -477,3 +477,55 @@
         flex: 1 1 160px;
     }
 }
+
+/* =========================
+   FIX VISUAL CHAT
+========================= */
+
+.bubble img {
+    max-width: 240px;
+    max-height: 260px;
+    border-radius: 12px;
+    display: block;
+    margin-top: 6px;
+    object-fit: cover;
+}
+
+.bubble video {
+    max-width: 260px;
+    border-radius: 12px;
+}
+
+.bubble audio {
+    width: 220px;
+}
+
+.dp-appHeader {
+    padding: 8px 10px;
+}
+
+.avatarWrap {
+    width: 46px;
+    height: 46px;
+}
+
+.dp-userName {
+    font-size: 16px;
+    font-weight: 900;
+}
+
+.dp-userMail {
+    font-size: 11px;
+}
+
+.dp-walletMini {
+    padding: 4px 8px;
+    font-size: 11px;
+    border-radius: 10px;
+}
+
+.dp-actionBtn {
+    min-height: 34px;
+    padding: 0 12px;
+    font-size: 13px;
+}
