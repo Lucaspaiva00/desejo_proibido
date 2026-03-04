@@ -107,25 +107,16 @@ async function mapMensagemParaUsuario(m, idiomaDestino, viewerId) {
 
         const { publicId: tId, format: tFmt } = splitPath(m.thumbPath);
 
+        if (tId) {
+            thumbUrl = buildPublicUrl({
+                publicId: tId,
+                resourceType: "image",
+                format: tFmt || "jpg"
+            });
+        }
+
         const canSeeOriginal =
             !locked || (await alreadyUnlockedMedia(viewerId, m.id));
-
-        if (tId) {
-
-            if (!canSeeOriginal) {
-                thumbUrl = buildThumbBlurUrl({
-                    publicId: tId,
-                    format: tFmt || "jpg"
-                });
-            } else {
-                thumbUrl = buildPublicUrl({
-                    publicId: tId,
-                    resourceType: "image",
-                    format: tFmt || "jpg"
-                });
-            }
-
-        }
 
         if (canSeeOriginal) {
 
@@ -140,7 +131,11 @@ async function mapMensagemParaUsuario(m, idiomaDestino, viewerId) {
             }
 
         } else {
-            locked = true;
+
+            // 🔒 IMPORTANTE
+            mediaUrl = null
+            locked = true
+
         }
 
     }
