@@ -105,6 +105,7 @@ async function mapMensagemParaUsuario(m, idiomaDestino, viewerId) {
                 publicId: tId,
                 resourceType: "image",
                 format: tFmt || "jpg",
+                transformation: "e_blur:2000,q_30"
             });
         }
 

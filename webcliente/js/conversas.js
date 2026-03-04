@@ -64,6 +64,17 @@ const btnHangup = document.getElementById("btnHangup");
 const btnMute = document.getElementById("btnMute");
 const btnCam = document.getElementById("btnCam");
 
+
+function abrirChatMobile() {
+
+    if (window.innerWidth <= 980) {
+
+        document.querySelector(".panel.left").style.display = "none";
+        document.querySelector(".panel.right.chat").style.display = "flex";
+
+    }
+
+}
 // ==============================
 // Scroll helpers
 // ==============================
@@ -1394,3 +1405,4 @@ setInterval(async () => {
 setInterval(() => {
     if (state.conversaId) carregarMensagens({ silent: true });
 }, 4000);
+
