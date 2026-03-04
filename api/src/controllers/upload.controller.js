@@ -51,16 +51,16 @@ export async function uploadAudioFile(req, res) {
     try {
         file = assertFile(req);
 
-        const ext = path.extname(file.originalname || "").toLowerCase();
-        const ok = [".mp3", ".wav", ".m4a", ".aac", ".ogg", ".webm"].includes(ext);
-        if (!ok) return res.status(415).json({ erro: "Formato inválido. Envie áudio (mp3/wav/m4a/aac/ogg/webm)." });
+        if (!file.mimetype.startsWith("audio/")) {
+            return res.status(415).json({ erro: "Formato inválido. Envie áudio." });
+        }
 
         const buffer = await fs.readFile(file.path);
 
         const { mediaPath } = await uploadAudio({
             buffer,
             folder: "desejoproibido/chat/audios",
-            filename: file.originalname || "audio",
+            filename: Date.now(),
         });
 
         return res.json({
