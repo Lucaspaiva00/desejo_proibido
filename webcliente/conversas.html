@@ -469,13 +469,17 @@
       </aside>
 
       <!-- CHAT -->
-      <section class="panel right chat" style="position: relative;">
+      <section class="panel right chat" id="chatPanel" style="position: relative;">
 
         <!-- HEADER APP COMPACTO (1 LINHA) -->
         <div class="dp-appHeader">
           <div class="dp-userCard">
 
             <div class="dp-userLeft">
+              <!-- ✅ BOTÃO VOLTAR (só aparece no mobile via CSS) -->
+              <button class="iconbtn dp-backBtn" id="btnBackChat" type="button" aria-label="Voltar para lista"
+                title="Voltar">←</button>
+
               <div class="avatarWrap">
                 <img id="chatAvatar" class="avatar" alt="avatar" />
                 <div class="avatarFallback" id="chatAvatarFallback">DP</div>
@@ -498,13 +502,19 @@
 
                 <span class="dp-pill" id="minutosPill">🔒 Crédito: -</span>
 
-                <button class="iconbtn" id="btnComprarCreditosTopo" title="Comprar créditos">🛒</button>
+                <button class="iconbtn" id="btnComprarCreditosTopo" title="Comprar créditos"
+                  aria-label="Comprar créditos">
+                  🛒
+                </button>
               </div>
 
               <div class="dp-rightActions">
-                <button class="dp-actionBtn" id="btnAssinarTopo" type="button">💎 Upgrade VIP</button>
-                <button class="dp-actionBtn" id="btnGift" type="button" disabled>🎁 Presentear</button>
-                <button class="dp-actionBtn" id="btnCall" type="button" disabled>🔑 Conectar</button>
+                <button class="dp-actionBtn" id="btnAssinarTopo" type="button">💎 <span class="lbl">Upgrade
+                    VIP</span></button>
+                <button class="dp-actionBtn" id="btnGift" type="button" disabled>🎁 <span
+                    class="lbl">Presentear</span></button>
+                <button class="dp-actionBtn" id="btnCall" type="button" disabled>🔑 <span
+                    class="lbl">Conectar</span></button>
               </div>
 
               <div class="muted dp-rightStatus" id="chatStatus"></div>
@@ -580,8 +590,8 @@
 
         <!-- composer (intacto) -->
         <div class="composer">
-          <button class="iconbtn" id="btnFoto" title="Enviar foto">📷</button>
-          <button class="iconbtn" id="btnAudio" title="Enviar áudio">🎙️</button>
+          <button class="iconbtn" id="btnFoto" title="Enviar foto" aria-label="Enviar foto">📷</button>
+          <button class="iconbtn" id="btnAudio" title="Enviar áudio" aria-label="Enviar áudio">🎙️</button>
 
           <textarea id="texto" placeholder="Digite uma mensagem..." disabled></textarea>
 
@@ -636,6 +646,39 @@
 
   <script src="/api/socket.io/socket.io.js"></script>
   <script type="module" src="js/conversas.js?v=20260213-1"></script>
+
+  <!-- ✅ MOBILE NAV: lista -> chat full screen (SEM mexer no seu conversas.js) -->
+  <script>
+    (function () {
+      const mq = window.matchMedia("(max-width: 980px)");
+      const body = document.body;
+      const lista = document.getElementById("lista");
+      const back = document.getElementById("btnBackChat");
+
+      function openChat() {
+        if (!mq.matches) return;
+        body.classList.add("is-chat-open");
+      }
+
+      function closeChat() {
+        body.classList.remove("is-chat-open");
+      }
+
+      // Ao clicar em qualquer item de conversa, abre chat full screen
+      lista?.addEventListener("click", (e) => {
+        const item = e.target.closest(".item");
+        if (item) openChat();
+      });
+
+      // Botão voltar
+      back?.addEventListener("click", closeChat);
+
+      // Se sair do mobile (resize), volta layout desktop
+      window.addEventListener("resize", () => {
+        if (!mq.matches) closeChat();
+      });
+    })();
+  </script>
 
   <script>
     const navToggle = document.getElementById("navToggle");
