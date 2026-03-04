@@ -1,6 +1,7 @@
 // src/controllers/mensagem.controller.js
 import { prisma } from "../prisma.js";
 import {
+    unlockMidia,
     isChatUnlocked,
     isPremiumEfetivo,
     debitWallet,
@@ -18,6 +19,48 @@ const DEFAULT_AUDIO_UNLOCK_COST = Number(process.env.AUDIO_UNLOCK_COST || 10);
 
 // ✅ custo por mensagem TEXTO
 const MSG_SEND_COST = Number(process.env.MSG_SEND_COST || 5);
+
+export async function unlockMidia(req, res) {
+
+    const userId = req.usuario.id
+    const { id } = req.params
+
+    const msg = await prisma.mensagem.findUnique({
+        where: { id }
+    })
+
+    if (!msg) return res.status(404).json({ erro: "Mensagem não encontrada" })
+
+    const custo = msg.custoMoedas || 10
+
+    const wallet = await prisma.wallet.findUnique({
+        where: { userId }
+    })
+
+    if (!wallet || wallet.saldoCreditos < custo) {
+        return res.status(402).json({ erro: "Créditos insuficientes" })
+    }
+
+    await prisma.$transaction([
+        prisma.wallet.update({
+            where: { userId },
+            data: { saldoCreditos: { decrement: custo } }
+        }),
+
+        prisma.walletTx.create({
+            data: {
+                userId,
+                tipo: "DEBIT",
+                origem: "MIDIA_UNLOCK",
+                valor: custo,
+                refId: id
+            }
+        })
+    ])
+
+    res.json({ ok: true })
+
+}
 
 // ============================
 // Helpers locais

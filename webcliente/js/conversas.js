@@ -726,16 +726,36 @@ async function carregarMensagens({ silent = false } = {}) {
 }
 async function unlockMedia(mensagemId) {
 
-    const resp = await apiFetch(`/mensagens/${mensagemId}/unlock`, {
-        method: "POST"
-    })
+    try {
 
-    if (!resp.ok) {
-        alert("Créditos insuficientes")
-        return
+        const r = await apiFetch(`/mensagens/${mensagemId}/desbloquear`, {
+            method: "POST"
+        })
+
+        if (typeof r?.saldoCreditos === "number") {
+
+            state.saldoCreditos = r.saldoCreditos
+
+            if (minutosPill)
+                minutosPill.textContent = `💰 Créditos: ${r.saldoCreditos}`
+
+            if (saldoCreditosEl)
+                saldoCreditosEl.textContent = `${r.saldoCreditos}`
+
+        }
+
+        await carregarMensagens()
+
+    } catch (e) {
+
+        if (e?.status === 402) {
+            alert("Saldo insuficiente para desbloquear.")
+            return
+        }
+
+        alert("Erro ao desbloquear mídia")
+
     }
-
-    abrirConversa(conversaAtualId)
 
 }
 /**
@@ -769,21 +789,21 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
 
             const imgSrc = m.mediaUrl || m.thumbUrl
 
-            html += `
-    <div class="bubble foto ${m.locked ? "locked" : ""}" 
-         data-id="${m.id}"
-         ${m.locked ? 'onclick="unlockMedia(\'' + m.id + '\')"' : ""}>
+            conteudo = `
+      <div class="bubble foto ${m.locked ? "locked" : ""}" 
+           data-id="${m.id}"
+           ${m.locked ? `onclick="unlockMedia('${m.id}')"` : ""}>
 
-      <img src="${imgSrc}" />
+        <img src="${imgSrc}" />
 
-      ${m.locked ? `
-        <div class="media-lock">
-          🔒 Desbloquear por ${m.custoMoedas || 10} créditos
-        </div>
-      ` : ""}
+        ${m.locked ? `
+          <div class="media-lock">
+            🔒 Desbloquear por ${m.custoMoedas || 10} créditos
+          </div>
+        ` : ""}
 
-    </div>
-  `
+      </div>
+    `
         } else if (tipo === "AUDIO") {
             if (m.locked) {
                 conteudo = `
