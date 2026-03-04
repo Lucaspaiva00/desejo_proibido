@@ -23,7 +23,7 @@ export function buildPublicUrl({
 }
 
 /**
- * Thumb blur seguro
+ * Thumb borrado dinâmico (preview)
  */
 export function buildThumbBlurUrl({ publicId, format = "jpg" }) {
     return buildPublicUrl({
@@ -44,6 +44,7 @@ export function uploadBuffer({
     filename = "file"
 }) {
     return new Promise((resolve, reject) => {
+
         const stream = cloudinary.uploader.upload_stream(
             {
                 folder,
@@ -63,6 +64,31 @@ export function uploadBuffer({
 }
 
 /**
+ * Upload de foto + geração de thumb blur
+ */
+export async function uploadPhotoWithThumb({
+    buffer,
+    folder = "dp/photos",
+    filename = "photo"
+}) {
+
+    const r = await uploadBuffer({
+        buffer,
+        folder,
+        resourceType: "image",
+        filename
+    });
+
+    const publicId = r.public_id;
+    const format = r.format || "jpg";
+
+    return {
+        mediaPath: `${publicId}.${format}`,
+        thumbPath: `${publicId}.${format}`
+    };
+}
+
+/**
  * Upload de áudio
  */
 export async function uploadAudio({
@@ -70,6 +96,7 @@ export async function uploadAudio({
     folder = "dp/audios",
     filename = "audio"
 }) {
+
     const r = await uploadBuffer({
         buffer,
         folder,
@@ -80,5 +107,7 @@ export async function uploadAudio({
     const publicId = r.public_id;
     const format = r.format || "mp3";
 
-    return { mediaPath: `${publicId}.${format}` };
+    return {
+        mediaPath: `${publicId}.${format}`
+    };
 }
