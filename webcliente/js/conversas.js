@@ -724,7 +724,20 @@ async function carregarMensagens({ silent = false } = {}) {
         }
     }
 }
+async function unlockMedia(mensagemId) {
 
+    const resp = await apiFetch(`/mensagens/${mensagemId}/unlock`, {
+        method: "POST"
+    })
+
+    if (!resp.ok) {
+        alert("Créditos insuficientes")
+        return
+    }
+
+    abrirConversa(conversaAtualId)
+
+}
 /**
  * ✅ Render 100% correto:
  * - sem sobrescrever conteudo de FOTO/AUDIO
