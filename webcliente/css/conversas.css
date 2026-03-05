@@ -603,3 +603,21 @@
 #btnComprarCreditosTopo::first-letter {
     margin-right: 2px;
 }
+
+.gift-img {
+    width: 120px;
+    height: 120px;
+    object-fit: contain;
+    display: block;
+}
+
+.bubble.gift {
+    padding: 10px;
+    background: linear-gradient(180deg, #8b0000, #4b0000);
+    border: 1px solid rgba(255, 0, 0, 0.4);
+    border-radius: 14px;
+}
+
+.gift-img {
+    width: 160px;
+}

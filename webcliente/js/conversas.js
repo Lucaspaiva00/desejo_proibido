@@ -832,15 +832,16 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
 
             }, 50);
         } else if (tipo === "PRESENTE") {
-            const nome = meta.nome || (m.texto || "🎁 Presente");
-            const { emoji, text } = splitEmojiAndText(nome);
+
+            const img = meta.imagemUrl || "/assets/presentes/presente.png";
+            const nome = meta.nome || "Presente";
 
             conteudo = `
         <div class="giftBig">
-          <div class="giftEmoji">${escapeHtml(emoji)}</div>
-          ${text ? `<div class="giftLabel">${escapeHtml(text)}</div>` : ""}
+            <img class="giftImg" src="${img}" alt="${escapeHtml(nome)}">
+            <div class="giftLabel">${escapeHtml(nome)}</div>
         </div>
-      `;
+    `;
         } else {
             const textToShow = m.textoExibido ?? m.texto ?? "";
             conteudo = `<div>${escapeHtml(textToShow)}</div>`;
