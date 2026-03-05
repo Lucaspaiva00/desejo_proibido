@@ -1387,15 +1387,14 @@ inputFoto?.addEventListener("change", async () => {
 
 let mediaRecorder = null;
 let audioChunks = [];
+let audioStream = null;
 
 btnAudio?.addEventListener("mousedown", iniciarGravacao);
 btnAudio?.addEventListener("mouseup", pararGravacao);
-
-btnAudio?.addEventListener("touchstart", iniciarGravacao);
+btnAudio?.addEventListener("touchstart", iniciarGravacao, { passive: true });
 btnAudio?.addEventListener("touchend", pararGravacao);
 
 async function iniciarGravacao() {
-
     if (!state.conversaId) return;
 
     if (!state.premiumAtivo && !state.chatLiberado) {
@@ -1404,71 +1403,85 @@ async function iniciarGravacao() {
     }
 
     try {
+        audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // ✅ melhor: escolhe mime suportado
+        const mimeCandidates = ["audio/webm;codecs=opus", "audio/webm", "video/webm"];
+        const mimeType = mimeCandidates.find(t => window.MediaRecorder?.isTypeSupported?.(t));
 
-        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder = new MediaRecorder(audioStream, mimeType ? { mimeType } : undefined);
 
         audioChunks = [];
-
         mediaRecorder.ondataavailable = (e) => {
-            audioChunks.push(e.data);
+            if (e.data && e.data.size > 0) audioChunks.push(e.data);
         };
 
         mediaRecorder.start();
-
         btnAudio.classList.add("gravando");
-
     } catch (e) {
+        console.error(e);
         alert("Erro ao acessar microfone");
     }
-
 }
 
 async function pararGravacao() {
-
     if (!mediaRecorder) return;
 
-    mediaRecorder.stop();
-
-    btnAudio.classList.remove("gravando");
-
+    // ✅ define onstop antes!
     mediaRecorder.onstop = async () => {
-
         try {
+            btnAudio.classList.remove("gravando");
 
-            const blob = new Blob(audioChunks, { type: "audio/webm" });
+            // ✅ fecha mic
+            try { audioStream?.getTracks()?.forEach(t => t.stop()); } catch { }
+            audioStream = null;
 
-            const file = new File([blob], "audio.webm", { type: "audio/webm" });
+            if (!audioChunks.length) {
+                alert("Áudio vazio. Segure o botão por mais tempo.");
+                mediaRecorder = null;
+                return;
+            }
+
+            const blobType = mediaRecorder.mimeType || "audio/webm";
+            const blob = new Blob(audioChunks, { type: blobType });
+
+            if (!blob.size) {
+                alert("Áudio vazio. Tente novamente.");
+                mediaRecorder = null;
+                return;
+            }
+
+            // ✅ usa extensão coerente
+            const ext = blobType.includes("mp4") ? "mp4" : "webm";
+            const file = new File([blob], `audio.${ext}`, { type: blobType });
 
             const form = new FormData();
             form.append("file", file);
 
             const up = await apiFetch("/uploads/audio", {
                 method: "POST",
-                body: form
+                body: form,
             });
 
             await apiFetch("/mensagens/audio", {
                 method: "POST",
-                body: {
-                    conversaId: state.conversaId,
-                    mediaPath: up.mediaPath
-                }
+                body: { conversaId: state.conversaId, mediaPath: up.mediaPath },
             });
 
             await carregarMensagens();
-
         } catch (e) {
-
-            alert("Erro ao enviar áudio");
-
+            console.error(e);
+            alert("Erro ao enviar áudio: " + (e?.message || "erro"));
+        } finally {
+            mediaRecorder = null;
+            audioChunks = [];
         }
-
     };
 
+    try {
+        mediaRecorder.stop();
+    } catch { }
 }
-
 // ==============================
 // Init
 // ==============================

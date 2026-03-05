@@ -13,6 +13,7 @@
     /* ===============================
        INLINE (mantive seus componentes)
        =============================== */
+
     .lockedAction {
       opacity: .55;
       filter: grayscale(.2);
@@ -403,6 +404,44 @@
     .composer {
       flex: 0 0 auto;
     }
+
+    /* =========================================================
+       ✅ AJUSTE: manter o "💎 Upgrade VIP" na MESMA LINHA
+       (sem quebrar o texto, nem empurrar o diamante pra cima)
+       ========================================================= */
+
+    /* garante que a linha dos botões não “quebre” estranho */
+    .dp-rightActions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: nowrap;
+    }
+
+    /* botão com layout flex: ícone + texto sempre lado a lado */
+    .dp-actionBtn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      white-space: nowrap;
+      /* 🔥 impede quebra de linha */
+      flex-wrap: nowrap;
+      line-height: 1;
+    }
+
+    .dp-actionBtn .lbl {
+      display: inline-block;
+      white-space: nowrap;
+      /* 🔥 impede "Upgrade" e "VIP" separarem */
+    }
+
+    /* se no mobile ficar apertado, some só o texto, mantendo ícone alinhado */
+    @media (max-width: 980px) {
+      .dp-actionBtn .lbl {
+        display: none;
+      }
+    }
   </style>
 </head>
 
@@ -503,7 +542,8 @@
               </div>
 
               <div class="dp-rightActions">
-                <button class="dp-actionBtn" id="btnComprarCreditosTopo" type="button" disabled>💎 <span class="lbl">Upgrade
+                <button class="dp-actionBtn" id="btnComprarCreditosTopo" type="button" disabled>💎 <span
+                    class="lbl">Upgrade
                     VIP</span></button>
                 <button class="dp-actionBtn" id="btnGift" type="button" disabled>🎁 <span
                     class="lbl">Presentear</span></button>
