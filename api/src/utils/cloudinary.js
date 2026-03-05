@@ -9,16 +9,16 @@ cloudinary.config({
 
 /**
  * Monta URL pública com transformation opcional
+ * - resourceType: "image" | "video"
  */
 export function buildPublicUrl({
     publicId,
     resourceType = "image",
     format = "",
-    transformation = ""
+    transformation = "",
 }) {
     const t = transformation ? `${transformation}/` : "";
     const fmt = format ? `.${format}` : "";
-
     return `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/${resourceType}/upload/${t}${publicId}${fmt}`;
 }
 
@@ -30,21 +30,15 @@ export function buildThumbBlurUrl({ publicId, format = "jpg" }) {
         publicId,
         resourceType: "image",
         format,
-        transformation: "w_520,q_60,e_blur:2000"
+        transformation: "w_520,q_60,e_blur:2000",
     });
 }
 
 /**
- * Upload buffer -> Cloudinary
+ * (Opcional) Upload buffer -> Cloudinary (server-side)
  */
-export function uploadBuffer({
-    buffer,
-    folder = "dp",
-    resourceType = "image",
-    filename = "file"
-}) {
+export function uploadBuffer({ buffer, folder = "dp", resourceType = "image", filename = "file" }) {
     return new Promise((resolve, reject) => {
-
         const stream = cloudinary.uploader.upload_stream(
             {
                 folder,
@@ -64,19 +58,14 @@ export function uploadBuffer({
 }
 
 /**
- * Upload de foto + geração de thumb blur
+ * (Opcional) Upload de foto + thumb (server-side)
  */
-export async function uploadPhotoWithThumb({
-    buffer,
-    folder = "dp/photos",
-    filename = "photo"
-}) {
-
+export async function uploadPhotoWithThumb({ buffer, folder = "dp/photos", filename = "photo" }) {
     const r = await uploadBuffer({
         buffer,
         folder,
         resourceType: "image",
-        filename
+        filename,
     });
 
     const publicId = r.public_id;
@@ -84,29 +73,21 @@ export async function uploadPhotoWithThumb({
 
     return {
         mediaPath: `${publicId}.${format}`,
-        thumbPath: `${publicId}.${format}`
+        thumbPath: `${publicId}.${format}`,
     };
 }
 
-export async function uploadAudio({ buffer, folder = "dp/audios" }) {
-    const r = await new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-            {
-                folder,
-                resource_type: "video",
-                format: "mp3",          // ✅ converte no upload
-                unique_filename: true,
-            },
-            (err, result) => {
-                if (err) {
-                    console.error("[cloudinary] upload_stream error:", err);
-                    return reject(err);
-                }
-                resolve(result);
-            }
-        );
-        stream.end(buffer);
+/**
+ * (Opcional) Upload audio (server-side)
+ * ✅ SEM converter (mais estável). Se quiser converter, faz depois quando tudo funcionar.
+ */
+export async function uploadAudio({ buffer, folder = "dp/audios", filename = "audio" }) {
+    const r = await uploadBuffer({
+        buffer,
+        folder,
+        resourceType: "video", // ✅ Cloudinary trata áudio como "video"
+        filename,
     });
 
-    return { mediaPath: `${r.public_id}.${r.format || "mp3"}` };
+    return { mediaPath: `${r.public_id}.${r.format || "webm"}` };
 }

@@ -64,17 +64,13 @@ const btnHangup = document.getElementById("btnHangup");
 const btnMute = document.getElementById("btnMute");
 const btnCam = document.getElementById("btnCam");
 
-
 function abrirChatMobile() {
-
     if (window.innerWidth <= 980) {
-
         document.querySelector(".panel.left").style.display = "none";
         document.querySelector(".panel.right.chat").style.display = "flex";
-
     }
-
 }
+
 // ==============================
 // Scroll helpers
 // ==============================
@@ -92,7 +88,11 @@ function scrollToBottom(el) {
 // Auth robusto
 // ==============================
 function safeJsonParse(v) {
-    try { return JSON.parse(v); } catch { return null; }
+    try {
+        return JSON.parse(v);
+    } catch {
+        return null;
+    }
 }
 
 function getAuth() {
@@ -104,14 +104,20 @@ function getAuth() {
         const v = localStorage.getItem(k);
         if (v) {
             const obj = safeJsonParse(v);
-            if (obj) { usuario = obj; break; }
+            if (obj) {
+                usuario = obj;
+                break;
+            }
         }
     }
 
     let token = null;
     for (const k of keysToken) {
         const v = localStorage.getItem(k);
-        if (v) { token = v; break; }
+        if (v) {
+            token = v;
+            break;
+        }
     }
 
     const authRaw = localStorage.getItem("auth");
@@ -244,7 +250,6 @@ socket.on("call:incoming", async (p) => {
 
         if (callSub) callSub.textContent = "Aguardando conexão…";
         state.callActive = true;
-
     } catch (e) {
         alert("Erro ao aceitar chamada: " + (e?.message || "erro"));
         await endCallLocal();
@@ -724,49 +729,31 @@ async function carregarMensagens({ silent = false } = {}) {
         }
     }
 }
+
 async function unlockMedia(mensagemId) {
-
     try {
-
-        const r = await apiFetch(`/mensagens/${mensagemId}/desbloquear`, {
-            method: "POST"
-        });
+        const r = await apiFetch(`/mensagens/${mensagemId}/desbloquear`, { method: "POST" });
 
         if (typeof r?.saldoCreditos === "number") {
-
             state.saldoCreditos = r.saldoCreditos;
 
-            if (minutosPill)
-                minutosPill.textContent = `💰 Créditos: ${r.saldoCreditos}`;
-
-            if (saldoCreditosEl)
-                saldoCreditosEl.textContent = `${r.saldoCreditos}`;
+            if (minutosPill) minutosPill.textContent = `💰 Créditos: ${r.saldoCreditos}`;
+            if (saldoCreditosEl) saldoCreditosEl.textContent = `${r.saldoCreditos}`;
         }
 
         await carregarMensagens();
-
     } catch (e) {
-
         if (e?.status === 402) {
             alert("Saldo insuficiente para desbloquear.");
             return;
         }
-
         alert("Erro ao desbloquear mídia");
-
     }
-
 }
 
 // 🔥 deixar função global para o onclick
 window.unlockMedia = unlockMedia;
-/**
- * ✅ Render 100% correto:
- * - sem sobrescrever conteudo de FOTO/AUDIO
- * - sem querySelector dentro do map
- * - handler de desbloquear via delegation
- * - ✅ agora com botão encaminhar
- */
+
 function renderMensagens(items, { stickToBottom = true } = {}) {
     if (!items?.length) {
         msgs.innerHTML = `<div class="empty">Sem mensagens ainda.</div>`;
@@ -788,24 +775,20 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
         let conteudo = "";
 
         if (m.tipo === "FOTO") {
-
-            const imgSrc = m.mediaUrl || m.thumbUrl
+            const imgSrc = m.mediaUrl || m.thumbUrl;
 
             conteudo = `
-      <div class="bubble foto ${m.locked ? "locked" : ""}" 
-           data-id="${m.id}"
-           ${m.locked ? `onclick="unlockMedia('${m.id}')"` : ""}>
-
-        <img src="${imgSrc}" />
-
-        ${m.locked ? `
-          <div class="media-lock">
-            🔒 Desbloquear por ${m.custoMoedas || 10} créditos
-          </div>
-        ` : ""}
-
-      </div>
-    `
+        <div class="bubble foto ${m.locked ? "locked" : ""}" 
+             data-id="${m.id}"
+             ${m.locked ? `onclick="unlockMedia('${m.id}')"` : ""}>
+          <img src="${imgSrc}" />
+          ${m.locked ? `
+            <div class="media-lock">
+              🔒 Desbloquear por ${m.custoMoedas || 10} créditos
+            </div>
+          ` : ""}
+        </div>
+      `;
         } else if (tipo === "AUDIO") {
             if (m.locked) {
                 conteudo = `
@@ -1305,7 +1288,6 @@ btnCall?.addEventListener("click", async () => {
 
         btnCall.textContent = "⛔";
         if (chatStatus) chatStatus.textContent = "Chamando…";
-
     } catch (e) {
         if (isChatLockedError(e)) {
             await atualizarStatusChat();
@@ -1329,8 +1311,13 @@ btnCall?.addEventListener("click", async () => {
 });
 
 // ==============================
-// ✅ MÍDIA: Foto / Áudio
+// ✅ MÍDIA: Foto / Áudio (CLOUDINARY DIRETO)
 // ==============================
+
+const CLOUD_NAME = "dfdinbti3";
+const UPLOAD_PRESET = "desejoproibido";
+
+// FOTO
 btnFoto?.addEventListener("click", () => {
     if (!state.conversaId) return;
     if (!state.premiumAtivo && !state.chatLiberado) {
@@ -1347,25 +1334,18 @@ inputFoto?.addEventListener("change", async () => {
     try {
         const formData = new FormData();
         formData.append("file", file);
-        formData.append("upload_preset", "desejoproibido"); // unsigned preset
-        formData.append("folder", "desejoproibido/chat");
+        formData.append("upload_preset", UPLOAD_PRESET);
+        formData.append("folder", "desejoproibido/chat/photos");
 
-        // 🔥 Upload direto Cloudinary
         const responseUpload = await fetch(
-            "https://api.cloudinary.com/v1_1/dfdinbti3/image/upload",
-            {
-                method: "POST",
-                body: formData,
-            }
+            `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+            { method: "POST", body: formData }
         ).then((res) => res.json());
 
-        if (responseUpload.error) {
-            throw new Error(responseUpload.error.message);
-        }
+        if (responseUpload.error) throw new Error(responseUpload.error.message);
 
         const mediaPath = responseUpload.public_id + "." + responseUpload.format;
 
-        // 🔥 Agora só cria mensagem no backend
         await apiFetch("/mensagens/foto", {
             method: "POST",
             body: {
@@ -1377,14 +1357,15 @@ inputFoto?.addEventListener("change", async () => {
         });
 
         await carregarMensagens();
-
     } catch (e) {
+        console.error(e);
         alert("Erro ao enviar foto: " + (e?.message || "erro"));
     } finally {
         if (inputFoto) inputFoto.value = "";
     }
 });
 
+// ÁUDIO
 let mediaRecorder = null;
 let audioChunks = [];
 let audioStream = null;
@@ -1405,7 +1386,7 @@ async function iniciarGravacao() {
     try {
         audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-        // ✅ melhor: escolhe mime suportado
+        // ✅ escolhe mime suportado
         const mimeCandidates = ["audio/webm;codecs=opus", "audio/webm", "video/webm"];
         const mimeType = mimeCandidates.find(t => window.MediaRecorder?.isTypeSupported?.(t));
 
@@ -1451,21 +1432,28 @@ async function pararGravacao() {
                 return;
             }
 
-            // ✅ usa extensão coerente
+            // ✅ extensão coerente
             const ext = blobType.includes("mp4") ? "mp4" : "webm";
             const file = new File([blob], `audio.${ext}`, { type: blobType });
 
-            const form = new FormData();
-            form.append("file", file);
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("upload_preset", UPLOAD_PRESET);
+            formData.append("folder", "desejoproibido/chat/audios");
 
-            const up = await apiFetch("/uploads/audio", {
-                method: "POST",
-                body: form,
-            });
+            // ⚠️ áudio vai no endpoint VIDEO
+            const responseUpload = await fetch(
+                `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/video/upload`,
+                { method: "POST", body: formData }
+            ).then((r) => r.json());
+
+            if (responseUpload.error) throw new Error(responseUpload.error.message);
+
+            const mediaPath = responseUpload.public_id + "." + responseUpload.format;
 
             await apiFetch("/mensagens/audio", {
                 method: "POST",
-                body: { conversaId: state.conversaId, mediaPath: up.mediaPath },
+                body: { conversaId: state.conversaId, mediaPath },
             });
 
             await carregarMensagens();
@@ -1478,10 +1466,9 @@ async function pararGravacao() {
         }
     };
 
-    try {
-        mediaRecorder.stop();
-    } catch { }
+    try { mediaRecorder.stop(); } catch { }
 }
+
 // ==============================
 // Init
 // ==============================
@@ -1502,4 +1489,3 @@ setInterval(async () => {
 setInterval(() => {
     if (state.conversaId) carregarMensagens({ silent: true });
 }, 4000);
-
