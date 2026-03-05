@@ -39,12 +39,16 @@
     }
 
     .dp-modal {
-      width: min(520px, 100%);
+      width: min(720px, 96%);
+      max-height: 80vh;
       background: #111;
       border: 1px solid rgba(255, 255, 255, .12);
       border-radius: 14px;
       overflow: hidden;
       box-shadow: 0 18px 60px rgba(0, 0, 0, .6);
+
+      display: flex;
+      flex-direction: column;
     }
 
     .dp-modal-head {
@@ -77,10 +81,15 @@
     }
 
     .dp-gifts {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-top: 10px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .dp-modal-body {
+      overflow-y: auto;
+      max-height: 65vh;
     }
 
     .dp-gift {
@@ -542,7 +551,7 @@
               </div>
 
               <div class="dp-rightActions">
-                <button class="dp-actionBtn" id="btnComprarCreditosTopo" type="button" >💎</button>
+                <button class="dp-actionBtn" id="btnComprarCreditosTopo" type="button">💎</button>
                 <button class="dp-actionBtn" id="btnGift" type="button" disabled>🎁 <span
                     class="lbl">Presentear</span></button>
                 <button class="dp-actionBtn" id="btnCall" type="button" disabled>🔑 <span
