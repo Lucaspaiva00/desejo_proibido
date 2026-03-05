@@ -839,7 +839,7 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
             conteudo = `
         <div class="giftBig">
             <img class="giftImg" src="${img}" alt="${escapeHtml(nome)}">
-            <div class="giftLabel">${escapeHtml(nome)}</div>
+           
         </div>
     `;
         } else {
