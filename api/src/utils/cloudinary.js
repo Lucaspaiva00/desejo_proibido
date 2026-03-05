@@ -88,25 +88,22 @@ export async function uploadPhotoWithThumb({
     };
 }
 
-/**
- * Upload de áudio
- */
-export async function uploadAudio({
-    buffer,
-    folder = "dp/audios",
-    filename = "audio"
-}) {
-
-    const r = await uploadBuffer({
-        buffer,
-        folder,
-        resourceType: "video", // Cloudinary trata áudio como video
-        filename: `${Date.now()}`
+export async function uploadAudio({ buffer, folder = "dp/audios" }) {
+    const r = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+            {
+                folder,
+                resource_type: "video",
+                format: "mp3",          // ✅ converte no upload
+                unique_filename: true,
+            },
+            (err, result) => {
+                if (err) return reject(err);
+                resolve(result);
+            }
+        );
+        stream.end(buffer);
     });
 
-    const publicId = r.public_id;
-
-    return {
-        mediaPath: publicId + "." + (r.format || "webm")
-    };
+    return { mediaPath: `${r.public_id}.${r.format || "mp3"}` };
 }

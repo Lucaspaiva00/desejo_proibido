@@ -51,8 +51,14 @@ export async function uploadAudioFile(req, res) {
     try {
         file = assertFile(req);
 
-        if (!file.mimetype.startsWith("audio/")) {
-            return res.status(415).json({ erro: "Formato inválido. Envie áudio." });
+        const mt = String(file.mimetype || "").toLowerCase();
+        const ok =
+            mt.startsWith("audio/") ||
+            mt === "video/webm" ||
+            mt === "application/octet-stream";
+
+        if (!ok) {
+            return res.status(415).json({ erro: `Formato inválido: ${file.mimetype}` });
         }
 
         const buffer = await fs.readFile(file.path);
@@ -63,17 +69,11 @@ export async function uploadAudioFile(req, res) {
             filename: Date.now(),
         });
 
-        return res.json({
-            ok: true,
-            tipo: "audio",
-            mediaPath,
-        });
+        return res.json({ ok: true, tipo: "audio", mediaPath });
     } catch (e) {
         const code = e.statusCode || 500;
         return res.status(code).json({ erro: e.message || "Erro no upload de áudio" });
     } finally {
-        try {
-            if (file?.path) await fs.unlink(file.path);
-        } catch { }
+        try { if (file?.path) await fs.unlink(file.path); } catch { }
     }
 }
