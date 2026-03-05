@@ -790,22 +790,47 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
         </div>
       `;
         } else if (tipo === "AUDIO") {
-            if (m.locked) {
-                conteudo = `
-          <div class="mediaLocked audioLocked" data-mid="${escapeHtml(m.id)}" data-tipo="AUDIO">
-            <div class="audioCard">
-              🎙️ Áudio bloqueado
-              <div class="muted">Toque para desbloquear por ${Number(m.custoMoedas || 0)} créditos</div>
+
+            conteudo = `
+                <div class="audioBox" data-mid="${m.id}">
+                <div class="audioLoading">🎙️ Carregando áudio...</div>
+                </div>
+            `;
+
+            // carregar mídia real
+            setTimeout(async () => {
+
+                try {
+
+                    const r = await apiFetch(`/mensagens/${m.id}/midia`);
+
+                    const box = document.querySelector(`[data-mid="${m.id}"]`);
+                    if (!box) return;
+
+                    if (r.locked) {
+
+                        box.innerHTML = `
+            <div class="mediaLocked audioLocked" data-mid="${m.id}">
+                🎙️ Áudio bloqueado
+                <div class="muted">
+                Toque para desbloquear por ${r.custoMoedas} créditos
+                </div>
             </div>
-          </div>
-          <button class="btnForward" data-mid="${escapeHtml(m.id)}">↪ Encaminhar</button>
-        `;
-            } else {
-                conteudo = `
-          <audio controls preload="metadata" src="${escapeHtml(m.audioUrl || "")}"></audio>
-          <button class="btnForward" data-mid="${escapeHtml(m.id)}">↪ Encaminhar</button>
-        `;
-            }
+            `;
+
+                    } else {
+
+                        box.innerHTML = `
+            <audio controls preload="metadata" src="${r.audioUrl}"></audio>
+            `;
+
+                    }
+
+                } catch (e) {
+                    console.error("Erro carregando áudio:", e);
+                }
+
+            }, 50);
         } else if (tipo === "PRESENTE") {
             const nome = meta.nome || (m.texto || "🎁 Presente");
             const { emoji, text } = splitEmojiAndText(nome);

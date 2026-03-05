@@ -560,3 +560,46 @@
     transform: scale(1.1);
     box-shadow: 0 0 10px #C1121F;
 }
+
+/* ============================
+   FIX: botão Upgrade VIP
+   ============================ */
+
+.dp-rightActions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: nowrap;
+}
+
+.dp-actionBtn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 999px;
+
+    white-space: nowrap;
+    flex-shrink: 0;
+
+    background: linear-gradient(180deg, #3a0007, #1a0004);
+    border: 1px solid rgba(255, 0, 0, 0.35);
+    color: #fff;
+}
+
+.dp-actionBtn .lbl {
+    display: inline-block;
+    white-space: nowrap;
+}
+
+/* força o diamante ficar na mesma linha */
+#btnComprarCreditosTopo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* melhora alinhamento visual */
+#btnComprarCreditosTopo::first-letter {
+    margin-right: 2px;
+}
