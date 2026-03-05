@@ -51,28 +51,39 @@ export async function uploadAudioFile(req, res) {
     try {
         file = assertFile(req);
 
+        console.log("[uploadAudioFile] file:", {
+            mimetype: file.mimetype,
+            originalname: file.originalname,
+            size: file.size,
+            path: file.path,
+        });
+
         const mt = String(file.mimetype || "").toLowerCase();
         const ok =
             mt.startsWith("audio/") ||
             mt === "video/webm" ||
             mt === "application/octet-stream";
 
-        if (!ok) {
-            return res.status(415).json({ erro: `Formato inválido: ${file.mimetype}` });
-        }
+        if (!ok) return res.status(415).json({ erro: `Formato inválido: ${file.mimetype}` });
 
         const buffer = await fs.readFile(file.path);
+        console.log("[uploadAudioFile] buffer bytes:", buffer.length);
 
         const { mediaPath } = await uploadAudio({
             buffer,
             folder: "desejoproibido/chat/audios",
-            filename: Date.now(),
         });
 
         return res.json({ ok: true, tipo: "audio", mediaPath });
     } catch (e) {
+        console.error("[uploadAudioFile] ERROR:", e); // ✅ log completo
         const code = e.statusCode || 500;
-        return res.status(code).json({ erro: e.message || "Erro no upload de áudio" });
+        return res.status(code).json({
+            erro: e.message || "Erro no upload de áudio",
+            // ✅ isso aqui ajuda MUITO a diagnosticar:
+            name: e.name,
+            http_code: e.http_code,
+        });
     } finally {
         try { if (file?.path) await fs.unlink(file.path); } catch { }
     }

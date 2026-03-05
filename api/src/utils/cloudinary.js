@@ -98,7 +98,10 @@ export async function uploadAudio({ buffer, folder = "dp/audios" }) {
                 unique_filename: true,
             },
             (err, result) => {
-                if (err) return reject(err);
+                if (err) {
+                    console.error("[cloudinary] upload_stream error:", err);
+                    return reject(err);
+                }
                 resolve(result);
             }
         );
