@@ -838,8 +838,11 @@
   </script>
 
   <script>
+    // ===============================
+    // BARRA DE PRESENTES RÁPIDOS
+    // ===============================
 
-    (async function () {
+    (function () {
 
       const bar = document.getElementById("quickGiftsBar");
       if (!bar) return;
@@ -849,22 +852,26 @@
         const btn = e.target.closest(".quickGiftBtn");
         if (!btn) return;
 
+        if (!state.conversaId) return;
+
+        // botão abrir modal completo
         if (btn.dataset.open) {
           document.getElementById("btnGift")?.click();
           return;
         }
 
-        const nomePresente = btn.dataset.name;
-        if (!nomePresente) return;
+        const nome = btn.dataset.name;
+        if (!nome) return;
 
         try {
 
+          // carrega presentes do backend
           if (!state.presentesCache) {
-            state.presentesCache = await apiFetch("/presentes");
+            state.presentesCache = await apiFetch(API.listarPresentes);
           }
 
           const presente = state.presentesCache.find(p =>
-            p.nome.toLowerCase() === nomePresente.toLowerCase()
+            p.nome.toLowerCase().includes(nome.toLowerCase())
           );
 
           if (!presente) {
@@ -872,7 +879,8 @@
             return;
           }
 
-          await apiFetch("/presentes/enviar", {
+          // envia presente
+          const r = await apiFetch(API.enviarPresente, {
             method: "POST",
             body: {
               conversaId: state.conversaId,
@@ -880,11 +888,22 @@
             }
           });
 
+          // atualiza saldo
+          if (typeof r?.saldoCreditos === "number") {
+            state.saldoCreditos = r.saldoCreditos;
+
+            if (saldoCreditosEl)
+              saldoCreditosEl.textContent = r.saldoCreditos;
+          }
+
+          // recarrega chat
           await carregarMensagens();
 
-        } catch (e) {
+        } catch (err) {
 
-          if (e?.status === 402) {
+          console.error("ERRO PRESENTE:", err);
+
+          if (err?.status === 402) {
             alert("Saldo insuficiente.");
             return;
           }
@@ -896,7 +915,6 @@
       });
 
     })();
-
   </script>
 </body>
 
