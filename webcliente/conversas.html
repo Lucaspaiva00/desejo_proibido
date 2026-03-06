@@ -446,19 +446,13 @@
        BARRA DE PRESENTES RÁPIDOS
        ========================================= */
 
-    /* =========================================
-   BARRA DE PRESENTES RÁPIDOS ESTILO APP
-========================================= */
-
     .quickGiftsBar {
       display: flex;
-      gap: 14px;
+      gap: 12px;
       padding: 12px;
       overflow-x: auto;
-      overflow-y: hidden;
-      background: #1a0004;
-      border-top: 1px solid rgba(255, 255, 255, .05);
-      scrollbar-width: none;
+      background: linear-gradient(180deg, #2a0007, #1a0004);
+      border-top: 1px solid rgba(255, 255, 255, .06);
     }
 
     .quickGiftsBar::-webkit-scrollbar {
@@ -466,39 +460,33 @@
     }
 
     .quickGiftBtn {
-      flex: 0 0 auto;
-      width: 64px;
-      height: 64px;
-      border-radius: 16px;
+      width: 60px;
+      height: 60px;
+      border-radius: 14px;
+      background: #3a000a;
       border: none;
-      background: #2a0007;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       transition: .15s;
-      box-shadow: 0 4px 14px rgba(0, 0, 0, .4);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, .5);
     }
 
     .quickGiftBtn img {
-      width: 44px;
-      height: 44px;
+      width: 38px;
+      height: 38px;
       object-fit: contain;
       pointer-events: none;
     }
 
     .quickGiftBtn:hover {
-      transform: scale(1.08);
-      background: #3a000b;
+      transform: scale(1.12);
+      background: #540012;
     }
 
     .quickGiftBtn:active {
-      transform: scale(.95);
-    }
-
-    .quickGiftBtn:disabled {
-      opacity: .5;
-      cursor: not-allowed;
+      transform: scale(.92);
     }
 
     @media (max-width: 640px) {
@@ -635,23 +623,23 @@
         <!-- BARRA DE PRESENTES RÁPIDOS -->
         <div class="quickGiftsBar" id="quickGiftsBar">
 
-          <button class="quickGiftBtn" data-gift="urso">
+          <button class="quickGiftBtn" data-name="Urso">
             <img src="assets/presentes/urso.png">
           </button>
 
-          <button class="quickGiftBtn" data-gift="whisky">
-            <img src="assets/presentes/whisky.png">
+          <button class="quickGiftBtn" data-name="Rosas">
+            <img src="assets/presentes/flor.png">
           </button>
 
-          <button class="quickGiftBtn" data-gift="vip">
+          <button class="quickGiftBtn" data-name="VIP">
             <img src="assets/presentes/vip.png">
           </button>
 
-          <button class="quickGiftBtn" data-gift="rosas">
-            <img src="assets/presentes/rosas.png">
+          <button class="quickGiftBtn" data-name="Whisky">
+            <img src="assets/presentes/whisk.png">
           </button>
 
-          <button class="quickGiftBtn" data-gift="abrir">
+          <button class="quickGiftBtn" data-open="true">
             <img src="assets/presentes/presente.png">
           </button>
 
@@ -851,53 +839,48 @@
 
   <script>
 
-    (function () {
+    (async function () {
 
-      const quickBar = document.getElementById("quickGiftsBar");
-      if (!quickBar) return;
+      const bar = document.getElementById("quickGiftsBar");
+      if (!bar) return;
 
-      const mapPresentes = {
-        urso: 1,
-        whisky: 2,
-        vip: 3,
-        rosas: 4
-      };
-
-      quickBar.addEventListener("click", async (e) => {
+      bar.addEventListener("click", async (e) => {
 
         const btn = e.target.closest(".quickGiftBtn");
         if (!btn) return;
 
-        const tipo = btn.dataset.gift;
-
-        if (!tipo) return;
-
-        if (tipo === "abrir") {
+        if (btn.dataset.open) {
           document.getElementById("btnGift")?.click();
           return;
         }
 
-        if (!window.state || !window.apiFetch) return;
-
-        if (!state.conversaId) return;
-
-        const presenteId = mapPresentes[tipo];
-
-        if (!presenteId) return;
+        const nomePresente = btn.dataset.name;
+        if (!nomePresente) return;
 
         try {
+
+          if (!state.presentesCache) {
+            state.presentesCache = await apiFetch("/presentes");
+          }
+
+          const presente = state.presentesCache.find(p =>
+            p.nome.toLowerCase() === nomePresente.toLowerCase()
+          );
+
+          if (!presente) {
+            alert("Presente não encontrado");
+            return;
+          }
 
           await apiFetch("/presentes/enviar", {
             method: "POST",
             body: {
               conversaId: state.conversaId,
-              presenteId
+              presenteId: presente.id
             }
           });
 
-          if (window.carregarMensagens) {
-            await carregarMensagens();
-          }
+          await carregarMensagens();
 
         } catch (e) {
 
