@@ -451,6 +451,44 @@
         display: none;
       }
     }
+
+    /* =========================================
+BARRA DE PRESENTES RÁPIDOS
+========================================= */
+
+    .quickGiftsBar {
+      display: flex;
+      gap: 8px;
+      padding: 8px 10px;
+      border-top: 1px solid rgba(255, 255, 255, .08);
+      border-bottom: 1px solid rgba(255, 255, 255, .08);
+      background: rgba(0, 0, 0, .25);
+      overflow-x: auto;
+    }
+
+    .quickGiftBtn {
+      min-width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, .15);
+      background: rgba(255, 255, 255, .06);
+      color: #fff;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: .15s;
+    }
+
+    .quickGiftBtn:hover {
+      background: rgba(255, 255, 255, .14);
+      transform: scale(1.05);
+    }
+
+    .quickGiftBtn:active {
+      transform: scale(.95);
+    }
   </style>
 </head>
 
@@ -554,7 +592,7 @@
                 <button class="dp-actionBtn" id="btnComprarCreditosTopo" type="button">💎</button>
                 <button class="dp-actionBtn" id="btnGift" type="button" disabled>🎁 <span
                     class="lbl">Presentear</span></button>
-                <button class="dp-actionBtn" id="btnCall" type="button" disabled>🔑 <span
+                <button class="dp-actionBtn" id="btnCall" type="button" disabled>📹 <span
                     class="lbl">Conectar</span></button>
               </div>
 
@@ -565,10 +603,39 @@
         </div>
 
         <!-- MENSAGENS -->
+        <!-- MENSAGENS -->
         <div id="msgs" class="msgs">
           <div class="empty">
             Escolha uma conversa à esquerda para iniciar uma interação privada.
           </div>
+        </div>
+
+        <!-- =========================================
+BARRA DE PRESENTES RÁPIDOS (NOVO)
+========================================= -->
+        <div class="quickGiftsBar">
+
+          <button class="quickGiftBtn" data-gift="urso">🧸</button>
+          <button class="quickGiftBtn" data-gift="whisky">🥃</button>
+          <button class="quickGiftBtn" data-gift="vip">💎</button>
+          <button class="quickGiftBtn" data-gift="rosas">🌹</button>
+          <button class="quickGiftBtn" data-gift="presente">🎁</button>
+
+        </div>
+
+        <!-- composer (original mantido) -->
+        <div class="composer">
+          <button class="iconbtn" id="btnFoto" title="Enviar foto" aria-label="Enviar foto">📷</button>
+          <button class="iconbtn" id="btnAudio" title="Enviar áudio" aria-label="Enviar áudio">🎙️</button>
+
+          <textarea id="texto" placeholder="Digite uma mensagem..." disabled></textarea>
+
+          <button id="btnEnviar" class="btn btn-primary" disabled>
+            Enviar
+          </button>
+
+          <input type="file" id="inputFoto" accept="image/*" hidden />
+          <input type="file" id="inputAudio" accept="audio/*" hidden />
         </div>
 
         <!-- creditwall (intacto) -->
