@@ -1029,22 +1029,11 @@ async function garantirPresentesCache(force = false) {
 }
 
 function encontrarPresenteRapido(itens, btn) {
-    const slugBotao = normalizarTexto(btn?.dataset?.slug);
-
-    const mapa = {
-        urso: ["urso", "bear", "pelucia", "ursinho"],
-        flor: ["flor", "rosa", "rosa vermelha", "buque", "bouquet"],
-        vip: ["vip"],
-        whisky: ["whisky", "whiskey", "drink", "bebida"]
-    };
-
-    const apelidos = mapa[slugBotao] || [slugBotao];
+    const nomeBotao = normalizarTexto(btn?.dataset?.name);
 
     return itens.find((p) => {
-        const slug = normalizarTexto(p.slug);
         const nome = normalizarTexto(p.nome);
-
-        return apelidos.some((a) => slug === a || nome === a);
+        return nome === nomeBotao;
     });
 }
 
