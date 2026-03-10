@@ -21,7 +21,7 @@ const msgs = document.getElementById("msgs");
 const texto = document.getElementById("texto");
 const btnEnviar = document.getElementById("btnEnviar");
 
-// ✅ Mídia (tem que existir no HTML)
+// ✅ Mídia
 const btnFoto = document.getElementById("btnFoto");
 const btnAudio = document.getElementById("btnAudio");
 const inputFoto = document.getElementById("inputFoto");
@@ -157,6 +157,10 @@ const state = {
     custoChat: 0,
     saldoCreditos: 0,
 
+    // Cache visual do chat
+    lastMessagesHash: null,
+    isLoadingMessages: false,
+
     // Video
     sessaoId: null,
     roomId: null,
@@ -181,7 +185,7 @@ if (!state.usuario && !localStorage.getItem("token")) {
 }
 
 // ==============================
-// ✅ Socket.IO (CORRIGIDO pro seu /api)
+// ✅ Socket.IO
 // ==============================
 const token = localStorage.getItem("token") || "";
 
@@ -361,6 +365,22 @@ function normalizarTexto(v) {
         .toLowerCase();
 }
 
+function buildMessagesHash(items) {
+    if (!Array.isArray(items) || !items.length) return "empty";
+
+    const last = items[items.length - 1];
+    const prev = items.length > 1 ? items[items.length - 2] : null;
+
+    return JSON.stringify({
+        total: items.length,
+        lastId: last?.id || "",
+        lastTipo: last?.tipo || "",
+        lastTexto: last?.texto || last?.textoExibido || "",
+        lastCriadoEm: last?.criadoEm || "",
+        prevId: prev?.id || "",
+    });
+}
+
 // presentes modal
 function openGiftModal() {
     giftOverlay?.classList.add("show");
@@ -406,7 +426,6 @@ function applyChatLockUI() {
         if (texto) texto.disabled = true;
         if (btnEnviar) btnEnviar.disabled = true;
 
-        // ✅ mídia
         if (btnFoto) btnFoto.disabled = true;
         if (btnAudio) btnAudio.disabled = true;
 
@@ -425,7 +444,6 @@ function applyChatLockUI() {
         if (texto) texto.disabled = true;
         if (btnEnviar) btnEnviar.disabled = true;
 
-        // ✅ mídia
         if (btnFoto) btnFoto.disabled = true;
         if (btnAudio) btnAudio.disabled = true;
     } else {
@@ -433,7 +451,6 @@ function applyChatLockUI() {
         if (texto) texto.disabled = false;
         if (btnEnviar) btnEnviar.disabled = false;
 
-        // ✅ mídia
         if (btnFoto) btnFoto.disabled = false;
         if (btnAudio) btnAudio.disabled = false;
     }
@@ -675,6 +692,7 @@ btnLiberarChat?.addEventListener("click", async () => {
 // Abrir conversa
 async function abrirConversa(conversaId) {
     state.conversaId = conversaId;
+    state.lastMessagesHash = null;
 
     const c = state.conversas.find((x) => x.id === conversaId);
     if (!c) return;
@@ -704,18 +722,19 @@ async function abrirConversa(conversaId) {
 
     await checarPremium();
     await atualizarStatusChat();
-    await carregarMensagens();
+    await carregarMensagens({ forceRender: true });
 }
 
 // Mensagens
-async function carregarMensagens({ silent = false } = {}) {
-    if (!state.conversaId) return;
+async function carregarMensagens({ silent = false, forceRender = false } = {}) {
+    if (!state.conversaId || state.isLoadingMessages) return;
+
+    state.isLoadingMessages = true;
 
     try {
-        if (!silent) chatStatus.textContent = "Carregando...";
+        if (!silent) chatStatus.textContent = "";
 
         const shouldStick = isNearBottom(msgs);
-
         const data = await apiFetch(API.mensagensDaConversa(state.conversaId));
 
         let items = [];
@@ -728,16 +747,23 @@ async function carregarMensagens({ silent = false } = {}) {
             items = (data?.data && Array.isArray(data.data)) ? data.data : [];
         }
 
-        renderMensagens(items, { stickToBottom: shouldStick });
+        const newHash = buildMessagesHash(items);
+        const changed = forceRender || newHash !== state.lastMessagesHash;
+
+        if (changed) {
+            renderMensagens(items, { stickToBottom: shouldStick });
+            state.lastMessagesHash = newHash;
+        }
 
         if (!silent) chatStatus.textContent = "";
-
         await atualizarStatusChat();
     } catch (e) {
         if (!silent) {
-            chatStatus.textContent = "Erro";
+            chatStatus.textContent = "";
             msgs.innerHTML = `<div class="empty">Erro ao carregar mensagens: ${escapeHtml(e.message)}</div>`;
         }
+    } finally {
+        state.isLoadingMessages = false;
     }
 }
 
@@ -752,7 +778,7 @@ async function unlockMedia(mensagemId) {
             if (saldoCreditosEl) saldoCreditosEl.textContent = `${r.saldoCreditos}`;
         }
 
-        await carregarMensagens();
+        await carregarMensagens({ forceRender: true });
     } catch (e) {
         if (e?.status === 402) {
             alert("Saldo insuficiente para desbloquear.");
@@ -807,7 +833,6 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
                 </div>
             `;
 
-            // carregar mídia real
             setTimeout(async () => {
                 try {
                     const r = await apiFetch(`/mensagens/${m.id}/midia`);
@@ -862,12 +887,11 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
     if (stickToBottom) scrollToBottom(msgs);
 }
 
-// ✅ Delegation: 1 handler só (não duplica)
+// ✅ Delegation
 if (msgs && !msgs.__dpMediaHandlerAttached) {
     msgs.__dpMediaHandlerAttached = true;
 
     msgs.addEventListener("click", async (ev) => {
-        // ✅ encaminhar
         const fwd = ev.target?.closest?.(".btnForward");
         if (fwd) {
             const mid = fwd.getAttribute("data-mid");
@@ -906,7 +930,6 @@ if (msgs && !msgs.__dpMediaHandlerAttached) {
             return;
         }
 
-        // ✅ desbloquear mídia
         const box = ev.target?.closest?.(".mediaLocked");
         if (!box) return;
 
@@ -922,7 +945,7 @@ if (msgs && !msgs.__dpMediaHandlerAttached) {
                 if (saldoCreditosEl) saldoCreditosEl.textContent = `${r.saldoCreditos}`;
             }
 
-            await carregarMensagens();
+            await carregarMensagens({ forceRender: true });
         } catch (e) {
             if (e?.status === 402) {
                 alert("Saldo insuficiente para desbloquear.");
@@ -958,7 +981,7 @@ async function enviarMensagem() {
             if (saldoCreditosEl) saldoCreditosEl.textContent = `${state.saldoCreditos}`;
         }
 
-        await carregarMensagens();
+        await carregarMensagens({ forceRender: true });
     } catch (e) {
         if (e?.status === 402 && e?.data?.code === "SALDO_INSUFICIENTE") {
             if (typeof e?.data?.saldoCreditos === "number") {
@@ -1148,7 +1171,7 @@ async function enviarPresente(presenteId) {
         }
 
         closeGiftModal();
-        await carregarMensagens();
+        await carregarMensagens({ forceRender: true });
 
         return r;
     } catch (e) {
@@ -1375,7 +1398,7 @@ btnCall?.addEventListener("click", async () => {
 
     try {
         btnCall.disabled = true;
-        if (chatStatus) chatStatus.textContent = "Iniciando chamada…";
+        if (chatStatus) chatStatus.textContent = "";
 
         const r = await apiFetch(`/ligacoes/video/iniciar`, {
             method: "POST",
@@ -1396,7 +1419,7 @@ btnCall?.addEventListener("click", async () => {
         state.callActive = true;
 
         btnCall.textContent = "⛔";
-        if (chatStatus) chatStatus.textContent = "Chamando…";
+        if (chatStatus) chatStatus.textContent = "";
     } catch (e) {
         if (isChatLockedError(e)) {
             await atualizarStatusChat();
@@ -1420,9 +1443,8 @@ btnCall?.addEventListener("click", async () => {
 });
 
 // ==============================
-// ✅ MÍDIA: Foto / Áudio (CLOUDINARY DIRETO)
+// ✅ MÍDIA: Foto / Áudio
 // ==============================
-
 const CLOUD_NAME = "dfdinbti3";
 const UPLOAD_PRESET = "desejoproibido";
 
@@ -1465,7 +1487,7 @@ inputFoto?.addEventListener("change", async () => {
             },
         });
 
-        await carregarMensagens();
+        await carregarMensagens({ forceRender: true });
     } catch (e) {
         console.error(e);
         alert("Erro ao enviar foto: " + (e?.message || "erro"));
@@ -1495,7 +1517,6 @@ async function iniciarGravacao() {
     try {
         audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-        // ✅ escolhe mime suportado
         const mimeCandidates = ["audio/webm;codecs=opus", "audio/webm", "video/webm"];
         const mimeType = mimeCandidates.find(t => window.MediaRecorder?.isTypeSupported?.(t));
 
@@ -1517,12 +1538,10 @@ async function iniciarGravacao() {
 async function pararGravacao() {
     if (!mediaRecorder) return;
 
-    // ✅ define onstop antes!
     mediaRecorder.onstop = async () => {
         try {
             btnAudio.classList.remove("gravando");
 
-            // ✅ fecha mic
             try { audioStream?.getTracks()?.forEach(t => t.stop()); } catch { }
             audioStream = null;
 
@@ -1541,7 +1560,6 @@ async function pararGravacao() {
                 return;
             }
 
-            // ✅ extensão coerente
             const ext = blobType.includes("mp4") ? "mp4" : "webm";
             const file = new File([blob], `audio.${ext}`, { type: blobType });
 
@@ -1550,7 +1568,6 @@ async function pararGravacao() {
             formData.append("upload_preset", UPLOAD_PRESET);
             formData.append("folder", "desejoproibido/chat/audios");
 
-            // ⚠️ áudio vai no endpoint VIDEO
             const responseUpload = await fetch(
                 `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/video/upload`,
                 { method: "POST", body: formData }
@@ -1565,7 +1582,7 @@ async function pararGravacao() {
                 body: { conversaId: state.conversaId, mediaPath },
             });
 
-            await carregarMensagens();
+            await carregarMensagens({ forceRender: true });
         } catch (e) {
             console.error(e);
             alert("Erro ao enviar áudio: " + (e?.message || "erro"));
@@ -1588,6 +1605,7 @@ document.addEventListener("visibilitychange", async () => {
     if (!document.hidden) {
         await checarPremium();
         await atualizarStatusChat();
+        await carregarMensagens({ silent: true });
     }
 });
 
