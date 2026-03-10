@@ -53,6 +53,9 @@ const giftOverlay = document.getElementById("giftOverlay");
 const giftClose = document.getElementById("giftClose");
 const giftList = document.getElementById("giftList");
 
+// Quick gifts
+const quickGiftsBar = document.getElementById("quickGiftsBar");
+
 // Video overlay
 const callOverlay = document.getElementById("callOverlay");
 const callTitle = document.getElementById("callTitle");
@@ -348,6 +351,14 @@ function splitEmojiAndText(nome) {
     const emoji = chars.shift() || "🎁";
     const text = chars.join("").trim();
     return { emoji, text };
+}
+
+function normalizarTexto(v) {
+    return String(v || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim()
+        .toLowerCase();
 }
 
 // presentes modal
@@ -790,7 +801,6 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
         </div>
       `;
         } else if (tipo === "AUDIO") {
-
             conteudo = `
                 <div class="audioBox" data-mid="${m.id}">
                 <div class="audioLoading">🎙️ Carregando áudio...</div>
@@ -799,16 +809,13 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
 
             // carregar mídia real
             setTimeout(async () => {
-
                 try {
-
                     const r = await apiFetch(`/mensagens/${m.id}/midia`);
 
                     const box = document.querySelector(`[data-mid="${m.id}"]`);
                     if (!box) return;
 
                     if (r.locked) {
-
                         box.innerHTML = `
             <div class="mediaLocked audioLocked" data-mid="${m.id}">
                 🎙️ Áudio bloqueado
@@ -817,29 +824,22 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
                 </div>
             </div>
             `;
-
                     } else {
-
                         box.innerHTML = `
             <audio controls preload="metadata" src="${r.audioUrl}"></audio>
             `;
-
                     }
-
                 } catch (e) {
                     console.error("Erro carregando áudio:", e);
                 }
-
             }, 50);
         } else if (tipo === "PRESENTE") {
-
             const img = meta.imagemUrl || "/assets/presentes/presente.png";
             const nome = meta.nome || "Presente";
 
             conteudo = `
         <div class="giftBig">
             <img class="giftImg" src="${img}" alt="${escapeHtml(nome)}">
-           
         </div>
     `;
         } else {
@@ -999,9 +999,14 @@ texto?.addEventListener("keydown", (e) => {
     }
 });
 
-// Presentes
+// ==============================
+// PRESENTES
+// ==============================
 btnGift?.addEventListener("click", async () => {
-    if (!state.conversaId) return;
+    if (!state.conversaId) {
+        alert("Selecione uma conversa primeiro.");
+        return;
+    }
 
     if (!state.premiumAtivo) {
         if (paywall) {
@@ -1015,12 +1020,34 @@ btnGift?.addEventListener("click", async () => {
     openGiftModal();
 });
 
+async function garantirPresentesCache(force = false) {
+    if (force || !state.presentesCache) {
+        const data = await apiFetch(API.listarPresentes);
+        state.presentesCache = Array.isArray(data) ? data : (data?.data || []);
+    }
+    return state.presentesCache || [];
+}
+
+function encontrarPresenteRapido(itens, btn) {
+    const slugBotao = normalizarTexto(btn?.dataset?.slug);
+    const nomeBotao = normalizarTexto(btn?.dataset?.name);
+
+    return itens.find((p) => {
+        const slug = normalizarTexto(p.slug);
+        const nome = normalizarTexto(p.nome);
+
+        if (slugBotao && slug === slugBotao) return true;
+        if (nomeBotao && (nome === nomeBotao || slug === nomeBotao)) return true;
+
+        return false;
+    });
+}
+
 async function carregarPresentes() {
     giftList.innerHTML = "Carregando...";
 
     try {
-        if (!state.presentesCache) state.presentesCache = await apiFetch(API.listarPresentes);
-        const itens = state.presentesCache || [];
+        const itens = await garantirPresentesCache();
 
         if (!itens.length) {
             giftList.innerHTML = `<div class="muted">Nenhum presente cadastrado.</div>`;
@@ -1028,7 +1055,6 @@ async function carregarPresentes() {
         }
 
         giftList.innerHTML = itens.map((p) => {
-
             const custo = Number(p.custoCreditos || 0);
             const saldo = Number(state.saldoCreditos || 0);
             const disabled = custo > saldo;
@@ -1036,31 +1062,83 @@ async function carregarPresentes() {
             const img = p.imagemUrl || `/assets/presentes/${p.slug || "presente"}.png`;
 
             return `
-        <button class="dp-gift" data-id="${p.id}" ${disabled ? "disabled" : ""}>
-
-            <img class="gift-icon" src="${img}" alt="${escapeHtml(p.nome)}">
-
-            <div>
-                <span class="sub">${custo} créditos</span>
-            </div>
-
-        </button>
-    `;
-
+                <button class="dp-gift" data-id="${p.id}" ${disabled ? "disabled" : ""} type="button">
+                    <img class="gift-icon" src="${img}" alt="${escapeHtml(p.nome)}">
+                    <div>
+                        <span class="sub">${custo} créditos</span>
+                    </div>
+                </button>
+            `;
         }).join("");
 
         [...giftList.querySelectorAll("button[data-id]")].forEach((btn) => {
             btn.addEventListener("click", async () => {
                 const presenteId = btn.getAttribute("data-id");
-                if (btn.disabled) return;
-                await enviarPresente(presenteId);
+                if (!presenteId || btn.disabled) return;
+
+                try {
+                    btn.disabled = true;
+                    await enviarPresente(presenteId);
+                } finally {
+                    btn.disabled = false;
+                }
             });
         });
     } catch (e) {
         if (enforcePremiumFromError(e)) return;
-        giftList.innerHTML = `<div class="muted">Erro: ${escapeHtml(e.message)}</div>`;
+        giftList.innerHTML = `<div class="muted">Erro: ${escapeHtml(e.message || "erro ao carregar presentes")}</div>`;
     }
 }
+
+quickGiftsBar?.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".quickGiftBtn");
+    if (!btn) return;
+
+    if (!state.conversaId) {
+        alert("Selecione uma conversa primeiro.");
+        return;
+    }
+
+    if (!state.premiumAtivo) {
+        if (paywall) {
+            paywall.hidden = false;
+            paywall.style.display = "flex";
+        }
+        return;
+    }
+
+    if (btn.dataset.open === "true") {
+        await carregarPresentes();
+        openGiftModal();
+        return;
+    }
+
+    try {
+        btn.disabled = true;
+
+        const itens = await garantirPresentesCache();
+        const presente = encontrarPresenteRapido(itens, btn);
+
+        if (!presente) {
+            alert("Esse presente rápido não foi encontrado no cadastro.");
+            return;
+        }
+
+        const custo = Number(presente.custoCreditos || 0);
+        const saldo = Number(state.saldoCreditos || 0);
+
+        if (custo > saldo) {
+            alert("Saldo insuficiente pra enviar esse presente.");
+            return;
+        }
+
+        await enviarPresente(presente.id);
+    } catch (e) {
+        alert("Erro ao enviar presente rápido: " + (e?.message || "erro"));
+    } finally {
+        btn.disabled = false;
+    }
+});
 
 async function enviarPresente(presenteId) {
     try {
@@ -1070,19 +1148,24 @@ async function enviarPresente(presenteId) {
         });
 
         if (typeof r?.saldoCreditos === "number") {
-            state.saldoCreditos = r.saldoCreditos;
-            if (minutosPill) minutosPill.textContent = `💰 Créditos: ${r.saldoCreditos}`;
-            if (saldoCreditosEl) saldoCreditosEl.textContent = `${r.saldoCreditos}`;
+            state.saldoCreditos = Number(r.saldoCreditos);
+            if (minutosPill) minutosPill.textContent = `💰 Créditos: ${state.saldoCreditos}`;
+            if (saldoCreditosEl) saldoCreditosEl.textContent = `${state.saldoCreditos}`;
         }
 
         closeGiftModal();
         await carregarMensagens();
+
+        return r;
     } catch (e) {
         if (e?.status === 402 && e?.data?.code === "SALDO_INSUFICIENTE") {
             alert("Saldo insuficiente pra enviar esse presente.");
             return;
         }
-        alert("Erro ao enviar presente: " + e.message);
+
+        if (enforcePremiumFromError(e)) return;
+
+        alert("Erro ao enviar presente: " + (e?.message || "erro"));
     }
 }
 
