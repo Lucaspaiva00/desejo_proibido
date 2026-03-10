@@ -1028,19 +1028,25 @@ async function carregarPresentes() {
         }
 
         giftList.innerHTML = itens.map((p) => {
+
             const custo = Number(p.custoCreditos || 0);
             const saldo = Number(state.saldoCreditos || 0);
             const disabled = custo > saldo;
 
+            const img = p.imagemUrl || `/assets/presentes/${p.slug || "presente"}.png`;
+
             return `
         <button class="dp-gift" data-id="${p.id}" ${disabled ? "disabled" : ""}>
-          <div>
-            <span class="name">${escapeHtml(p.nome)}</span>
-            <span class="sub">Crédita ${Number(p.minutos || 0)} minuto(s) • Custa ${custo} crédito(s)</span>
-          </div>
-          <span class="dp-pill">💰 ${custo}</span>
+
+            <img class="gift-icon" src="${img}" alt="${escapeHtml(p.nome)}">
+
+            <div>
+                <span class="sub">${custo} créditos</span>
+            </div>
+
         </button>
-      `;
+    `;
+
         }).join("");
 
         [...giftList.querySelectorAll("button[data-id]")].forEach((btn) => {

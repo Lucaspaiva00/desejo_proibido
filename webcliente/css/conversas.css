@@ -622,8 +622,27 @@
     width: 160px;
 }
 
-.gift-icon {
-    width: 72px;
-    height: 72px;
-    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .4));
+.gift-icon img,
+.quickGiftBtn img,
+.giftImg {
+    background: transparent;
+}
+
+.dp-gift {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.dp-gift img {
+    width: 70px;
+    height: 70px;
+    object-fit: contain;
+}
+
+.dp-gift .sub {
+    font-size: 12px;
+    opacity: .8;
 }
