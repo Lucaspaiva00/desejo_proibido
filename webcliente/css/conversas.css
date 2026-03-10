@@ -612,14 +612,24 @@
 }
 
 .bubble.gift {
-    padding: 10px;
-    background: linear-gradient(180deg, #8b0000, #4b0000);
-    border: 1px solid rgba(255, 0, 0, 0.4);
-    border-radius: 14px;
+    padding: 6px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
 }
 
-.gift-img {
-    width: 160px;
+.giftImg {
+    width: 180px;
+    height: auto;
+    object-fit: contain;
+    background: transparent;
+    filter: drop-shadow(0 10px 18px rgba(0, 0, 0, .55));
+}
+
+.giftBig {
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .gift-icon img,
