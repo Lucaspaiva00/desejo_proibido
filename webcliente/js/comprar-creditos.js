@@ -88,7 +88,7 @@ function renderPacotes(pacotes) {
 
         <div class="pack-actions">
           <button class="btn btn-primary" type="button" data-pack="${id}">
-            <span class="icon">🛒</span> Comprar
+            <span class="icon">💎</span> Comprar
           </button>
           <button class="btn btn-ghost" type="button" data-detalhe="${id}">
             Detalhes

@@ -513,11 +513,11 @@
     </div>
 
     <div class="navlinks navlinks-desktop" aria-label="Links do menu">
-      <a href="home.html">Feed</a>
       <a href="perfil.html">Perfil</a>
+      <a href="home.html" class="active">Feed</a>
       <a href="fotos.html">Fotos</a>
       <a href="matches.html">Matches</a>
-      <a href="conversas.html" class="active">Chat</a>
+      <a href="conversas.html">Chat</a>
     </div>
 
     <div class="spacer"></div>
@@ -602,9 +602,9 @@
               <div class="dp-rightActions">
                 <button class="dp-actionBtn" id="btnComprarCreditosTopo" type="button">💎</button>
                 <button class="dp-actionBtn" id="btnGift" type="button" disabled>🎁 <span
-                    class="lbl">Presentear</span></button>
-                <button class="dp-actionBtn" id="btnCall" type="button" disabled>📹 <span
-                    class="lbl">Conectar</span></button>
+                    class="lbl">Presente</span></button>
+                <button class="dp-actionBtn" id="btnCall" type="button" disabled>🎥 <span
+                    class="lbl">Vídeo</span></button>
               </div>
 
               <div class="muted dp-rightStatus" id="chatStatus"></div>
@@ -837,85 +837,7 @@
     }
   </script>
 
-  <script>
-    // ===============================
-    // BARRA DE PRESENTES RÁPIDOS
-    // ===============================
 
-    (function () {
-
-      const bar = document.getElementById("quickGiftsBar");
-      if (!bar) return;
-
-      bar.addEventListener("click", async (e) => {
-
-        const btn = e.target.closest(".quickGiftBtn");
-        if (!btn) return;
-
-        if (!state.conversaId) return;
-
-        // botão abrir modal completo
-        if (btn.dataset.open) {
-          document.getElementById("btnGift")?.click();
-          return;
-        }
-
-        const nome = btn.dataset.name;
-        if (!nome) return;
-
-        try {
-
-          // carrega presentes do backend
-          if (!state.presentesCache) {
-            state.presentesCache = await apiFetch(API.listarPresentes);
-          }
-
-          const presente = state.presentesCache.find(p =>
-            p.nome.toLowerCase().includes(nome.toLowerCase())
-          );
-
-          if (!presente) {
-            alert("Presente não encontrado");
-            return;
-          }
-
-          // envia presente
-          const r = await apiFetch(API.enviarPresente, {
-            method: "POST",
-            body: {
-              conversaId: state.conversaId,
-              presenteId: presente.id
-            }
-          });
-
-          // atualiza saldo
-          if (typeof r?.saldoCreditos === "number") {
-            state.saldoCreditos = r.saldoCreditos;
-
-            if (saldoCreditosEl)
-              saldoCreditosEl.textContent = r.saldoCreditos;
-          }
-
-          // recarrega chat
-          await carregarMensagens();
-
-        } catch (err) {
-
-          console.error("ERRO PRESENTE:", err);
-
-          if (err?.status === 402) {
-            alert("Saldo insuficiente.");
-            return;
-          }
-
-          alert("Erro ao enviar presente");
-
-        }
-
-      });
-
-    })();
-  </script>
 </body>
 
 </html>
