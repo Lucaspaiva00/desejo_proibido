@@ -8,7 +8,7 @@ import {
     getSaldoCreditos
 } from "../utils/wallet.js";
 import { buildPublicUrl } from "../utils/cloudinary.js";
-
+import { containsContato, contatoReason } from "../utils/antiContato.js";
 // ============================
 // Config
 // ============================
@@ -73,48 +73,7 @@ function splitPath(p) {
     return { publicId: s.slice(0, lastDot), format: s.slice(lastDot + 1) };
 }
 
-// ============================
-// Anti-contato (só TEXTO)
-// ============================
-function normalizeText(s = "") {
-    return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-}
-function hasPhoneLike(text) {
-    const t = normalizeText(text);
-    const digits = t.replace(/[^0-9]/g, "");
-    if (digits.length >= 9 && digits.length <= 14) return true;
-    const phonePattern = /(\+?\d{1,3}\s*)?(\(?\d{2,3}\)?\s*)?\d{4,5}[-\s]?\d{4}/;
-    return phonePattern.test(t);
-}
-function hasInstagram(text) {
-    const t = normalizeText(text);
-    if (t.includes("instagram.com")) return true;
-    const hasAtUser = /@[a-z0-9._]{3,}/.test(t);
-    const hasContext = /(insta|instagram|ig|segue|follow|perfil|arroba)/.test(t);
-    if (hasAtUser && hasContext) return true;
-    if (/(me chama|chama no|passo|te mando|te passo).*(insta|instagram|ig)/.test(t)) return true;
-    return false;
-}
-function hasOtherContact(text) {
-    const t = normalizeText(text);
-    if (/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/.test(t)) return true;
-    const bad =
-        /(wa\.me|api\.whatsapp|whatsapp|wpp|zap|t\.me|telegram|discord\.gg|discord|facebook|fb\.com|x\.com|twitter|snapchat|tiktok|linktr\.ee)/;
-    if (bad.test(t)) return true;
-    if (/(https?:\/\/|www\.)\S+/i.test(t)) return true;
-    return false;
-}
-function containsContato(text) {
-    if (!text) return false;
-    return hasPhoneLike(text) || hasInstagram(text) || hasOtherContact(text);
-}
-function contatoReason(text) {
-    const t = normalizeText(text || "");
-    if (hasPhoneLike(t)) return "telefone/whatsapp";
-    if (hasInstagram(t)) return "instagram";
-    if (hasOtherContact(t)) return "contato/link/email";
-    return "contato";
-}
+
 
 // ============================
 // TEXT: POST /mensagens
