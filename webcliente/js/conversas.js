@@ -161,6 +161,9 @@ const state = {
     lastMessagesHash: null,
     isLoadingMessages: false,
 
+    translatedMessages: {},
+    translatingMessages: {},
+
     // Video
     sessaoId: null,
     roomId: null,
@@ -381,6 +384,43 @@ function buildMessagesHash(items) {
     });
 }
 
+function getTargetLang() {
+    return String(
+        state.usuario?.idioma ||
+        localStorage.getItem("lang") ||
+        navigator.language ||
+        "pt"
+    )
+        .toLowerCase()
+        .split("-")[0]
+        .trim();
+}
+
+async function traduzirMensagemTexto(mensagemId) {
+    if (!mensagemId) return;
+
+    const lang = getTargetLang();
+
+    if (state.translatingMessages[mensagemId]) return;
+
+    try {
+        state.translatingMessages[mensagemId] = true;
+
+        const r = await apiFetch(API.traduzirMensagem(mensagemId, lang));
+
+        state.translatedMessages[mensagemId] = {
+            texto: r?.textoTraduzido || "",
+            idioma: r?.idiomaDestino || lang,
+        };
+
+        await carregarMensagens({ forceRender: true, silent: true });
+    } catch (e) {
+        alert("Erro ao traduzir mensagem: " + (e?.message || "erro"));
+    } finally {
+        state.translatingMessages[mensagemId] = false;
+    }
+}
+
 // presentes modal
 function openGiftModal() {
     giftOverlay?.classList.add("show");
@@ -488,6 +528,7 @@ const API = {
     listarPresentes: "/presentes",
     enviarPresente: "/presentes/enviar",
     premiumStatus: "/premium/me",
+    traduzirMensagem: (mensagemId, lang) => `/mensagens/${mensagemId}/traduzir?lang=${encodeURIComponent(lang)}`,
 };
 
 function syncUsuarioPremium(isPremium, saldoCreditos = null) {
@@ -869,7 +910,59 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
     `;
         } else {
             const textToShow = m.textoExibido ?? m.texto ?? "";
-            conteudo = `<div>${escapeHtml(textToShow)}</div>`;
+            const textoTraduzido = state.translatedMessages[m.id]?.texto || "";
+            const traduzindo = !!state.translatingMessages[m.id];
+            const idiomaOriginal = String(m.idiomaOriginal || "pt").toLowerCase();
+            const idiomaDestino = getTargetLang();
+
+            const podeTraduzir =
+                tipo === "TEXTO" &&
+                textToShow &&
+                idiomaOriginal !== idiomaDestino;
+
+            conteudo = `
+        <div>${escapeHtml(textToShow)}</div>
+
+        ${podeTraduzir ? `
+            <div class="msgTranslateRow" style="margin-top:8px;">
+                <button
+                    class="btnTranslate"
+                    type="button"
+                    data-mid="${m.id}"
+                    ${traduzindo ? "disabled" : ""}
+                    style="
+                        border:1px solid rgba(255,255,255,.14);
+                        background:rgba(255,255,255,.06);
+                        color:#fff;
+                        border-radius:10px;
+                        padding:6px 10px;
+                        font-size:12px;
+                        cursor:pointer;
+                    "
+                >
+                    ${traduzindo ? "Traduzindo..." : "Traduzir"}
+                </button>
+            </div>
+        ` : ""}
+
+        ${textoTraduzido ? `
+            <div
+                class="translatedText"
+                style="
+                    margin-top:8px;
+                    padding-top:8px;
+                    border-top:1px solid rgba(255,255,255,.10);
+                    font-size:13px;
+                    opacity:.92;
+                "
+            >
+                <div style="font-size:11px; opacity:.7; margin-bottom:4px;">
+                    Tradução
+                </div>
+                <div>${escapeHtml(textoTraduzido)}</div>
+            </div>
+        ` : ""}
+    `;
         }
 
         return `
@@ -892,6 +985,14 @@ if (msgs && !msgs.__dpMediaHandlerAttached) {
     msgs.__dpMediaHandlerAttached = true;
 
     msgs.addEventListener("click", async (ev) => {
+        const translateBtn = ev.target?.closest?.(".btnTranslate");
+        if (translateBtn) {
+            const mid = translateBtn.getAttribute("data-mid");
+            if (!mid) return;
+
+            await traduzirMensagemTexto(mid);
+            return;
+        }
         const fwd = ev.target?.closest?.(".btnForward");
         if (fwd) {
             const mid = fwd.getAttribute("data-mid");

@@ -27,6 +27,7 @@ export async function auth(req, res, next) {
                 email: true,
                 ativo: true,
                 role: true,
+                idioma: true,
                 banGlobal: { select: { ativo: true, ate: true, motivo: true } },
             },
         });
@@ -57,7 +58,7 @@ export async function auth(req, res, next) {
             }
         }
 
-        req.usuario = { id: u.id, email: u.email, role: u.role };
+        req.usuario = { id: u.id, email: u.email, role: u.role, idioma: u.idioma };
         return next();
     } catch (e) {
         logAcesso(req, { evento: "TOKEN_INVALIDO", status: 401, detalhe: "expirado ou inválido" });

@@ -197,6 +197,7 @@ export async function login(req, res) {
                 plano: usuario.plano,
                 saldoCreditos,
                 emailVerificado: !!usuario.emailVerificado,
+                idioma: usuario.idioma || "pt",
             },
             token,
         });
@@ -224,6 +225,7 @@ export async function me(req, res) {
             isPremium: premiumEfetivo,
             saldoCreditos,
             emailVerificado: !!usuario.emailVerificado,
+            idioma: usuario.idioma || "pt",
         });
     } catch (e) {
         return res.status(500).json({ erro: "Erro ao buscar usuário", detalhe: e.message });

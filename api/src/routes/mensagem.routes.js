@@ -7,8 +7,9 @@ import {
     enviarAudio,
     desbloquearMidia,
     obterMidia,
-    encaminharMidia, // ✅ novo
+    encaminharMidia,
 } from "../controllers/mensagem.controller.js";
+import { traduzirMensagem } from "../controllers/mensagem.translate.controller.js";
 
 const router = Router();
 router.use(auth);
@@ -22,9 +23,9 @@ router.post("/audio", enviarAudio);
 
 // ✅ encaminhar mídia
 router.post("/encaminhar", encaminharMidia);
-
+router.get("/:id/traduzir", traduzirMensagem)
 // paywall mídia
 router.post("/:id/desbloquear", desbloquearMidia);
-router.get("/:id/midia", obterMidia);
+router.get("/:id/midia", obterMidia);;
 
 export default router;
