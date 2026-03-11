@@ -174,7 +174,7 @@ async function mapMensagemParaUsuario(m, idiomaDestino, viewerId) {
 // ==============================
 export async function listarConversas(req, res) {
     const userId = req.usuario.id;
-    const idiomaDestino = req.lang || req.usuario?.idioma || "pt";
+    const idiomaDestino = req.query?.lang || req.usuario?.idioma || req.lang || "pt";
 
     const conversas = await prisma.conversa.findMany({
         where: { match: { OR: [{ usuarioAId: userId }, { usuarioBId: userId }] } },
@@ -272,7 +272,7 @@ export async function listarConversas(req, res) {
 // ==============================
 export async function mensagensDaConversa(req, res) {
     const userId = req.usuario.id;
-    const idiomaDestino = req.lang || req.usuario?.idioma || "pt";
+    const idiomaDestino = req.query?.lang || req.usuario?.idioma || req.lang || "pt";
     const { id: conversaId } = req.params;
 
     const conv = await prisma.conversa.findUnique({
