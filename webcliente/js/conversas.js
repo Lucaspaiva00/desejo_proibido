@@ -70,6 +70,8 @@ const btnCam = document.getElementById("btnCam");
 const imageViewerOverlay = document.getElementById("imageViewerOverlay");
 const imageViewerClose = document.getElementById("imageViewerClose");
 const imageViewerImg = document.getElementById("imageViewerImg");
+const chatPanel = document.getElementById("chatPanel");
+const screenGuard = document.getElementById("screenGuard");
 
 function abrirChatMobile() {
     if (window.innerWidth <= 980) {
@@ -343,6 +345,114 @@ function setMsg(text, type = "muted") {
     if (!msg) return;
     msg.className = `msgline ${type}`;
     msg.textContent = text || "";
+}
+
+function showScreenGuard(mode = "blur") {
+    if (!chatPanel) return;
+
+    chatPanel.classList.add("chatProtected");
+
+    if (mode === "hard") {
+        chatPanel.classList.remove("protect-blur");
+        chatPanel.classList.add("protect-hard");
+    } else {
+        chatPanel.classList.remove("protect-hard");
+        chatPanel.classList.add("protect-blur");
+    }
+
+    if (screenGuard) {
+        screenGuard.classList.add("show");
+        screenGuard.setAttribute("aria-hidden", "false");
+    }
+}
+
+function hideScreenGuard() {
+    if (!chatPanel) return;
+
+    chatPanel.classList.remove("protect-blur");
+    chatPanel.classList.remove("protect-hard");
+    chatPanel.classList.add("chatProtected");
+
+    if (screenGuard) {
+        screenGuard.classList.remove("show");
+        screenGuard.setAttribute("aria-hidden", "true");
+    }
+}
+
+function enableChatProtection() {
+    if (!chatPanel) return;
+
+    chatPanel.classList.add("chatProtected");
+
+    // bloqueia menu de contexto
+    document.addEventListener("contextmenu", (e) => {
+        const insideChat = e.target?.closest?.("#chatPanel");
+        const insideViewer = e.target?.closest?.("#imageViewerOverlay");
+        if (insideChat || insideViewer) {
+            e.preventDefault();
+        }
+    });
+
+    // bloqueia arrastar imagem
+    document.addEventListener("dragstart", (e) => {
+        const media = e.target?.closest?.("#chatPanel img, #chatPanel video, #imageViewerImg");
+        if (media) e.preventDefault();
+    });
+
+    // bloqueia seleção dentro do chat
+    document.addEventListener("selectstart", (e) => {
+        const insideChat = e.target?.closest?.("#chatPanel");
+        if (insideChat) e.preventDefault();
+    });
+
+    // atalhos comuns
+    document.addEventListener("keydown", (e) => {
+        const key = String(e.key || "").toLowerCase();
+
+        const blocked =
+            key === "printscreen" ||
+            (e.ctrlKey && key === "p") ||
+            (e.ctrlKey && e.shiftKey && ["i", "j", "c", "k"].includes(key)) ||
+            (e.key === "F12");
+
+        if (blocked) {
+            e.preventDefault();
+            e.stopPropagation();
+            showScreenGuard("hard");
+
+            setTimeout(() => {
+                hideScreenGuard();
+            }, 1800);
+        }
+    });
+
+    // quando perder foco, oculta temporariamente
+    window.addEventListener("blur", () => {
+        showScreenGuard("blur");
+    });
+
+    window.addEventListener("focus", () => {
+        hideScreenGuard();
+    });
+
+    document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+            showScreenGuard("hard");
+        } else {
+            hideScreenGuard();
+        }
+    });
+
+    // tentativa de print screen em alguns navegadores/sistemas
+    document.addEventListener("keyup", (e) => {
+        const key = String(e.key || "").toLowerCase();
+        if (key === "printscreen") {
+            showScreenGuard("hard");
+            setTimeout(() => {
+                hideScreenGuard();
+            }, 1800);
+        }
+    });
 }
 
 function escapeHtml(s) {
@@ -1069,6 +1179,7 @@ function openImageViewer(src) {
     imageViewerOverlay.classList.add("show");
     imageViewerOverlay.setAttribute("aria-hidden", "false");
     document.body.classList.add("no-scroll");
+    document.body.classList.add("dp-no-context-menu");
 }
 
 function closeImageViewer() {
@@ -1078,8 +1189,8 @@ function closeImageViewer() {
     imageViewerOverlay.setAttribute("aria-hidden", "true");
     imageViewerImg.removeAttribute("src");
     document.body.classList.remove("no-scroll");
+    document.body.classList.remove("dp-no-context-menu");
 }
-
 imageViewerClose?.addEventListener("click", closeImageViewer);
 
 imageViewerOverlay?.addEventListener("click", (e) => {
@@ -1647,6 +1758,9 @@ async function pararGravacao() {
 // ==============================
 await checarPremium();
 await carregarConversas();
+
+enableChatProtection();
+hideScreenGuard();
 
 document.addEventListener("visibilitychange", async () => {
     if (!document.hidden) {

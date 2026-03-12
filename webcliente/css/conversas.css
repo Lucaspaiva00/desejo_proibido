@@ -1114,3 +1114,90 @@
 .imageViewerClose:hover {
     background: rgba(255, 255, 255, 0.22);
 }
+
+/* =========================================================
+   PROTEÇÃO VISUAL / ANTI-PRINT WEB
+========================================================= */
+
+.chatProtected,
+.chatProtected * {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+}
+
+.chatProtected img,
+.chatProtected video {
+    -webkit-user-drag: none;
+    user-drag: none;
+    pointer-events: auto;
+}
+
+.chatProtected.protect-blur #msgs,
+.chatProtected.protect-blur .dp-appHeader,
+.chatProtected.protect-blur .composer,
+.chatProtected.protect-blur .quickGiftsBar {
+    filter: blur(18px) brightness(.45);
+    transition: filter .18s ease;
+}
+
+.chatProtected.protect-hard #msgs,
+.chatProtected.protect-hard .dp-appHeader,
+.chatProtected.protect-hard .composer,
+.chatProtected.protect-hard .quickGiftsBar {
+    visibility: hidden;
+}
+
+.screenGuard {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.82);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 200000;
+}
+
+.screenGuard.show {
+    display: flex;
+}
+
+.screenGuardBox {
+    width: min(460px, 100%);
+    border-radius: 18px;
+    padding: 22px 18px;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, .14);
+    background:
+        radial-gradient(500px 220px at 50% 0%, rgba(193, 18, 31, .18), transparent 60%),
+        linear-gradient(180deg, rgba(28, 0, 8, .95), rgba(0, 0, 0, .96));
+    box-shadow: 0 24px 70px rgba(0, 0, 0, .65);
+}
+
+.screenGuardTitle {
+    font-size: 18px;
+    font-weight: 900;
+    margin-bottom: 8px;
+}
+
+.screenGuardText {
+    font-size: 14px;
+    color: rgba(255, 255, 255, .82);
+    line-height: 1.45;
+}
+
+.msgPhotoOpen,
+.giftImg,
+#msgs img,
+#msgs video {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-user-drag: none;
+}
+
+body.dp-no-context-menu {
+    overflow: hidden;
+}
