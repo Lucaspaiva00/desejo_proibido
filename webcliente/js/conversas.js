@@ -67,6 +67,10 @@ const btnHangup = document.getElementById("btnHangup");
 const btnMute = document.getElementById("btnMute");
 const btnCam = document.getElementById("btnCam");
 
+const imageViewerOverlay = document.getElementById("imageViewerOverlay");
+const imageViewerClose = document.getElementById("imageViewerClose");
+const imageViewerImg = document.getElementById("imageViewerImg");
+
 function abrirChatMobile() {
     if (window.innerWidth <= 980) {
         document.querySelector(".panel.left").style.display = "none";
@@ -821,7 +825,11 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
         <div class="bubble foto ${m.locked ? "locked" : ""}" 
              data-id="${m.id}"
              ${m.locked ? `onclick="unlockMedia('${m.id}')"` : ""}>
-          <img src="${imgSrc}" />
+          <img
+            src="${imgSrc}"
+            ${!m.locked && m.mediaUrl ? `class="msgPhotoOpen" data-full="${m.mediaUrl}"` : ""}
+            alt="Foto enviada no chat"
+          />
           ${m.locked ? `
             <div class="media-lock">
               🔒 Desbloquear por ${m.custoMoedas || 10} créditos
@@ -892,9 +900,16 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
 
 // ✅ Delegation
 if (msgs && !msgs.__dpMediaHandlerAttached) {
+
     msgs.__dpMediaHandlerAttached = true;
 
     msgs.addEventListener("click", async (ev) => {
+        const openedImg = ev.target?.closest?.(".msgPhotoOpen");
+        if (openedImg) {
+            const full = openedImg.getAttribute("data-full") || openedImg.getAttribute("src");
+            if (full) openImageViewer(full);
+            return;
+        }
 
         const fwd = ev.target?.closest?.(".btnForward");
         if (fwd) {
@@ -1045,6 +1060,34 @@ btnGift?.addEventListener("click", async () => {
 
     await carregarPresentes();
     openGiftModal();
+});
+
+function openImageViewer(src) {
+    if (!src || !imageViewerOverlay || !imageViewerImg) return;
+
+    imageViewerImg.src = src;
+    imageViewerOverlay.classList.add("show");
+    imageViewerOverlay.setAttribute("aria-hidden", "false");
+    document.body.classList.add("no-scroll");
+}
+
+function closeImageViewer() {
+    if (!imageViewerOverlay || !imageViewerImg) return;
+
+    imageViewerOverlay.classList.remove("show");
+    imageViewerOverlay.setAttribute("aria-hidden", "true");
+    imageViewerImg.removeAttribute("src");
+    document.body.classList.remove("no-scroll");
+}
+
+imageViewerClose?.addEventListener("click", closeImageViewer);
+
+imageViewerOverlay?.addEventListener("click", (e) => {
+    if (e.target === imageViewerOverlay) closeImageViewer();
+});
+
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeImageViewer();
 });
 
 async function garantirPresentesCache(force = false) {

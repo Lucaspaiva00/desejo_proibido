@@ -1056,3 +1056,61 @@
         max-width: none;
     }
 }
+
+.msgPhotoOpen {
+    cursor: zoom-in;
+}
+
+.imageViewerOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.88);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 10000;
+}
+
+.imageViewerOverlay.show {
+    display: flex;
+}
+
+.imageViewerBox {
+    position: relative;
+    max-width: 92vw;
+    max-height: 92vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.imageViewerImg {
+    max-width: 92vw;
+    max-height: 92vh;
+    width: auto;
+    height: auto;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+    object-fit: contain;
+    background: #111;
+}
+
+.imageViewerClose {
+    position: absolute;
+    top: -14px;
+    right: -14px;
+    width: 42px;
+    height: 42px;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+    font-size: 20px;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+}
+
+.imageViewerClose:hover {
+    background: rgba(255, 255, 255, 0.22);
+}
