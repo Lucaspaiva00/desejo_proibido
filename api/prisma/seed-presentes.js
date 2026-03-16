@@ -81,7 +81,7 @@ async function main() {
     desativados = paraDesativar.length;
   }
 
-  // Atualiza ou cria pelo nome
+  
   for (const p of presentes) {
     const existente = await prisma.presente.findFirst({
       where: { nome: p.nome },
