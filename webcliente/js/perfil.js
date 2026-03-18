@@ -1,7 +1,10 @@
 // app/js/perfil.js
+import { startRegistration } from "https://esm.sh/@simplewebauthn/browser@13.1.1?bundle";
 import { apiFetch, logout } from "./api.js";
 
 const msg = document.getElementById("msg");
+const msgBiometria = document.getElementById("msgBiometria");
+const btnAtivarBiometria = document.getElementById("btnAtivarBiometria");
 
 document.getElementById("btnSair").onclick = logout;
 const btnSairMobile = document.getElementById("btnSairMobile");
@@ -76,7 +79,7 @@ if (auth.token && !localStorage.getItem("token")) {
 // se não achou nada, manda pro login
 if (!auth.usuario && !localStorage.getItem("token")) {
     alert("Sessão expirada. Faça login.");
-    location.href = "login.html";
+    location.href = "index.html";
 }
 
 // Estado
@@ -91,6 +94,20 @@ const state = {
 function setMsg(text) {
     if (!msg) return;
     msg.textContent = text || "";
+}
+
+function setMsgBiometria(text, isError = false) {
+    if (!msgBiometria) return;
+    msgBiometria.textContent = text || "";
+    msgBiometria.style.color = isError ? "#ff6b6b" : "";
+}
+
+function setBiometriaLoading(loading) {
+    if (!btnAtivarBiometria) return;
+    btnAtivarBiometria.disabled = loading;
+    btnAtivarBiometria.textContent = loading
+        ? "Ativando biometria..."
+        : "Ativar biometria neste dispositivo";
 }
 
 // ✅ NOVO: aviso quando vem do cadastro / bloqueio do feed
@@ -214,7 +231,6 @@ async function checarPremium() {
         state.premiumAtivo = ativo;
         state.saldoCreditos = saldo;
 
-        // mantém consistência no localStorage (igual chat faz)
         try {
             const raw = localStorage.getItem("usuario");
             const u = raw ? JSON.parse(raw) : (auth.usuario || {});
@@ -243,10 +259,7 @@ async function carregarPerfil() {
     try {
         const perfil = await apiFetch("/perfil/me");
         preencherPerfil(perfil);
-
-        // ✅ NOVO: avisa claramente o usuário do que falta
         aplicarGatePerfil(perfil);
-
         return perfil;
     } catch {
         return null;
@@ -257,19 +270,15 @@ async function carregarInvisivelEBoost() {
     if (!toggle || !txt) return;
 
     try {
-        // checa premium primeiro (igual chat)
         await checarPremium();
 
-        // se não é premium, já bloqueia UI e sai
         if (!state.premiumAtivo) return;
 
-        // agora busca dados do usuário (invisível/boost)
         const u = await apiFetch("/usuarios/me");
 
         syncInvisivelUI(!!u.isInvisivel, u.invisivelAte);
         syncBoostUI(u.boostAte);
 
-        // TOGGLE INVISÍVEL
         toggle.onchange = async () => {
             if (!state.premiumAtivo) return;
 
@@ -310,7 +319,6 @@ async function carregarInvisivelEBoost() {
             }
         };
 
-        // BOOST
         if (btnBoost) {
             btnBoost.onclick = async () => {
                 if (!state.premiumAtivo) return;
@@ -345,6 +353,54 @@ async function carregarInvisivelEBoost() {
     }
 }
 
+// ==============================
+// BIOMETRIA / PASSKEY
+// ==============================
+async function ativarBiometria() {
+    try {
+        setMsgBiometria("");
+        setBiometriaLoading(true);
+
+        if (
+            typeof window.PublicKeyCredential === "undefined" ||
+            typeof window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable !== "function"
+        ) {
+            throw new Error("Este dispositivo/navegador não suporta biometria no navegador.");
+        }
+
+        const disponivel = await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+        if (!disponivel) {
+            throw new Error("Biometria não disponível neste dispositivo ou navegador.");
+        }
+
+        const { options, state } = await apiFetch("/auth/passkeys/register/options", {
+            method: "POST",
+            body: {},
+        });
+
+        const response = await startRegistration({ optionsJSON: options });
+
+        await apiFetch("/auth/passkeys/register/verify", {
+            method: "POST",
+            body: { response, state },
+        });
+
+        setMsgBiometria("✅ Biometria ativada com sucesso neste dispositivo.");
+    } catch (e) {
+        if (e?.name === "NotAllowedError") {
+            setMsgBiometria("Operação cancelada pelo usuário.", true);
+        } else {
+            setMsgBiometria(e?.message || "Não foi possível ativar a biometria.", true);
+        }
+    } finally {
+        setBiometriaLoading(false);
+    }
+}
+
+if (btnAtivarBiometria) {
+    btnAtivarBiometria.addEventListener("click", ativarBiometria);
+}
+
 // salvar perfil
 document.getElementById("btnSalvar").onclick = async () => {
     try {
@@ -359,7 +415,6 @@ document.getElementById("btnSalvar").onclick = async () => {
             nascimento: elNascimento ? elNascimento.value : "",
         };
 
-        // ✅ agora obriga o mínimo pra aparecer no feed
         if (!body.nome) throw new Error("Nome é obrigatório");
         if (!body.estado || body.estado.length !== 2) throw new Error("Estado deve ter 2 letras (ex: SP)");
         if (!body.genero) throw new Error("Gênero é obrigatório");
@@ -371,15 +426,12 @@ document.getElementById("btnSalvar").onclick = async () => {
 
         await apiFetch("/perfil", { method: "PUT", body });
 
-        // ✅ mensagem + opcional: mandar pro feed após salvar
         setMsg("✅ Perfil salvo! Agora você já aparece no feed.");
 
-        // Recarrega e aplica gate novamente (caso faltou algo)
         const perfil = await apiFetch("/perfil/me");
         preencherPerfil(perfil);
         aplicarGatePerfil(perfil);
 
-        // ✅ se estiver completo, manda pro feed automaticamente (melhora UX)
         if (isPerfilCompletoMinimo(perfil)) {
             setTimeout(() => (location.href = "home.html"), 500);
         }

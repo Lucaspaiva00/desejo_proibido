@@ -1,4 +1,4 @@
-import { startAuthentication } from "@simplewebauthn/browser";
+import { startAuthentication } from "https://esm.sh/@simplewebauthn/browser@13.1.1?bundle";
 import { apiFetch, setToken } from "./api.js";
 
 const form = document.getElementById("formLogin");
@@ -93,6 +93,18 @@ btnPasskeyLogin?.addEventListener("click", async () => {
     try {
         setAlert("");
 
+        if (
+            typeof window.PublicKeyCredential === "undefined" ||
+            typeof window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable !== "function"
+        ) {
+            throw new Error("Este navegador não suporta biometria no login.");
+        }
+
+        const disponivel = await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+        if (!disponivel) {
+            throw new Error("Biometria não disponível neste dispositivo ou navegador.");
+        }
+
         const email = document.getElementById("email")?.value?.trim();
         if (!email) {
             throw new Error("Informe seu e-mail para entrar com biometria.");
@@ -117,7 +129,11 @@ btnPasskeyLogin?.addEventListener("click", async () => {
 
         redirectAfterLogin();
     } catch (e) {
-        setAlert(e.message || "Não foi possível entrar com biometria.");
+        if (e?.name === "NotAllowedError") {
+            setAlert("Operação cancelada pelo usuário.");
+        } else {
+            setAlert(e.message || "Não foi possível entrar com biometria.");
+        }
     } finally {
         setPasskeyLoading(false);
     }
