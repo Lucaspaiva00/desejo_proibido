@@ -1,5 +1,14 @@
 // src/controllers/auth.controller.js
 import bcrypt from "bcrypt";
+import crypto from "crypto";
+import jwt from "jsonwebtoken";
+import {
+    generateRegistrationOptions,
+    verifyRegistrationResponse,
+    generateAuthenticationOptions,
+    verifyAuthenticationResponse,
+} from "@simplewebauthn/server";
+
 import { prisma } from "../prisma.js";
 import { assinarToken } from "../utils/jwt.js";
 import { logAcesso } from "../utils/auditoria.js";
@@ -18,6 +27,150 @@ function appUrl(path) {
     const p = String(path || "");
     return base + (p.startsWith("/") ? p : `/${p}`);
 }
+
+// ======================================================
+// PASSKEY / WEBAUTHN HELPERS
+// ======================================================
+
+function getExpectedOrigin() {
+    return (process.env.APP_URL || "http://localhost:5000").replace(/\/$/, "");
+}
+
+function getRpID() {
+    if (process.env.WEBAUTHN_RP_ID) return process.env.WEBAUTHN_RP_ID.trim();
+
+    try {
+        return new URL(getExpectedOrigin()).hostname;
+    } catch {
+        return "localhost";
+    }
+}
+
+function getRpName() {
+    return process.env.WEBAUTHN_RP_NAME || "Desejo Proibido";
+}
+
+function signPasskeyState(payload, expiresIn = "10m") {
+    return jwt.sign(
+        { ...payload, type: "passkey_state" },
+        process.env.JWT_SECRET,
+        { expiresIn }
+    );
+}
+
+function verifyPasskeyState(token) {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (!decoded || decoded.type !== "passkey_state") {
+        throw new Error("State inválido");
+    }
+    return decoded;
+}
+
+function parseTransports(transports) {
+    if (!transports) return [];
+    if (Array.isArray(transports)) return transports.filter(Boolean);
+
+    try {
+        const parsed = JSON.parse(transports);
+        return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+    } catch {
+        return String(transports)
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean);
+    }
+}
+
+function stringifyTransports(transports) {
+    return JSON.stringify(Array.isArray(transports) ? transports : []);
+}
+
+async function validarUsuarioAtivoPorId(req, userId) {
+    const usuario = await prisma.usuario.findUnique({
+        where: { id: userId },
+    });
+
+    if (!usuario) {
+        logAcesso(req, {
+            evento: "LOGIN_FALHA",
+            status: 401,
+            detalhe: "Usuário não encontrado",
+        });
+        return { erro: { status: 401, body: { erro: "Usuário inválido" } } };
+    }
+
+    if (!usuario.ativo) {
+        logAcesso(req, {
+            evento: "LOGIN_BLOQUEADO",
+            status: 403,
+            usuarioId: usuario.id,
+            email: usuario.email,
+            detalhe: "Usuário desativado",
+        });
+        return { erro: { status: 403, body: { erro: "Usuário desativado" } } };
+    }
+
+    const ban = await prisma.banGlobal.findUnique({ where: { usuarioId: usuario.id } });
+    if (ban?.ativo) {
+        const agora = new Date();
+        const dentroDoPrazo = !ban.ate || new Date(ban.ate) > agora;
+        if (dentroDoPrazo) {
+            logAcesso(req, {
+                evento: "LOGIN_BLOQUEADO",
+                status: 403,
+                usuarioId: usuario.id,
+                email: usuario.email,
+                detalhe: ban.motivo || "Ban global ativo",
+            });
+            return { erro: { status: 403, body: { erro: "Usuário banido" } } };
+        }
+    }
+
+    return { usuario };
+}
+
+async function montarRespostaLogin(req, usuario) {
+    await ensureWallet(usuario.id);
+
+    const token = assinarToken({ id: usuario.id, email: usuario.email });
+
+    logAcesso(req, {
+        evento: "LOGIN_OK",
+        status: 200,
+        usuarioId: usuario.id,
+        email: usuario.email,
+    });
+
+    const { saldoCreditos, premiumEfetivo } = await getPremiumStatus(usuario.id);
+
+    return {
+        usuario: {
+            id: usuario.id,
+            email: usuario.email,
+            isPremium: premiumEfetivo,
+            plano: usuario.plano,
+            saldoCreditos,
+            emailVerificado: !!usuario.emailVerificado,
+            idioma: usuario.idioma || "pt",
+        },
+        token,
+    };
+}
+
+async function getOrCreateWebauthnUserId(usuarioId) {
+    const existing = await prisma.passkey.findFirst({
+        where: { usuarioId },
+        select: { webauthnUserId: true },
+    });
+
+    if (existing?.webauthnUserId) return existing.webauthnUserId;
+
+    return crypto.randomUUID();
+}
+
+// ======================================================
+// AUTH PADRÃO
+// ======================================================
 
 export async function registrar(req, res) {
     try {
@@ -202,7 +355,6 @@ export async function login(req, res) {
             token,
         });
     } catch (e) {
-        // também não bloquear aqui (nem arriscar loop por DB)
         logAcesso(req, { evento: "LOGIN_ERRO", status: 500, detalhe: e?.message || String(e) });
         return res.status(500).json({ erro: "Erro ao logar" });
     }
@@ -229,6 +381,317 @@ export async function me(req, res) {
         });
     } catch (e) {
         return res.status(500).json({ erro: "Erro ao buscar usuário", detalhe: e.message });
+    }
+}
+
+// ======================================================
+// PASSKEY / WEBAUTHN
+// ======================================================
+
+export async function passkeyRegisterOptions(req, res) {
+    try {
+        const userId = req.usuario.id;
+
+        const usuario = await prisma.usuario.findUnique({
+            where: { id: userId },
+            select: { id: true, email: true, ativo: true },
+        });
+
+        if (!usuario) return res.status(401).json({ erro: "Usuário inválido" });
+        if (!usuario.ativo) return res.status(403).json({ erro: "Usuário desativado" });
+
+        const existingPasskeys = await prisma.passkey.findMany({
+            where: { usuarioId: usuario.id },
+            select: {
+                credentialId: true,
+                transports: true,
+            },
+        });
+
+        const webauthnUserId = await getOrCreateWebauthnUserId(usuario.id);
+
+        const options = await generateRegistrationOptions({
+            rpName: getRpName(),
+            rpID: getRpID(),
+            userID: webauthnUserId,
+            userName: usuario.email,
+            userDisplayName: usuario.email,
+            timeout: 60000,
+            attestationType: "none",
+            excludeCredentials: existingPasskeys.map((p) => ({
+                id: p.credentialId,
+                transports: parseTransports(p.transports),
+            })),
+            authenticatorSelection: {
+                residentKey: "preferred",
+                userVerification: "required",
+                authenticatorAttachment: "platform",
+            },
+            supportedAlgorithmIDs: [-7, -257],
+        });
+
+        const state = signPasskeyState({
+            action: "register",
+            challenge: options.challenge,
+            usuarioId: usuario.id,
+            webauthnUserId,
+        });
+
+        return res.json({ options, state });
+    } catch (e) {
+        console.error("passkeyRegisterOptions error:", e);
+        return res.status(500).json({ erro: "Erro ao gerar opções de cadastro da biometria" });
+    }
+}
+
+export async function passkeyRegisterVerify(req, res) {
+    try {
+        const { response, state } = req.body;
+
+        if (!response || !state) {
+            return res.status(400).json({ erro: "response e state são obrigatórios" });
+        }
+
+        let decoded;
+        try {
+            decoded = verifyPasskeyState(state);
+        } catch {
+            return res.status(400).json({ erro: "State inválido ou expirado" });
+        }
+
+        if (decoded.action !== "register") {
+            return res.status(400).json({ erro: "State inválido para cadastro de passkey" });
+        }
+
+        if (decoded.usuarioId !== req.usuario.id) {
+            return res.status(403).json({ erro: "State não pertence ao usuário autenticado" });
+        }
+
+        const verification = await verifyRegistrationResponse({
+            response,
+            expectedChallenge: decoded.challenge,
+            expectedOrigin: getExpectedOrigin(),
+            expectedRPID: getRpID(),
+            requireUserVerification: true,
+        });
+
+        const { verified, registrationInfo } = verification;
+
+        if (!verified || !registrationInfo) {
+            return res.status(400).json({ erro: "Não foi possível validar a biometria" });
+        }
+
+        const credentialId = registrationInfo.credential.id;
+
+        const jaExiste = await prisma.passkey.findUnique({
+            where: { credentialId },
+            select: { id: true },
+        });
+
+        if (jaExiste) {
+            return res.json({ ok: true, duplicada: true });
+        }
+
+        await prisma.passkey.create({
+            data: {
+                usuarioId: decoded.usuarioId,
+                webauthnUserId: decoded.webauthnUserId,
+                credentialId,
+                publicKey: Buffer.from(registrationInfo.credential.publicKey),
+                counter: registrationInfo.credential.counter,
+                deviceType: registrationInfo.credentialDeviceType,
+                backedUp: registrationInfo.credentialBackedUp,
+                transports: stringifyTransports(response.response?.transports || []),
+            },
+        });
+
+        logAcesso(req, {
+            evento: "PASSKEY_REGISTRO_OK",
+            status: 200,
+            usuarioId: decoded.usuarioId,
+            email: req.usuario.email,
+        });
+
+        return res.json({ ok: true });
+    } catch (e) {
+        console.error("passkeyRegisterVerify error:", e);
+        logAcesso(req, {
+            evento: "PASSKEY_REGISTRO_ERRO",
+            status: 500,
+            usuarioId: req.usuario?.id,
+            email: req.usuario?.email,
+            detalhe: e?.message || String(e),
+        });
+        return res.status(500).json({ erro: "Erro ao validar cadastro da biometria" });
+    }
+}
+
+export async function passkeyLoginOptions(req, res) {
+    try {
+        const { email } = req.body || {};
+
+        if (!email) {
+            return res.status(400).json({ erro: "Email é obrigatório para login com biometria" });
+        }
+
+        const usuario = await prisma.usuario.findUnique({
+            where: { email },
+            select: { id: true, email: true, ativo: true },
+        });
+
+        // resposta neutra só até onde der; para login biométrico precisa haver passkey cadastrada
+        if (!usuario) {
+            return res.status(404).json({ erro: "Nenhuma biometria cadastrada para este e-mail" });
+        }
+
+        if (!usuario.ativo) {
+            return res.status(403).json({ erro: "Usuário desativado" });
+        }
+
+        const passkeys = await prisma.passkey.findMany({
+            where: { usuarioId: usuario.id },
+            select: {
+                credentialId: true,
+                transports: true,
+            },
+        });
+
+        if (!passkeys.length) {
+            return res.status(404).json({ erro: "Nenhuma biometria cadastrada para este e-mail" });
+        }
+
+        const options = await generateAuthenticationOptions({
+            rpID: getRpID(),
+            timeout: 60000,
+            userVerification: "required",
+            allowCredentials: passkeys.map((p) => ({
+                id: p.credentialId,
+                transports: parseTransports(p.transports),
+            })),
+        });
+
+        const state = signPasskeyState({
+            action: "login",
+            challenge: options.challenge,
+            email: usuario.email,
+        });
+
+        return res.json({ options, state });
+    } catch (e) {
+        console.error("passkeyLoginOptions error:", e);
+        return res.status(500).json({ erro: "Erro ao gerar opções de login com biometria" });
+    }
+}
+
+export async function passkeyLoginVerify(req, res) {
+    try {
+        const { response, state } = req.body;
+
+        if (!response || !state) {
+            return res.status(400).json({ erro: "response e state são obrigatórios" });
+        }
+
+        let decoded;
+        try {
+            decoded = verifyPasskeyState(state);
+        } catch {
+            return res.status(400).json({ erro: "State inválido ou expirado" });
+        }
+
+        if (decoded.action !== "login") {
+            return res.status(400).json({ erro: "State inválido para login de passkey" });
+        }
+
+        const credentialId = response.id;
+        if (!credentialId) {
+            return res.status(400).json({ erro: "Credencial inválida" });
+        }
+
+        const passkey = await prisma.passkey.findUnique({
+            where: { credentialId },
+            include: {
+                usuario: true,
+            },
+        });
+
+        if (!passkey) {
+            logAcesso(req, {
+                evento: "PASSKEY_LOGIN_FALHA",
+                status: 401,
+                email: decoded.email || null,
+                detalhe: "Credencial não encontrada",
+            });
+            return res.status(401).json({ erro: "Credencial inválida" });
+        }
+
+        if (decoded.email && passkey.usuario.email !== decoded.email) {
+            logAcesso(req, {
+                evento: "PASSKEY_LOGIN_FALHA",
+                status: 401,
+                email: decoded.email,
+                usuarioId: passkey.usuarioId,
+                detalhe: "Credencial não pertence ao e-mail informado",
+            });
+            return res.status(401).json({ erro: "Credencial inválida" });
+        }
+
+        const validacao = await validarUsuarioAtivoPorId(req, passkey.usuarioId);
+        if (validacao.erro) {
+            return res.status(validacao.erro.status).json(validacao.erro.body);
+        }
+
+        const verification = await verifyAuthenticationResponse({
+            response,
+            expectedChallenge: decoded.challenge,
+            expectedOrigin: getExpectedOrigin(),
+            expectedRPID: getRpID(),
+            credential: {
+                id: passkey.credentialId,
+                publicKey: new Uint8Array(passkey.publicKey),
+                counter: passkey.counter,
+                transports: parseTransports(passkey.transports),
+            },
+            requireUserVerification: true,
+        });
+
+        const { verified, authenticationInfo } = verification;
+
+        if (!verified) {
+            logAcesso(req, {
+                evento: "PASSKEY_LOGIN_FALHA",
+                status: 401,
+                usuarioId: passkey.usuarioId,
+                email: passkey.usuario.email,
+                detalhe: "Verificação WebAuthn falhou",
+            });
+            return res.status(401).json({ erro: "Falha ao autenticar com biometria" });
+        }
+
+        await prisma.passkey.update({
+            where: { id: passkey.id },
+            data: {
+                counter: authenticationInfo.newCounter,
+                atualizadoEm: new Date(),
+            },
+        });
+
+        logAcesso(req, {
+            evento: "PASSKEY_LOGIN_OK",
+            status: 200,
+            usuarioId: passkey.usuarioId,
+            email: passkey.usuario.email,
+        });
+
+        const payload = await montarRespostaLogin(req, passkey.usuario);
+        return res.json(payload);
+    } catch (e) {
+        console.error("passkeyLoginVerify error:", e);
+        logAcesso(req, {
+            evento: "PASSKEY_LOGIN_ERRO",
+            status: 500,
+            detalhe: e?.message || String(e),
+        });
+        return res.status(500).json({ erro: "Erro ao autenticar com biometria" });
     }
 }
 
@@ -264,7 +727,6 @@ export async function forgotPassword(req, res) {
 
         const link = appUrl(`/reset-password.html?token=${raw}`);
 
-        // ✅ NÃO derruba se SMTP não estiver configurado
         if (isSmtpConfigured()) {
             await sendEmail({
                 to: u.email,

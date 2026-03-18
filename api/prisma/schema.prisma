@@ -122,6 +122,7 @@ model Usuario {
 
   // ✅ NOVO: mídia desbloqueada (foto/áudio se quiser)
   midiasDesbloqueadas MidiaDesbloqueada[]
+  passkeys            Passkey[]
 
   @@index([ativo])
   @@index([role])
@@ -671,4 +672,22 @@ model WalletTx {
 
   @@index([userId, origem, refId])
   @@index([criadoEm])
+}
+
+model Passkey {
+  id             String   @id @default(cuid())
+  usuarioId      String
+  webauthnUserId String   @unique
+  credentialId   String   @unique
+  publicKey      Bytes
+  counter        Int
+  deviceType     String
+  backedUp       Boolean
+  transports     String?
+  criadoEm       DateTime @default(now())
+  atualizadoEm   DateTime @updatedAt
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
 }
