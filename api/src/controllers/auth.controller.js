@@ -413,7 +413,7 @@ export async function passkeyRegisterOptions(req, res) {
         const options = await generateRegistrationOptions({
             rpName: getRpName(),
             rpID: getRpID(),
-            userID: webauthnUserId,
+            userID: Buffer.from(webauthnUserId, "utf8"),
             userName: usuario.email,
             userDisplayName: usuario.email,
             timeout: 60000,
