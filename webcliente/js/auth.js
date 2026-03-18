@@ -1,4 +1,4 @@
-import { startAuthentication } from "https://esm.sh/@simplewebauthn/browser@13.1.1?bundle";
+const { startAuthentication } = window.SimpleWebAuthnBrowser;
 import { apiFetch, setToken } from "./api.js";
 
 const form = document.getElementById("formLogin");

@@ -1,5 +1,5 @@
 // app/js/perfil.js
-import { startRegistration } from "https://esm.sh/@simplewebauthn/browser@13.1.1?bundle";
+const { startRegistration } = window.SimpleWebAuthnBrowser;
 import { apiFetch, logout } from "./api.js";
 
 const msg = document.getElementById("msg");
