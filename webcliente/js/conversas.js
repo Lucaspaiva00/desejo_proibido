@@ -1654,17 +1654,47 @@ inputFoto?.addEventListener("change", async () => {
     }
 });
 
-// ÁUDIO
+// ÁUDIO — estilo segurar para gravar
 let mediaRecorder = null;
 let audioChunks = [];
 let audioStream = null;
+let isRecordingAudio = false;
+let isAudioStarting = false;
+let audioPressStartedAt = 0;
+let activeAudioPointerId = null;
 
-btnAudio?.addEventListener("mousedown", iniciarGravacao);
-btnAudio?.addEventListener("mouseup", pararGravacao);
-btnAudio?.addEventListener("touchstart", iniciarGravacao, { passive: true });
-btnAudio?.addEventListener("touchend", pararGravacao);
+const MIN_AUDIO_MS = 500;
 
-async function iniciarGravacao() {
+function resetAudioUI() {
+    btnAudio?.classList.remove("gravando");
+    if (btnAudio) {
+        btnAudio.disabled = false;
+        btnAudio.textContent = "🎙️";
+    }
+}
+
+function stopAudioTracks() {
+    try {
+        audioStream?.getTracks()?.forEach((t) => t.stop());
+    } catch { }
+    audioStream = null;
+}
+
+function getSupportedAudioMimeType() {
+    const mimeCandidates = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/mp4",
+        "video/webm",
+    ];
+
+    return mimeCandidates.find((t) => window.MediaRecorder?.isTypeSupported?.(t)) || "";
+}
+
+async function iniciarGravacao(ev) {
+    ev?.preventDefault?.();
+    ev?.stopPropagation?.();
+
     if (!state.conversaId) return;
 
     if (!state.premiumAtivo && !state.chatLiberado) {
@@ -1672,50 +1702,95 @@ async function iniciarGravacao() {
         return;
     }
 
+    if (isRecordingAudio || isAudioStarting) return;
+
     try {
+        isAudioStarting = true;
+        activeAudioPointerId = ev?.pointerId ?? null;
+        audioPressStartedAt = Date.now();
+
         audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-        const mimeCandidates = ["audio/webm;codecs=opus", "audio/webm", "video/webm"];
-        const mimeType = mimeCandidates.find(t => window.MediaRecorder?.isTypeSupported?.(t));
-
-        mediaRecorder = new MediaRecorder(audioStream, mimeType ? { mimeType } : undefined);
+        const mimeType = getSupportedAudioMimeType();
+        mediaRecorder = mimeType
+            ? new MediaRecorder(audioStream, { mimeType })
+            : new MediaRecorder(audioStream);
 
         audioChunks = [];
+
         mediaRecorder.ondataavailable = (e) => {
-            if (e.data && e.data.size > 0) audioChunks.push(e.data);
+            if (e.data && e.data.size > 0) {
+                audioChunks.push(e.data);
+            }
+        };
+
+        mediaRecorder.onerror = (e) => {
+            console.error("MediaRecorder error:", e);
         };
 
         mediaRecorder.start();
-        btnAudio.classList.add("gravando");
+        isRecordingAudio = true;
+
+        if (btnAudio) {
+            btnAudio.classList.add("gravando");
+            btnAudio.textContent = "🎙️";
+        }
     } catch (e) {
         console.error(e);
-        alert("Erro ao acessar microfone");
+        stopAudioTracks();
+        mediaRecorder = null;
+        audioChunks = [];
+        activeAudioPointerId = null;
+        alert("Erro ao acessar microfone.");
+    } finally {
+        isAudioStarting = false;
     }
 }
 
-async function pararGravacao() {
-    if (!mediaRecorder) return;
+async function pararGravacao(ev) {
+    ev?.preventDefault?.();
+    ev?.stopPropagation?.();
 
-    mediaRecorder.onstop = async () => {
+    if (ev?.pointerId != null && activeAudioPointerId != null && ev.pointerId !== activeAudioPointerId) {
+        return;
+    }
+
+    if (!mediaRecorder || !isRecordingAudio) return;
+
+    const elapsed = Date.now() - audioPressStartedAt;
+    const recorder = mediaRecorder;
+
+    isRecordingAudio = false;
+    activeAudioPointerId = null;
+
+    recorder.onstop = async () => {
         try {
-            btnAudio.classList.remove("gravando");
+            resetAudioUI();
+            stopAudioTracks();
 
-            try { audioStream?.getTracks()?.forEach(t => t.stop()); } catch { }
-            audioStream = null;
-
-            if (!audioChunks.length) {
-                alert("Áudio vazio. Segure o botão por mais tempo.");
+            if (elapsed < MIN_AUDIO_MS) {
+                audioChunks = [];
                 mediaRecorder = null;
                 return;
             }
 
-            const blobType = mediaRecorder.mimeType || "audio/webm";
+            if (!audioChunks.length) {
+                mediaRecorder = null;
+                return;
+            }
+
+            const blobType = recorder.mimeType || "audio/webm";
             const blob = new Blob(audioChunks, { type: blobType });
 
             if (!blob.size) {
-                alert("Áudio vazio. Tente novamente.");
                 mediaRecorder = null;
+                audioChunks = [];
                 return;
+            }
+
+            if (btnAudio) {
+                btnAudio.disabled = true;
+                btnAudio.textContent = "Enviando...";
             }
 
             const ext = blobType.includes("mp4") ? "mp4" : "webm";
@@ -1729,11 +1804,17 @@ async function pararGravacao() {
             const responseUpload = await fetch(
                 `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/video/upload`,
                 { method: "POST", body: formData }
-            ).then((r) => r.json());
+            ).then(async (r) => {
+                const json = await r.json();
+                if (!r.ok) throw new Error(json?.error?.message || "Erro no upload do áudio");
+                return json;
+            });
 
-            if (responseUpload.error) throw new Error(responseUpload.error.message);
+            if (responseUpload.error) {
+                throw new Error(responseUpload.error.message);
+            }
 
-            const mediaPath = responseUpload.public_id + "." + responseUpload.format;
+            const mediaPath = `${responseUpload.public_id}.${responseUpload.format}`;
 
             await apiFetch("/mensagens/audio", {
                 method: "POST",
@@ -1747,12 +1828,53 @@ async function pararGravacao() {
         } finally {
             mediaRecorder = null;
             audioChunks = [];
+            resetAudioUI();
         }
     };
 
-    try { mediaRecorder.stop(); } catch { }
+    try {
+        recorder.stop();
+    } catch (e) {
+        console.error("Erro ao parar gravação:", e);
+        mediaRecorder = null;
+        audioChunks = [];
+        stopAudioTracks();
+        resetAudioUI();
+    }
 }
 
+function cancelarGravacao(ev) {
+    ev?.preventDefault?.();
+    ev?.stopPropagation?.();
+
+    if (ev?.pointerId != null && activeAudioPointerId != null && ev.pointerId !== activeAudioPointerId) {
+        return;
+    }
+
+    if (!mediaRecorder) return;
+
+    try {
+        mediaRecorder.onstop = null;
+        if (mediaRecorder.state !== "inactive") {
+            mediaRecorder.stop();
+        }
+    } catch { }
+
+    mediaRecorder = null;
+    audioChunks = [];
+    isRecordingAudio = false;
+    activeAudioPointerId = null;
+    stopAudioTracks();
+    resetAudioUI();
+}
+
+btnAudio?.addEventListener("contextmenu", (e) => e.preventDefault());
+btnAudio?.addEventListener("dragstart", (e) => e.preventDefault());
+
+btnAudio?.addEventListener("pointerdown", iniciarGravacao);
+btnAudio?.addEventListener("pointerup", pararGravacao);
+btnAudio?.addEventListener("pointercancel", cancelarGravacao);
+btnAudio?.addEventListener("pointerleave", pararGravacao); 
 // ==============================
 // Init
 // ==============================
