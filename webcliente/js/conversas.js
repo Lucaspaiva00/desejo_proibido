@@ -1790,7 +1790,7 @@ async function pararGravacao(ev) {
 
             if (btnAudio) {
                 btnAudio.disabled = true;
-                btnAudio.textContent = "Enviando...";
+                // btnAudio.textContent = "Enviando...";
             }
 
             const ext = blobType.includes("mp4") ? "mp4" : "webm";
