@@ -1668,11 +1668,13 @@ let isAudioStarting = false;
 let audioPressStartedAt = 0;
 let activeAudioPointerId = null;
 let audioWasCanceled = false;
+let isPointerOverCancel = false;
 
 const MIN_AUDIO_MS = 500;
 
 function resetAudioUI() {
     btnAudio?.classList.remove("gravando");
+    btnCancelarAudio?.classList.remove("is-hover");
 
     if (btnAudio) {
         btnAudio.disabled = false;
@@ -1680,6 +1682,7 @@ function resetAudioUI() {
     }
 
     hideCancelAudioButton();
+    isPointerOverCancel = false;
 }
 
 function showCancelAudioButton() {
@@ -1692,6 +1695,7 @@ function hideCancelAudioButton() {
     if (!btnCancelarAudio) return;
     btnCancelarAudio.hidden = true;
     btnCancelarAudio.classList.remove("show");
+    btnCancelarAudio.classList.remove("is-hover");
 }
 
 function stopAudioTracks() {
@@ -1712,6 +1716,45 @@ function getSupportedAudioMimeType() {
     return mimeCandidates.find((t) => window.MediaRecorder?.isTypeSupported?.(t)) || "";
 }
 
+function isEventOverCancelButton(ev) {
+    if (!btnCancelarAudio || btnCancelarAudio.hidden) return false;
+
+    const x = ev?.clientX;
+    const y = ev?.clientY;
+
+    if (typeof x !== "number" || typeof y !== "number") return false;
+
+    const rect = btnCancelarAudio.getBoundingClientRect();
+
+    return (
+        x >= rect.left &&
+        x <= rect.right &&
+        y >= rect.top &&
+        y <= rect.bottom
+    );
+}
+
+function updateCancelHover(ev) {
+    const overCancel = isEventOverCancelButton(ev);
+    isPointerOverCancel = overCancel;
+
+    if (btnCancelarAudio) {
+        btnCancelarAudio.classList.toggle("is-hover", overCancel);
+    }
+}
+
+function detachAudioDragListeners() {
+    document.removeEventListener("pointermove", handleAudioPointerMove, true);
+    document.removeEventListener("pointerup", handleAudioPointerUp, true);
+    document.removeEventListener("pointercancel", handleAudioPointerCancel, true);
+}
+
+function attachAudioDragListeners() {
+    document.addEventListener("pointermove", handleAudioPointerMove, true);
+    document.addEventListener("pointerup", handleAudioPointerUp, true);
+    document.addEventListener("pointercancel", handleAudioPointerCancel, true);
+}
+
 async function iniciarGravacao(ev) {
     ev?.preventDefault?.();
     ev?.stopPropagation?.();
@@ -1730,6 +1773,7 @@ async function iniciarGravacao(ev) {
         activeAudioPointerId = ev?.pointerId ?? null;
         audioPressStartedAt = Date.now();
         audioWasCanceled = false;
+        isPointerOverCancel = false;
 
         if (!navigator.mediaDevices?.getUserMedia) {
             throw new Error("getUserMedia não suportado neste navegador");
@@ -1758,6 +1802,7 @@ async function iniciarGravacao(ev) {
 
         isRecordingAudio = true;
         showCancelAudioButton();
+        attachAudioDragListeners();
 
         if (btnAudio) {
             btnAudio.classList.add("gravando");
@@ -1773,6 +1818,8 @@ async function iniciarGravacao(ev) {
         isRecordingAudio = false;
         isAudioStarting = false;
         audioWasCanceled = false;
+        isPointerOverCancel = false;
+        detachAudioDragListeners();
 
         const errName = e?.name || "";
         if (errName === "NotAllowedError" || errName === "PermissionDeniedError") {
@@ -1811,6 +1858,7 @@ async function pararGravacao(ev) {
 
     isRecordingAudio = false;
     activeAudioPointerId = null;
+    detachAudioDragListeners();
 
     recorder.onstop = async () => {
         try {
@@ -1895,6 +1943,7 @@ async function pararGravacao(ev) {
         audioChunks = [];
         audioWasCanceled = false;
         stopAudioTracks();
+        detachAudioDragListeners();
         resetAudioUI();
     }
 }
@@ -1909,11 +1958,15 @@ function cancelarGravacao(ev) {
 
     if (!mediaRecorder) {
         audioWasCanceled = false;
+        detachAudioDragListeners();
         resetAudioUI();
         return;
     }
 
     audioWasCanceled = true;
+    isRecordingAudio = false;
+    activeAudioPointerId = null;
+    detachAudioDragListeners();
 
     try {
         mediaRecorder.onstop = null;
@@ -1927,24 +1980,50 @@ function cancelarGravacao(ev) {
 
     mediaRecorder = null;
     audioChunks = [];
-    isRecordingAudio = false;
     isAudioStarting = false;
     audioPressStartedAt = 0;
-    activeAudioPointerId = null;
 
     stopAudioTracks();
     resetAudioUI();
+}
+
+function handleAudioPointerMove(ev) {
+    if (!isRecordingAudio) return;
+    if (ev?.pointerId != null && activeAudioPointerId != null && ev.pointerId !== activeAudioPointerId) {
+        return;
+    }
+
+    updateCancelHover(ev);
+}
+
+function handleAudioPointerUp(ev) {
+    if (!isRecordingAudio) return;
+    if (ev?.pointerId != null && activeAudioPointerId != null && ev.pointerId !== activeAudioPointerId) {
+        return;
+    }
+
+    if (isEventOverCancelButton(ev)) {
+        cancelarGravacao(ev);
+    } else {
+        pararGravacao(ev);
+    }
+}
+
+function handleAudioPointerCancel(ev) {
+    if (!isRecordingAudio) return;
+    if (ev?.pointerId != null && activeAudioPointerId != null && ev.pointerId !== activeAudioPointerId) {
+        return;
+    }
+
+    cancelarGravacao(ev);
 }
 
 btnAudio?.addEventListener("contextmenu", (e) => e.preventDefault());
 btnAudio?.addEventListener("dragstart", (e) => e.preventDefault());
 
 btnAudio?.addEventListener("pointerdown", iniciarGravacao);
-btnAudio?.addEventListener("pointerup", pararGravacao);
-btnAudio?.addEventListener("pointercancel", cancelarGravacao);
 
 btnCancelarAudio?.addEventListener("click", cancelarGravacao);
-btnCancelarAudio?.addEventListener("pointerup", cancelarGravacao);
 
 // ==============================
 // Init

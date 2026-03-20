@@ -1278,3 +1278,10 @@ body.dp-no-context-menu {
     font-weight: 800;
     margin-left: 4px;
 }
+
+.cancelAudioBtn.is-hover {
+    background: rgba(193, 18, 31, 0.32);
+    border-color: rgba(193, 18, 31, 0.75);
+    transform: scale(1.08);
+    box-shadow: 0 0 18px rgba(193, 18, 31, .35);
+}
