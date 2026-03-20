@@ -72,6 +72,8 @@ const imageViewerClose = document.getElementById("imageViewerClose");
 const imageViewerImg = document.getElementById("imageViewerImg");
 const chatPanel = document.getElementById("chatPanel");
 const screenGuard = document.getElementById("screenGuard");
+const btnCancelarAudio = document.getElementById("btnCancelarAudio");
+
 
 function abrirChatMobile() {
     if (window.innerWidth <= 980) {
@@ -1670,10 +1672,24 @@ const MIN_AUDIO_MS = 500;
 
 function resetAudioUI() {
     btnAudio?.classList.remove("gravando");
+
     if (btnAudio) {
         btnAudio.disabled = false;
         btnAudio.textContent = "🎙️";
     }
+
+    hideCancelAudioButton();
+}
+function showCancelAudioButton() {
+    if (!btnCancelarAudio) return;
+    btnCancelarAudio.hidden = false;
+    btnCancelarAudio.classList.add("show");
+}
+
+function hideCancelAudioButton() {
+    if (!btnCancelarAudio) return;
+    btnCancelarAudio.hidden = true;
+    btnCancelarAudio.classList.remove("show");
 }
 
 function stopAudioTracks() {
@@ -1733,6 +1749,7 @@ async function iniciarGravacao(ev) {
 
         mediaRecorder.start();
         isRecordingAudio = true;
+        showCancelAudioButton();
 
         if (btnAudio) {
             btnAudio.classList.add("gravando");
@@ -1854,19 +1871,28 @@ function cancelarGravacao(ev) {
         return;
     }
 
-    if (!mediaRecorder) return;
+    if (!mediaRecorder) {
+        resetAudioUI();
+        return;
+    }
 
     try {
         mediaRecorder.onstop = null;
+
         if (mediaRecorder.state !== "inactive") {
             mediaRecorder.stop();
         }
-    } catch { }
+    } catch (e) {
+        console.error("Erro ao cancelar gravação:", e);
+    }
 
     mediaRecorder = null;
     audioChunks = [];
     isRecordingAudio = false;
+    isAudioStarting = false;
+    audioPressStartedAt = 0;
     activeAudioPointerId = null;
+
     stopAudioTracks();
     resetAudioUI();
 }
@@ -1877,7 +1903,9 @@ btnAudio?.addEventListener("dragstart", (e) => e.preventDefault());
 btnAudio?.addEventListener("pointerdown", iniciarGravacao);
 btnAudio?.addEventListener("pointerup", pararGravacao);
 btnAudio?.addEventListener("pointercancel", cancelarGravacao);
-btnAudio?.addEventListener("pointerleave", pararGravacao);
+btnAudio?.addEventListener("pointerleave", cancelarGravacao);
+btnCancelarAudio?.addEventListener("click", cancelarGravacao);
+
 // ==============================
 // Init
 // ==============================

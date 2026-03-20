@@ -1250,3 +1250,31 @@ body.dp-no-context-menu {
     font-weight: 800;
     margin-left: 4px;
 }
+
+.cancelAudioBtn {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #fff;
+}
+
+.cancelAudioBtn:hover {
+    background: rgba(193, 18, 31, 0.18);
+    border-color: rgba(193, 18, 31, 0.45);
+}
+
+.cancelAudioBtn.show {
+    display: inline-flex !important;
+}
+
+#btnAudio.gravando {
+    background: #C1121F;
+    transform: scale(1.08);
+    box-shadow: 0 0 16px rgba(193, 18, 31, .65);
+}
+
+#btnAudio.gravando::after {
+    content: " REC";
+    font-size: 11px;
+    font-weight: 800;
+    margin-left: 4px;
+}
