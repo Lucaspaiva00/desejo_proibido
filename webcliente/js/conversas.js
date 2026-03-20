@@ -1736,6 +1736,7 @@ async function iniciarGravacao(ev) {
             : new MediaRecorder(audioStream);
 
         audioChunks = [];
+        audioWasCanceled = false;
 
         mediaRecorder.ondataavailable = (e) => {
             if (e.data && e.data.size > 0) {
@@ -1748,6 +1749,7 @@ async function iniciarGravacao(ev) {
         };
 
         mediaRecorder.start();
+        btnAudio?.setPointerCapture?.(ev.pointerId);
         isRecordingAudio = true;
         showCancelAudioButton();
 
@@ -1788,6 +1790,13 @@ async function pararGravacao(ev) {
             resetAudioUI();
             stopAudioTracks();
 
+            if (audioWasCanceled) {
+                audioChunks = [];
+                mediaRecorder = null;
+                resetAudioUI();
+                return;
+            }
+
             if (elapsed < MIN_AUDIO_MS) {
                 audioChunks = [];
                 mediaRecorder = null;
@@ -1810,7 +1819,6 @@ async function pararGravacao(ev) {
 
             if (btnAudio) {
                 btnAudio.disabled = true;
-                // btnAudio.textContent = "Enviando...";
             }
 
             const ext = blobType.includes("mp4") ? "mp4" : "webm";
@@ -1848,9 +1856,16 @@ async function pararGravacao(ev) {
         } finally {
             mediaRecorder = null;
             audioChunks = [];
+            audioWasCanceled = false;
             resetAudioUI();
         }
     };
+
+    try {
+        if (ev?.pointerId != null) {
+            btnAudio?.releasePointerCapture?.(ev.pointerId);
+        }
+    } catch { }
 
     try {
         recorder.stop();
@@ -1876,6 +1891,8 @@ function cancelarGravacao(ev) {
         return;
     }
 
+    audioWasCanceled = true;
+
     try {
         mediaRecorder.onstop = null;
 
@@ -1896,15 +1913,15 @@ function cancelarGravacao(ev) {
     stopAudioTracks();
     resetAudioUI();
 }
-
 btnAudio?.addEventListener("contextmenu", (e) => e.preventDefault());
 btnAudio?.addEventListener("dragstart", (e) => e.preventDefault());
 
 btnAudio?.addEventListener("pointerdown", iniciarGravacao);
 btnAudio?.addEventListener("pointerup", pararGravacao);
 btnAudio?.addEventListener("pointercancel", cancelarGravacao);
-btnAudio?.addEventListener("pointerleave", cancelarGravacao);
+
 btnCancelarAudio?.addEventListener("click", cancelarGravacao);
+btnCancelarAudio?.addEventListener("pointerup", cancelarGravacao);
 
 // ==============================
 // Init
