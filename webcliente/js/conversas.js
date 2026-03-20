@@ -1667,6 +1667,7 @@ let isRecordingAudio = false;
 let isAudioStarting = false;
 let audioPressStartedAt = 0;
 let activeAudioPointerId = null;
+let audioWasCanceled = false;
 
 const MIN_AUDIO_MS = 500;
 
@@ -1680,6 +1681,7 @@ function resetAudioUI() {
 
     hideCancelAudioButton();
 }
+
 function showCancelAudioButton() {
     if (!btnCancelarAudio) return;
     btnCancelarAudio.hidden = false;
@@ -1727,6 +1729,11 @@ async function iniciarGravacao(ev) {
         isAudioStarting = true;
         activeAudioPointerId = ev?.pointerId ?? null;
         audioPressStartedAt = Date.now();
+        audioWasCanceled = false;
+
+        if (!navigator.mediaDevices?.getUserMedia) {
+            throw new Error("getUserMedia não suportado neste navegador");
+        }
 
         audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
@@ -1736,7 +1743,6 @@ async function iniciarGravacao(ev) {
             : new MediaRecorder(audioStream);
 
         audioChunks = [];
-        audioWasCanceled = false;
 
         mediaRecorder.ondataavailable = (e) => {
             if (e.data && e.data.size > 0) {
@@ -1749,7 +1755,7 @@ async function iniciarGravacao(ev) {
         };
 
         mediaRecorder.start();
-        btnAudio?.setPointerCapture?.(ev.pointerId);
+
         isRecordingAudio = true;
         showCancelAudioButton();
 
@@ -1758,11 +1764,32 @@ async function iniciarGravacao(ev) {
             btnAudio.textContent = "🎙️";
         }
     } catch (e) {
-        console.error(e);
+        console.error("Erro ao iniciar gravação:", e);
+
         stopAudioTracks();
         mediaRecorder = null;
         audioChunks = [];
         activeAudioPointerId = null;
+        isRecordingAudio = false;
+        isAudioStarting = false;
+        audioWasCanceled = false;
+
+        const errName = e?.name || "";
+        if (errName === "NotAllowedError" || errName === "PermissionDeniedError") {
+            alert("Permissão do microfone negada. Libere o acesso ao microfone no navegador.");
+            return;
+        }
+
+        if (errName === "NotFoundError" || errName === "DevicesNotFoundError") {
+            alert("Nenhum microfone foi encontrado no dispositivo.");
+            return;
+        }
+
+        if (errName === "NotReadableError" || errName === "TrackStartError") {
+            alert("O microfone está em uso por outro aplicativo ou não pôde ser acessado.");
+            return;
+        }
+
         alert("Erro ao acessar microfone.");
     } finally {
         isAudioStarting = false;
@@ -1793,7 +1820,6 @@ async function pararGravacao(ev) {
             if (audioWasCanceled) {
                 audioChunks = [];
                 mediaRecorder = null;
-                resetAudioUI();
                 return;
             }
 
@@ -1851,7 +1877,7 @@ async function pararGravacao(ev) {
 
             await carregarMensagens({ forceRender: true });
         } catch (e) {
-            console.error(e);
+            console.error("Erro ao enviar áudio:", e);
             alert("Erro ao enviar áudio: " + (e?.message || "erro"));
         } finally {
             mediaRecorder = null;
@@ -1862,17 +1888,12 @@ async function pararGravacao(ev) {
     };
 
     try {
-        if (ev?.pointerId != null) {
-            btnAudio?.releasePointerCapture?.(ev.pointerId);
-        }
-    } catch { }
-
-    try {
         recorder.stop();
     } catch (e) {
         console.error("Erro ao parar gravação:", e);
         mediaRecorder = null;
         audioChunks = [];
+        audioWasCanceled = false;
         stopAudioTracks();
         resetAudioUI();
     }
@@ -1887,6 +1908,7 @@ function cancelarGravacao(ev) {
     }
 
     if (!mediaRecorder) {
+        audioWasCanceled = false;
         resetAudioUI();
         return;
     }
@@ -1913,6 +1935,7 @@ function cancelarGravacao(ev) {
     stopAudioTracks();
     resetAudioUI();
 }
+
 btnAudio?.addEventListener("contextmenu", (e) => e.preventDefault());
 btnAudio?.addEventListener("dragstart", (e) => e.preventDefault());
 
