@@ -1209,13 +1209,34 @@ async function garantirPresentesCache(force = false) {
     return state.presentesCache || [];
 }
 
-function encontrarPresenteRapido(itens, btn) {
-    const nomeBotao = normalizarTexto(btn?.dataset?.name);
+function renderQuickGifts(itens = []) {
+    if (!quickGiftsBar) return;
 
-    return itens.find((p) => {
-        const nome = normalizarTexto(p.nome);
-        return nome === nomeBotao;
-    });
+    if (!Array.isArray(itens) || !itens.length) {
+        quickGiftsBar.innerHTML = `<div class="muted">Nenhum presente disponível.</div>`;
+        return;
+    }
+
+    quickGiftsBar.innerHTML = itens.map((p) => {
+        const img = p.imagemUrl || `/assets/presentes/${p.slug || "presente"}.png`;
+        const nome = p.nome || "Presente";
+        const custo = Number(p.custoCreditos || 0);
+        const saldo = Number(state.saldoCreditos || 0);
+        const disabled = custo > saldo;
+
+        return `
+            <button
+                class="quickGiftBtn ${disabled ? "is-disabled" : ""}"
+                data-id="${p.id}"
+                type="button"
+                title="${escapeHtml(nome)} - ${custo} créditos"
+                aria-label="${escapeHtml(nome)} - ${custo} créditos"
+                ${disabled ? "disabled" : ""}
+            >
+                <img src="${img}" alt="${escapeHtml(nome)}">
+            </button>
+        `;
+    }).join("");
 }
 
 async function carregarPresentes() {
@@ -1223,6 +1244,8 @@ async function carregarPresentes() {
 
     try {
         const itens = await garantirPresentesCache();
+
+        renderQuickGifts(itens);
 
         if (!itens.length) {
             giftList.innerHTML = `<div class="muted">Nenhum presente cadastrado.</div>`;
@@ -1282,34 +1305,14 @@ quickGiftsBar?.addEventListener("click", async (e) => {
         return;
     }
 
-    if (btn.dataset.open === "true") {
-        await carregarPresentes();
-        openGiftModal();
-        return;
-    }
+    const presenteId = btn.dataset.id;
+    if (!presenteId || btn.disabled) return;
 
     try {
         btn.disabled = true;
-
-        const itens = await garantirPresentesCache();
-        const presente = encontrarPresenteRapido(itens, btn);
-
-        if (!presente) {
-            alert("Esse presente rápido não foi encontrado no cadastro.");
-            return;
-        }
-
-        const custo = Number(presente.custoCreditos || 0);
-        const saldo = Number(state.saldoCreditos || 0);
-
-        if (custo > saldo) {
-            alert("Saldo insuficiente pra enviar esse presente.");
-            return;
-        }
-
-        await enviarPresente(presente.id);
+        await enviarPresente(presenteId);
     } catch (e) {
-        alert("Erro ao enviar presente rápido: " + (e?.message || "erro"));
+        alert("Erro ao enviar presente: " + (e?.message || "erro"));
     } finally {
         btn.disabled = false;
     }
@@ -1874,12 +1877,13 @@ btnAudio?.addEventListener("dragstart", (e) => e.preventDefault());
 btnAudio?.addEventListener("pointerdown", iniciarGravacao);
 btnAudio?.addEventListener("pointerup", pararGravacao);
 btnAudio?.addEventListener("pointercancel", cancelarGravacao);
-btnAudio?.addEventListener("pointerleave", pararGravacao); 
+btnAudio?.addEventListener("pointerleave", pararGravacao);
 // ==============================
 // Init
 // ==============================
 await checarPremium();
 await carregarConversas();
+await carregarPresentes();
 
 enableChatProtection();
 hideScreenGuard();
