@@ -1239,7 +1239,10 @@ function renderQuickGifts(itens = []) {
                 aria-label="${escapeHtml(nome)} - ${custo} créditos"
                 ${disabled ? "disabled" : ""}
             >
-                <img src="${img}" alt="${escapeHtml(nome)}">
+                <span class="quickGiftIconWrap">
+                    <img src="${img}" alt="${escapeHtml(nome)}">
+                </span>
+                <span class="quickGiftPrice">${custo}</span>
             </button>
         `;
     }).join("");

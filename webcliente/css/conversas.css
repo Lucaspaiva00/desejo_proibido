@@ -800,19 +800,31 @@
 
 .quickGiftBtn {
     flex: 0 0 auto;
-    width: 62px;
-    height: 62px;
+    width: 70px;
+    min-height: 82px;
+    padding: 6px 6px 8px;
     border-radius: 14px;
     background:
         radial-gradient(120px 90px at 30% 25%, rgba(255, 255, 255, .10), transparent 60%),
         linear-gradient(180deg, #3a000a, #1d0005);
     border: 1px solid rgba(193, 18, 31, .22);
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 4px;
     cursor: pointer;
     transition: transform .15s ease, box-shadow .15s ease, filter .15s ease, opacity .15s ease;
     box-shadow: 0 8px 18px rgba(0, 0, 0, .42);
+}
+
+.quickGiftIconWrap {
+    width: 46px;
+    height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
 }
 
 .quickGiftBtn img {
@@ -821,6 +833,16 @@
     object-fit: contain;
     pointer-events: none;
     background: transparent;
+}
+
+.quickGiftPrice {
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+    color: #ffd7a8;
+    text-align: center;
+    white-space: nowrap;
+    text-shadow: 0 0 10px rgba(255, 170, 80, .18);
 }
 
 .quickGiftBtn:hover {
@@ -1126,14 +1148,25 @@
     }
 
     .quickGiftBtn {
-        width: 48px;
-        height: 48px;
+        width: 58px;
+        min-height: 72px;
+        padding: 5px 4px 7px;
         border-radius: 12px;
+        gap: 3px;
+    }
+
+    .quickGiftIconWrap {
+        width: 34px;
+        height: 34px;
     }
 
     .quickGiftBtn img {
         width: 30px;
         height: 30px;
+    }
+
+    .quickGiftPrice {
+        font-size: 10px;
     }
 
     .audioRecorderBar {
