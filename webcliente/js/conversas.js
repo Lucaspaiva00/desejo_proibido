@@ -20,6 +20,7 @@ const chatStatus = document.getElementById("chatStatus");
 const msgs = document.getElementById("msgs");
 const texto = document.getElementById("texto");
 const btnEnviar = document.getElementById("btnEnviar");
+const composer = document.getElementById("composer");
 
 // ✅ Mídia
 const btnFoto = document.getElementById("btnFoto");
@@ -74,6 +75,11 @@ const chatPanel = document.getElementById("chatPanel");
 const screenGuard = document.getElementById("screenGuard");
 const btnCancelarAudio = document.getElementById("btnCancelarAudio");
 
+// NOVA UI DE GRAVAÇÃO
+const audioRecorderBar = document.getElementById("audioRecorderBar");
+const audioRecorderTime = document.getElementById("audioRecorderTime");
+const audioRecorderSlide = document.getElementById("audioRecorderSlide");
+const audioRecorderHint = document.getElementById("audioRecorderHint");
 
 function abrirChatMobile() {
     if (window.innerWidth <= 980) {
@@ -496,8 +502,6 @@ function buildMessagesHash(items) {
         prevId: prev?.id || "",
     });
 }
-
-
 
 // presentes modal
 function openGiftModal() {
@@ -1672,6 +1676,87 @@ let isPointerOverCancel = false;
 
 const MIN_AUDIO_MS = 500;
 
+// NOVAS VARIÁVEIS DA UI
+let audioStartX = 0;
+let audioCurrentDeltaX = 0;
+const AUDIO_CANCEL_THRESHOLD = 110;
+let audioRecTimer = null;
+let audioRecSeconds = 0;
+
+function formatAudioTime(totalSeconds) {
+    const min = Math.floor(totalSeconds / 60);
+    const sec = totalSeconds % 60;
+    return `${min}:${String(sec).padStart(2, "0")}`;
+}
+
+function startAudioTimer() {
+    stopAudioTimer();
+    audioRecSeconds = 0;
+    if (audioRecorderTime) audioRecorderTime.textContent = "0:00";
+
+    audioRecTimer = setInterval(() => {
+        audioRecSeconds += 1;
+        if (audioRecorderTime) {
+            audioRecorderTime.textContent = formatAudioTime(audioRecSeconds);
+        }
+    }, 1000);
+}
+
+function stopAudioTimer() {
+    if (audioRecTimer) clearInterval(audioRecTimer);
+    audioRecTimer = null;
+}
+
+function showAudioRecordingUI() {
+    composer?.classList.add("is-recording");
+    if (audioRecorderBar) {
+        audioRecorderBar.hidden = false;
+        audioRecorderBar.setAttribute("aria-hidden", "false");
+    }
+    if (audioRecorderTime) audioRecorderTime.textContent = "0:00";
+    if (audioRecorderSlide) {
+        audioRecorderSlide.style.transform = "translateX(0px)";
+        audioRecorderSlide.style.opacity = "1";
+        audioRecorderSlide.classList.remove("is-canceling");
+    }
+    if (audioRecorderHint) {
+        audioRecorderHint.textContent = "Deslize para cancelar";
+    }
+}
+
+function hideAudioRecordingUI() {
+    composer?.classList.remove("is-recording");
+    if (audioRecorderBar) {
+        audioRecorderBar.hidden = true;
+        audioRecorderBar.setAttribute("aria-hidden", "true");
+    }
+    if (audioRecorderSlide) {
+        audioRecorderSlide.style.transform = "translateX(0px)";
+        audioRecorderSlide.style.opacity = "1";
+        audioRecorderSlide.classList.remove("is-canceling");
+    }
+    if (audioRecorderHint) {
+        audioRecorderHint.textContent = "Deslize para cancelar";
+    }
+}
+
+function updateAudioSlideUI(deltaX) {
+    if (!audioRecorderSlide) return;
+
+    const limited = Math.max(deltaX, -160);
+    const opacity = Math.max(0.18, 1 - Math.abs(limited) / 170);
+
+    audioRecorderSlide.style.transform = `translateX(${limited}px)`;
+    audioRecorderSlide.style.opacity = String(opacity);
+
+    const canceling = deltaX <= -AUDIO_CANCEL_THRESHOLD;
+    audioRecorderSlide.classList.toggle("is-canceling", canceling);
+
+    if (audioRecorderHint) {
+        audioRecorderHint.textContent = canceling ? "Solte para cancelar" : "Deslize para cancelar";
+    }
+}
+
 function resetAudioUI() {
     btnAudio?.classList.remove("gravando");
     btnCancelarAudio?.classList.remove("is-hover");
@@ -1682,7 +1767,12 @@ function resetAudioUI() {
     }
 
     hideCancelAudioButton();
+    hideAudioRecordingUI();
+    stopAudioTimer();
+
     isPointerOverCancel = false;
+    audioCurrentDeltaX = 0;
+    audioStartX = 0;
 }
 
 function showCancelAudioButton() {
@@ -1755,6 +1845,13 @@ function attachAudioDragListeners() {
     document.addEventListener("pointercancel", handleAudioPointerCancel, true);
 }
 
+function getClientXFromEvent(ev) {
+    if (typeof ev?.clientX === "number") return ev.clientX;
+    if (ev?.touches?.[0] && typeof ev.touches[0].clientX === "number") return ev.touches[0].clientX;
+    if (ev?.changedTouches?.[0] && typeof ev.changedTouches[0].clientX === "number") return ev.changedTouches[0].clientX;
+    return 0;
+}
+
 async function iniciarGravacao(ev) {
     ev?.preventDefault?.();
     ev?.stopPropagation?.();
@@ -1774,6 +1871,9 @@ async function iniciarGravacao(ev) {
         audioPressStartedAt = Date.now();
         audioWasCanceled = false;
         isPointerOverCancel = false;
+
+        audioStartX = getClientXFromEvent(ev);
+        audioCurrentDeltaX = 0;
 
         if (!navigator.mediaDevices?.getUserMedia) {
             throw new Error("getUserMedia não suportado neste navegador");
@@ -1801,7 +1901,9 @@ async function iniciarGravacao(ev) {
         mediaRecorder.start();
 
         isRecordingAudio = true;
-        showCancelAudioButton();
+        showCancelAudioButton(); // mantido para não quebrar funcionalidade existente
+        showAudioRecordingUI();
+        startAudioTimer();
         attachAudioDragListeners();
 
         if (btnAudio) {
@@ -1820,6 +1922,7 @@ async function iniciarGravacao(ev) {
         audioWasCanceled = false;
         isPointerOverCancel = false;
         detachAudioDragListeners();
+        resetAudioUI();
 
         const errName = e?.name || "";
         if (errName === "NotAllowedError" || errName === "PermissionDeniedError") {
@@ -1859,6 +1962,7 @@ async function pararGravacao(ev) {
     isRecordingAudio = false;
     activeAudioPointerId = null;
     detachAudioDragListeners();
+    stopAudioTimer();
 
     recorder.onstop = async () => {
         try {
@@ -1967,6 +2071,7 @@ function cancelarGravacao(ev) {
     isRecordingAudio = false;
     activeAudioPointerId = null;
     detachAudioDragListeners();
+    stopAudioTimer();
 
     try {
         mediaRecorder.onstop = null;
@@ -1982,6 +2087,7 @@ function cancelarGravacao(ev) {
     audioChunks = [];
     isAudioStarting = false;
     audioPressStartedAt = 0;
+    audioCurrentDeltaX = 0;
 
     stopAudioTracks();
     resetAudioUI();
@@ -1994,6 +2100,21 @@ function handleAudioPointerMove(ev) {
     }
 
     updateCancelHover(ev);
+
+    const currentX = getClientXFromEvent(ev);
+    audioCurrentDeltaX = currentX - audioStartX;
+
+    if (audioCurrentDeltaX < 0) {
+        updateAudioSlideUI(audioCurrentDeltaX);
+    } else {
+        updateAudioSlideUI(0);
+    }
+
+    if (audioCurrentDeltaX <= -AUDIO_CANCEL_THRESHOLD) {
+        audioWasCanceled = true;
+    } else {
+        audioWasCanceled = false;
+    }
 }
 
 function handleAudioPointerUp(ev) {
@@ -2002,7 +2123,10 @@ function handleAudioPointerUp(ev) {
         return;
     }
 
-    if (isEventOverCancelButton(ev)) {
+    const canceledBySlide = audioCurrentDeltaX <= -AUDIO_CANCEL_THRESHOLD;
+    const canceledByOldButton = isEventOverCancelButton(ev);
+
+    if (canceledBySlide || canceledByOldButton) {
         cancelarGravacao(ev);
     } else {
         pararGravacao(ev);

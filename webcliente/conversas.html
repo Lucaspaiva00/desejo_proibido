@@ -8,8 +8,6 @@
 
   <link rel="stylesheet" href="css/dating.css" />
   <link rel="stylesheet" href="css/conversas.css" />
-
-
 </head>
 
 <body>
@@ -189,20 +187,41 @@
         </div>
 
         <!-- composer -->
-        <div class="composer">
+        <div class="composer" id="composer">
           <button class="iconbtn" id="btnFoto" title="Enviar foto" aria-label="Enviar foto">📷</button>
+
           <button class="iconbtn" id="btnAudio" type="button" title="Segure para gravar áudio"
             aria-label="Segure para gravar áudio">🎙️</button>
 
+          <!-- Mantido para não apagar funcionalidade existente -->
           <button class="iconbtn cancelAudioBtn" id="btnCancelarAudio" type="button" title="Cancelar gravação"
             aria-label="Cancelar gravação" hidden>
             ✕
           </button>
-          
+
           <textarea id="texto" placeholder="Digite uma mensagem..." disabled></textarea>
+
           <button id="btnEnviar" class="btn btn-primary" disabled>
             Enviar
           </button>
+
+          <!-- NOVA UI DE GRAVAÇÃO -->
+          <div class="audioRecorderBar" id="audioRecorderBar" hidden aria-hidden="true">
+            <div class="audioRecorderLeft">
+              <span class="audioRecorderDot"></span>
+              <span class="audioRecorderTime" id="audioRecorderTime">0:00</span>
+            </div>
+
+            <div class="audioRecorderSlideWrap">
+              <div class="audioRecorderSlide" id="audioRecorderSlide">
+                <span class="audioRecorderArrows">≪</span>
+                <span class="audioRecorderHint" id="audioRecorderHint">Deslize para cancelar</span>
+              </div>
+            </div>
+
+            <div class="audioRecorderMic" id="audioRecorderMic" aria-hidden="true">🎙️</div>
+          </div>
+
           <input type="file" id="inputFoto" accept="image/*" hidden />
           <input type="file" id="inputAudio" accept="audio/*" hidden />
         </div>
@@ -263,8 +282,9 @@
       </div>
     </div>
   </div>
+
   <script src="/api/socket.io/socket.io.js"></script>
-  <script type="module" src="js/conversas.js?v=20260213-1"></script>
+  <script type="module" src="js/conversas.js?v=20260213-2"></script>
 
   <!-- ✅ MOBILE NAV: lista -> chat full screen -->
   <script>
@@ -340,8 +360,6 @@
       btnSairMobile.addEventListener("click", () => btnSair.click());
     }
   </script>
-
-
 </body>
 
 </html>

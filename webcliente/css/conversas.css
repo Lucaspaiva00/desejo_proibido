@@ -512,6 +512,8 @@
     background:
         radial-gradient(900px 240px at 50% 0%, rgba(193, 18, 31, .10), transparent 60%),
         linear-gradient(180deg, rgba(10, 0, 3, .95), rgba(0, 0, 0, .92));
+    position: relative;
+    align-items: center;
 }
 
 #texto {
@@ -529,6 +531,132 @@
 #texto:focus {
     border-color: rgba(193, 18, 31, .58);
     box-shadow: 0 0 0 3px rgba(193, 18, 31, .18);
+}
+
+/* NOVA UI DE ÁUDIO */
+.audioRecorderBar {
+    position: absolute;
+    inset: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 14px;
+    min-height: 52px;
+    border-radius: 18px;
+    border: 1px solid rgba(193, 18, 31, .32);
+    background:
+        radial-gradient(240px 120px at 15% 20%, rgba(255, 255, 255, .06), transparent 60%),
+        linear-gradient(180deg, rgba(26, 0, 8, .98), rgba(8, 0, 2, .98));
+    box-shadow: 0 14px 40px rgba(0, 0, 0, .46), 0 0 30px rgba(193, 18, 31, .10);
+    z-index: 5;
+}
+
+.audioRecorderBar[hidden] {
+    display: none !important;
+}
+
+.composer.is-recording #btnFoto,
+.composer.is-recording #btnAudio,
+.composer.is-recording #btnCancelarAudio,
+.composer.is-recording #texto,
+.composer.is-recording #btnEnviar {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.audioRecorderLeft {
+    min-width: 62px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.audioRecorderDot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: #ff4040;
+    box-shadow: 0 0 0 0 rgba(255, 64, 64, .6);
+    animation: dpAudioPulse 1.2s infinite;
+}
+
+@keyframes dpAudioPulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(255, 64, 64, .6);
+    }
+
+    70% {
+        transform: scale(1.06);
+        box-shadow: 0 0 0 10px rgba(255, 64, 64, 0);
+    }
+
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(255, 64, 64, 0);
+    }
+}
+
+.audioRecorderTime {
+    color: #fff;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: .2px;
+}
+
+.audioRecorderSlideWrap {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.audioRecorderSlide {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: rgba(255, 255, 255, .76);
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    transform: translateX(0);
+    opacity: 1;
+    transition: transform .08s linear, opacity .08s linear, color .14s ease;
+    will-change: transform, opacity;
+}
+
+.audioRecorderSlide.is-canceling {
+    color: #ff6d6d;
+}
+
+.audioRecorderArrows {
+    font-size: 14px;
+    opacity: .85;
+    letter-spacing: -2px;
+}
+
+.audioRecorderHint {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.audioRecorderMic {
+    width: 42px;
+    height: 42px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    font-size: 18px;
+    background:
+        radial-gradient(100px 60px at 30% 20%, rgba(255, 255, 255, .18), transparent 60%),
+        linear-gradient(180deg, #2dd267, #149a46);
+    color: #fff;
+    box-shadow: 0 10px 24px rgba(24, 185, 86, .30);
 }
 
 /* =========================================================
@@ -1007,6 +1135,23 @@
         width: 30px;
         height: 30px;
     }
+
+    .audioRecorderBar {
+        inset: 8px 10px;
+        min-height: 50px;
+        padding: 0 12px;
+        gap: 10px;
+    }
+
+    .audioRecorderHint {
+        font-size: 13px;
+    }
+
+    .audioRecorderMic {
+        width: 38px;
+        height: 38px;
+        font-size: 17px;
+    }
 }
 
 @media (max-width: 520px) {
@@ -1230,7 +1375,6 @@ body.dp-no-context-menu {
     overflow: hidden;
 }
 
-
 #btnAudio {
     touch-action: none;
     -webkit-user-select: none;
@@ -1264,19 +1408,6 @@ body.dp-no-context-menu {
 
 .cancelAudioBtn.show {
     display: inline-flex !important;
-}
-
-#btnAudio.gravando {
-    background: #C1121F;
-    transform: scale(1.08);
-    box-shadow: 0 0 16px rgba(193, 18, 31, .65);
-}
-
-#btnAudio.gravando::after {
-    content: " REC";
-    font-size: 11px;
-    font-weight: 800;
-    margin-left: 4px;
 }
 
 .cancelAudioBtn.is-hover {
