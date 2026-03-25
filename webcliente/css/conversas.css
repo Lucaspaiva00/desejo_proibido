@@ -1152,6 +1152,26 @@
         height: 38px;
         font-size: 17px;
     }
+
+    .audioRecorderLeft {
+        min-width: 56px;
+    }
+
+    .audioRecorderSlideWrap {
+        justify-content: flex-start;
+    }
+
+    .audioRecorderSlide {
+        font-size: 12px;
+        gap: 6px;
+    }
+
+    .audioRecorderHint {
+        max-width: 140px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
 }
 
 @media (max-width: 520px) {

@@ -1679,9 +1679,14 @@ const MIN_AUDIO_MS = 500;
 // NOVAS VARIÁVEIS DA UI
 let audioStartX = 0;
 let audioCurrentDeltaX = 0;
-const AUDIO_CANCEL_THRESHOLD = 110;
+// const AUDIO_CANCEL_THRESHOLD = 110;
 let audioRecTimer = null;
 let audioRecSeconds = 0;
+
+function getAudioCancelThreshold() {
+    const isMobile = window.innerWidth <= 768;
+    return isMobile ? 55 : 110;
+}
 
 function formatAudioTime(totalSeconds) {
     const min = Math.floor(totalSeconds / 60);
@@ -1749,7 +1754,9 @@ function updateAudioSlideUI(deltaX) {
     audioRecorderSlide.style.transform = `translateX(${limited}px)`;
     audioRecorderSlide.style.opacity = String(opacity);
 
-    const canceling = deltaX <= -AUDIO_CANCEL_THRESHOLD;
+    const cancelThreshold = getAudioCancelThreshold();
+    const canceling = deltaX <= -cancelThreshold;
+
     audioRecorderSlide.classList.toggle("is-canceling", canceling);
 
     if (audioRecorderHint) {
@@ -2117,7 +2124,9 @@ function handleAudioPointerMove(ev) {
     if (ev?.pointerId != null && activeAudioPointerId != null && ev.pointerId !== activeAudioPointerId) {
         return;
     }
-    releaseAudioPointerCapture();
+
+    ev?.preventDefault?.();
+
     updateCancelHover(ev);
 
     const currentX = getClientXFromEvent(ev);
@@ -2129,7 +2138,9 @@ function handleAudioPointerMove(ev) {
         updateAudioSlideUI(0);
     }
 
-    if (audioCurrentDeltaX <= -AUDIO_CANCEL_THRESHOLD) {
+    const cancelThreshold = getAudioCancelThreshold();
+
+    if (audioCurrentDeltaX <= -cancelThreshold) {
         audioWasCanceled = true;
     } else {
         audioWasCanceled = false;
@@ -2142,7 +2153,8 @@ function handleAudioPointerUp(ev) {
         return;
     }
 
-    const canceledBySlide = audioCurrentDeltaX <= -AUDIO_CANCEL_THRESHOLD;
+    const cancelThreshold = getAudioCancelThreshold();
+    const canceledBySlide = audioCurrentDeltaX <= -cancelThreshold;
     const canceledByOldButton = isEventOverCancelButton(ev);
 
     if (canceledBySlide || canceledByOldButton) {
@@ -2151,7 +2163,6 @@ function handleAudioPointerUp(ev) {
         pararGravacao(ev);
     }
 }
-
 function handleAudioPointerCancel(ev) {
     if (!isRecordingAudio) return;
     if (ev?.pointerId != null && activeAudioPointerId != null && ev.pointerId !== activeAudioPointerId) {
