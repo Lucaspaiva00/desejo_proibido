@@ -1852,6 +1852,16 @@ function getClientXFromEvent(ev) {
     return 0;
 }
 
+function releaseAudioPointerCapture() {
+    if (btnAudio && activeAudioPointerId != null && btnAudio.releasePointerCapture) {
+        try {
+            if (btnAudio.hasPointerCapture?.(activeAudioPointerId)) {
+                btnAudio.releasePointerCapture(activeAudioPointerId);
+            }
+        } catch { }
+    }
+}
+
 async function iniciarGravacao(ev) {
     ev?.preventDefault?.();
     ev?.stopPropagation?.();
@@ -1871,6 +1881,12 @@ async function iniciarGravacao(ev) {
         audioPressStartedAt = Date.now();
         audioWasCanceled = false;
         isPointerOverCancel = false;
+
+        if (btnAudio && ev?.pointerId != null && btnAudio.setPointerCapture) {
+            try {
+                btnAudio.setPointerCapture(ev.pointerId);
+            } catch { }
+        }
 
         audioStartX = getClientXFromEvent(ev);
         audioCurrentDeltaX = 0;
@@ -1958,6 +1974,8 @@ async function pararGravacao(ev) {
 
     const elapsed = Date.now() - audioPressStartedAt;
     const recorder = mediaRecorder;
+
+    releaseAudioPointerCapture();
 
     isRecordingAudio = false;
     activeAudioPointerId = null;
@@ -2059,6 +2077,7 @@ function cancelarGravacao(ev) {
     if (ev?.pointerId != null && activeAudioPointerId != null && ev.pointerId !== activeAudioPointerId) {
         return;
     }
+    releaseAudioPointerCapture();
 
     if (!mediaRecorder) {
         audioWasCanceled = false;
@@ -2098,7 +2117,7 @@ function handleAudioPointerMove(ev) {
     if (ev?.pointerId != null && activeAudioPointerId != null && ev.pointerId !== activeAudioPointerId) {
         return;
     }
-
+    releaseAudioPointerCapture();
     updateCancelHover(ev);
 
     const currentX = getClientXFromEvent(ev);
