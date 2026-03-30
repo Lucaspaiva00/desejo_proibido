@@ -1249,20 +1249,20 @@ function renderQuickGifts(itens = []) {
         const disabled = custo > saldo;
 
         return `
-            <button
-                class="quickGiftBtn ${disabled ? "is-disabled" : ""}"
-                data-id="${p.id}"
-                type="button"
-                title="${escapeHtml(nome)} - ${custo} créditos"
-                aria-label="${escapeHtml(nome)} - ${custo} créditos"
-                ${disabled ? "disabled" : ""}
-            >
-                <span class="quickGiftIconWrap">
-                    <img src="${img}" alt="${escapeHtml(nome)}">
-                </span>
-                <span class="quickGiftPrice">${custo}</span>
-            </button>
-        `;
+    <button
+        class="quickGiftBtn ${disabled ? "is-disabled" : ""}"
+        data-id="${p.id}"
+        type="button"
+        title="${escapeHtml(nome)} - ${custo} créditos"
+        aria-label="${escapeHtml(nome)} - ${custo} créditos"
+        ${disabled ? "disabled" : ""}
+    >
+        <span class="quickGiftPrice">💎 ${custo}</span>
+        <span class="quickGiftIconWrap">
+            <img src="${img}" alt="${escapeHtml(nome)}">
+        </span>
+    </button>
+`;
     }).join("");
 }
 
