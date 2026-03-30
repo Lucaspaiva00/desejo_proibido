@@ -927,6 +927,7 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
         const tipo = m.tipo || "TEXTO";
         const dt = m.criadoEm ? new Date(m.criadoEm).toLocaleString() : "";
         const meta = m.metaJson || {};
+        const foiApagada = !!m.foiApagada;
 
         let extraClass = "";
         if (tipo === "SISTEMA") extraClass = "system";
@@ -934,54 +935,64 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
 
         let conteudo = "";
 
-        if (m.tipo === "FOTO") {
-            const imgSrc = m.mediaUrl || m.thumbUrl;
+        if (foiApagada) {
+            conteudo = `<div class="msgDeletedText">🚫 Mensagem apagada</div>`;
+        } else if (m.tipo === "FOTO") {
+            const imgSrc = m.mediaUrl || m.thumbUrl || "";
 
             conteudo = `
-        <div class="bubble foto ${m.locked ? "locked" : ""}" 
-             data-id="${m.id}"
-             ${m.locked ? `onclick="unlockMedia('${m.id}')"` : ""}>
-          <img
-            src="${imgSrc}"
-            ${!m.locked && m.mediaUrl ? `class="msgPhotoOpen" data-full="${m.mediaUrl}"` : ""}
-            alt="Foto enviada no chat"
-          />
-          ${m.locked ? `
-            <div class="media-lock">
-              🔒 Desbloquear por ${m.custoMoedas || 10} créditos
-            </div>
-          ` : ""}
-        </div>
-      `;
+                <div class="bubble foto ${m.locked ? "locked" : ""}" 
+                    data-id="${m.id}"
+                    ${m.locked ? `onclick="unlockMedia('${m.id}')"` : ""}>
+                    <img
+                        src="${imgSrc}"
+                        ${!m.locked && m.mediaUrl ? `class="msgPhotoOpen" data-full="${m.mediaUrl}"` : ""}
+                        alt="Foto enviada no chat"
+                    />
+                    ${m.locked ? `
+                        <div class="media-lock">
+                            🔒 Desbloquear por ${m.custoMoedas || 10} créditos
+                        </div>
+                    ` : ""}
+                </div>
+            `;
         } else if (tipo === "AUDIO") {
             conteudo = `
                 <div class="audioBox" data-mid="${m.id}">
-                <div class="audioLoading">🎙️ Carregando áudio...</div>
+                    <div class="audioLoading">🎙️ Carregando áudio...</div>
                 </div>
             `;
 
             setTimeout(async () => {
                 try {
-                    const r = await apiFetch(`/mensagens/${m.id}/midia`);
-
                     const box = document.querySelector(`[data-mid="${m.id}"]`);
                     if (!box) return;
 
+                    const r = await apiFetch(`/mensagens/${m.id}/midia`);
+
                     if (r.locked) {
                         box.innerHTML = `
-            <div class="mediaLocked audioLocked" data-mid="${m.id}">
-                🎙️ Áudio bloqueado
-                <div class="muted">
-                Toque para desbloquear por ${r.custoMoedas} créditos
-                </div>
-            </div>
-            `;
+                            <div class="mediaLocked audioLocked" data-mid="${m.id}">
+                                🎙️ Áudio bloqueado
+                                <div class="muted">
+                                    Toque para desbloquear por ${r.custoMoedas} créditos
+                                </div>
+                            </div>
+                        `;
                     } else {
                         box.innerHTML = `
-            <audio controls preload="metadata" src="${r.audioUrl}"></audio>
-            `;
+                            <audio controls preload="metadata" src="${r.audioUrl}"></audio>
+                        `;
                     }
                 } catch (e) {
+                    const box = document.querySelector(`[data-mid="${m.id}"]`);
+                    if (!box) return;
+
+                    if (e?.status === 410) {
+                        box.innerHTML = `<div class="msgDeletedText">🚫 Mensagem apagada</div>`;
+                        return;
+                    }
+
                     console.error("Erro carregando áudio:", e);
                 }
             }, 50);
@@ -990,23 +1001,30 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
             const nome = meta.nome || "Presente";
 
             conteudo = `
-        <div class="giftBig">
-            <img class="giftImg" src="${img}" alt="${escapeHtml(nome)}">
-        </div>
-    `;
+                <div class="giftBig">
+                    <img class="giftImg" src="${img}" alt="${escapeHtml(nome)}">
+                </div>
+            `;
         } else {
             const textToShow = m.textoExibido ?? m.texto ?? "";
             conteudo = `<div>${escapeHtml(textToShow)}</div>`;
         }
 
+        const actions = isMe && !foiApagada ? `
+            <div class="msgActions">
+                <button class="btnMsgDelete" onclick="apagarMensagem('${m.id}')">Apagar</button>
+            </div>
+        ` : "";
+
         return `
-      <div class="msgRow ${isMe ? "me" : "other"}">
-        <div class="bubble ${extraClass}">
-          ${conteudo}
-          <div class="meta muted">${escapeHtml(dt)}</div>
-        </div>
-      </div>
-    `;
+            <div class="msgRow ${isMe ? "me" : "other"} ${foiApagada ? "deleted" : ""}">
+                <div class="bubble ${extraClass} ${foiApagada ? "deletedBubble" : ""}">
+                    ${conteudo}
+                    <div class="meta muted">${escapeHtml(dt)}</div>
+                    ${actions}
+                </div>
+            </div>
+        `;
     }).join("");
 
     msgs.innerHTML = html;
@@ -2207,3 +2225,22 @@ setInterval(async () => {
 setInterval(() => {
     if (state.conversaId) carregarMensagens({ silent: true });
 }, 4000);
+
+async function apagarMensagem(mensagemId) {
+    if (!mensagemId) return;
+
+    const ok = confirm("Deseja realmente apagar esta mensagem?");
+    if (!ok) return;
+
+    try {
+        await apiFetch(`/mensagens/${mensagemId}`, {
+            method: "DELETE",
+        });
+
+        await carregarMensagens({ forceRender: true });
+    } catch (e) {
+        alert("Erro ao apagar mensagem: " + (e?.message || "erro"));
+    }
+}
+
+window.apagarMensagem = apagarMensagem;

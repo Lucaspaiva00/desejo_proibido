@@ -66,9 +66,27 @@ function splitPath(p) {
  * ✅ Mapeia mensagem p/ front
  * - TEXTO: tradução
  * - FOTO: thumbUrl sempre; mediaUrl só se autor OU desbloqueou
- * - AUDIO: audioUrl só se autor OU desbloqueou (✅ corrigido)
+ * - AUDIO: audioUrl só se autor OU desbloqueou
+ * - APAGADA: retorna placeholder sem mídia
  */
 async function mapMensagemParaUsuario(m, idiomaDestino, viewerId) {
+    const tipo = m.tipo || "TEXTO";
+    const foiApagada = !!m.foiApagada;
+
+    if (foiApagada) {
+        return {
+            ...m,
+            texto: "Mensagem apagada",
+            textoOriginal: "Mensagem apagada",
+            textoExibido: "Mensagem apagada",
+            thumbUrl: null,
+            mediaUrl: null,
+            audioUrl: null,
+            locked: false,
+            custoMoedas: null,
+        };
+    }
+
     const original = (m.textoOriginal ?? m.texto ?? "").trim();
     const idiomaOriginal = m.idiomaOriginal || "pt";
 
@@ -84,20 +102,16 @@ async function mapMensagemParaUsuario(m, idiomaDestino, viewerId) {
         if (t) textoExibido = t;
     }
 
-    const tipo = m.tipo || "TEXTO";
-
     let thumbUrl = null;
     let mediaUrl = null;
     let audioUrl = null;
 
     const custoMoedas = (m.custoMoedas ?? null);
 
-    // se for o autor, nunca fica "locked" pra ele
     let locked = !!m.bloqueada;
     if (String(m.autorId) === String(viewerId)) locked = false;
 
     if (tipo === "FOTO") {
-
         const { publicId: tId, format: tFmt } = splitPath(m.thumbPath);
 
         if (tId) {
@@ -109,11 +123,9 @@ async function mapMensagemParaUsuario(m, idiomaDestino, viewerId) {
             });
         }
 
-        const canSeeOriginal =
-            !locked || (await alreadyUnlockedMedia(viewerId, m.id));
+        const canSeeOriginal = !locked || (await alreadyUnlockedMedia(viewerId, m.id));
 
         if (canSeeOriginal) {
-
             const { publicId, format } = splitPath(m.mediaPath);
 
             if (publicId) {
@@ -123,17 +135,12 @@ async function mapMensagemParaUsuario(m, idiomaDestino, viewerId) {
                     format: format || "jpg",
                 });
             }
-
         } else {
-
-            // 🔒 IMPORTANTE
-            mediaUrl = null
-            locked = true
-
+            mediaUrl = null;
+            locked = true;
         }
-
     }
-    // ✅ AUDIO corrigido: só manda audioUrl se desbloqueou
+
     if (tipo === "AUDIO") {
         const canHearOriginal = !locked || (await alreadyUnlockedMedia(viewerId, m.id));
 
@@ -142,7 +149,7 @@ async function mapMensagemParaUsuario(m, idiomaDestino, viewerId) {
             if (publicId) {
                 audioUrl = buildPublicUrl({
                     publicId,
-                    resourceType: "video", // cloudinary audio = resource_type video
+                    resourceType: "video",
                     format: format || "mp3",
                     transformation: "",
                 });
@@ -158,12 +165,9 @@ async function mapMensagemParaUsuario(m, idiomaDestino, viewerId) {
         textoOriginal: m.textoOriginal ?? original,
         idiomaOriginal,
         textoExibido,
-
-        // mídia
         thumbUrl,
         mediaUrl,
         audioUrl,
-
         locked,
         custoMoedas,
     };
@@ -197,6 +201,7 @@ export async function listarConversas(req, res) {
             idiomaOriginal: true,
             tipo: true,
             criadoEm: true,
+            foiApagada: true,
         },
     });
 
@@ -228,6 +233,15 @@ export async function listarConversas(req, res) {
 
     const lastByConversa = new Map();
     for (const m of ultimas) {
+        if (m.foiApagada) {
+            lastByConversa.set(m.conversaId, {
+                texto: "Mensagem apagada",
+                textoExibido: "Mensagem apagada",
+                criadoEm: m.criadoEm,
+            });
+            continue;
+        }
+
         const original = (m.textoOriginal ?? m.texto ?? "").trim();
         const from = m.idiomaOriginal || "pt";
         let textoExibido = m.texto ?? original;
@@ -297,12 +311,14 @@ export async function mensagensDaConversa(req, res) {
             idiomaOriginal: true,
             metaJson: true,
             criadoEm: true,
-
             mediaPath: true,
             thumbPath: true,
             mediaDuracao: true,
             bloqueada: true,
             custoMoedas: true,
+            foiApagada: true,
+            apagadaEm: true,
+            apagadaPorId: true,
         },
     });
 

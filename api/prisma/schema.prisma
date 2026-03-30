@@ -74,9 +74,11 @@ model Usuario {
   curtidasEnviadas  Curtida[] @relation("CurtidasEnviadas")
   curtidasRecebidas Curtida[] @relation("CurtidasRecebidas")
 
-  matchesA  Match[]    @relation("MatchesA")
-  matchesB  Match[]    @relation("MatchesB")
-  mensagems Mensagem[]
+  matchesA Match[] @relation("MatchesA")
+  matchesB Match[] @relation("MatchesB")
+
+  mensagems         Mensagem[] @relation("MensagemAutor")
+  mensagensApagadas Mensagem[] @relation("MensagemApagadaPor")
 
   skipsEnviados  Skip[] @relation("SkipsEnviados")
   skipsRecebidos Skip[] @relation("SkipsRecebidos")
@@ -266,10 +268,17 @@ model Mensagem {
   custoMoedas Int?
 
   metaJson Json?
+
+  // ✅ NOVO: suporte a apagar mensagem
+  foiApagada   Boolean   @default(false)
+  apagadaEm    DateTime?
+  apagadaPorId String?
+
   criadoEm DateTime @default(now())
 
-  conversa Conversa @relation(fields: [conversaId], references: [id], onDelete: Cascade)
-  autor    Usuario  @relation(fields: [autorId], references: [id], onDelete: Cascade)
+  conversa   Conversa @relation(fields: [conversaId], references: [id], onDelete: Cascade)
+  autor      Usuario  @relation("MensagemAutor", fields: [autorId], references: [id], onDelete: Cascade)
+  apagadaPor Usuario? @relation("MensagemApagadaPor", fields: [apagadaPorId], references: [id], onDelete: SetNull)
 
   // ✅ cache de traduções
   traducoes MensagemTraducao[]
@@ -281,9 +290,10 @@ model Mensagem {
   @@index([autorId])
   @@index([conversaId, criadoEm])
   @@index([idiomaOriginal])
-  // ✅ NOVO: filtros úteis
   @@index([tipo])
   @@index([bloqueada])
+  @@index([foiApagada])
+  @@index([apagadaEm])
 }
 
 model MensagemTraducao {

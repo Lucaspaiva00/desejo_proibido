@@ -1469,3 +1469,29 @@ body.dp-no-context-menu {
     transform: scale(1.08);
     box-shadow: 0 0 18px rgba(193, 18, 31, .35);
 }
+
+.msgActions {
+    margin-top: 6px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.btnMsgDelete {
+    border: 0;
+    background: transparent;
+    font-size: 12px;
+    cursor: pointer;
+    opacity: 0.75;
+}
+
+.btnMsgDelete:hover {
+    opacity: 1;
+}
+
+.deletedBubble {
+    opacity: 0.75;
+}
+
+.msgDeletedText {
+    font-style: italic;
+}

@@ -9,6 +9,7 @@ import {
 } from "../utils/wallet.js";
 import { buildPublicUrl } from "../utils/cloudinary.js";
 import { containsContato, contatoReason } from "../utils/antiContato.js";
+
 // ============================
 // Config
 // ============================
@@ -18,7 +19,6 @@ const DEFAULT_AUDIO_UNLOCK_COST = Number(process.env.AUDIO_UNLOCK_COST || 10);
 
 // ✅ custo por mensagem TEXTO
 const MSG_SEND_COST = Number(process.env.MSG_SEND_COST || 5);
-
 
 // ============================
 // Helpers locais
@@ -73,8 +73,6 @@ function splitPath(p) {
     return { publicId: s.slice(0, lastDot), format: s.slice(lastDot + 1) };
 }
 
-
-
 // ============================
 // TEXT: POST /mensagens
 // ============================
@@ -108,7 +106,6 @@ export async function enviarMensagem(req, res) {
 
         const premiumEfetivo = await isPremiumEfetivo(userId);
 
-        // se não é premium efetivo, precisa estar com chat liberado
         if (!premiumEfetivo) {
             const unlocked = await isChatUnlocked(conversaId, userId);
             if (!unlocked) {
@@ -119,7 +116,6 @@ export async function enviarMensagem(req, res) {
             }
         }
 
-        // ✅ COBRANÇA POR MENSAGEM TEXTO (5 créditos)
         if (MSG_SEND_COST > 0) {
             try {
                 await debitWallet(userId, MSG_SEND_COST, { origem: "MSG_SEND", refId: conversaId });
@@ -204,13 +200,10 @@ export async function enviarFoto(req, res) {
                 texto: "📷 Foto",
                 textoOriginal: "📷 Foto",
                 idiomaOriginal,
-
                 mediaPath: String(mediaPath),
                 thumbPath: String(thumbPath || mediaPath),
-
                 bloqueada: true,
                 custoMoedas: custo > 0 ? custo : 0,
-
                 metaJson: { kind: "photo", locked: true },
             },
         });
@@ -267,11 +260,8 @@ export async function enviarAudio(req, res) {
                 texto: "🎙️ Áudio",
                 textoOriginal: "🎙️ Áudio",
                 idiomaOriginal,
-
                 mediaPath: String(mediaPath),
                 mediaDuracao: Number.isFinite(Number(duracao)) ? Number(duracao) : null,
-
-                // ✅ trava e cobra 10
                 bloqueada: true,
                 custoMoedas: custo > 0 ? custo : 0,
                 metaJson: { kind: "audio", locked: true },
@@ -306,13 +296,14 @@ export async function desbloquearMidia(req, res) {
                 autorId: true,
                 bloqueada: true,
                 custoMoedas: true,
+                foiApagada: true,
             },
         });
 
         if (!m) return res.status(404).json({ erro: "Mensagem não encontrada" });
+        if (m.foiApagada) return res.status(410).json({ erro: "Mensagem apagada" });
         if (m.tipo !== "FOTO" && m.tipo !== "AUDIO") return res.status(400).json({ erro: "Mensagem não é mídia" });
 
-        // autor não paga pela própria mídia
         if (String(m.autorId) === String(userId)) {
             const saldo = await getSaldoCreditos(userId);
             return res.json({ ok: true, jaLiberado: true, saldoCreditos: saldo });
@@ -384,10 +375,12 @@ export async function obterMidia(req, res) {
                 bloqueada: true,
                 custoMoedas: true,
                 mediaDuracao: true,
+                foiApagada: true,
             },
         });
 
         if (!m) return res.status(404).json({ erro: "Mensagem não encontrada" });
+        if (m.foiApagada) return res.status(410).json({ erro: "Mensagem apagada" });
 
         const conv = await prisma.conversa.findUnique({
             where: { id: m.conversaId },
@@ -396,7 +389,6 @@ export async function obterMidia(req, res) {
         if (!conv) return res.status(404).json({ erro: "Conversa não encontrada" });
         if (!assertParteDaConversa(conv, userId)) return res.status(403).json({ erro: "Sem acesso" });
 
-        // FOTO
         if (m.tipo === "FOTO") {
             const isAutor = String(m.autorId) === String(userId);
             const unlocked = isAutor ? true : await alreadyUnlockedMedia(userId, m.id);
@@ -425,7 +417,6 @@ export async function obterMidia(req, res) {
             return res.json({ tipo: "FOTO", locked: false, url, thumbUrl });
         }
 
-        // AUDIO (✅ AGORA BLOQUEIA E SÓ ENTREGA URL SE DESBLOQUEOU)
         if (m.tipo === "AUDIO") {
             const isAutor = String(m.autorId) === String(userId);
             const unlocked = isAutor ? true : await alreadyUnlockedMedia(userId, m.id);
@@ -475,15 +466,16 @@ export async function encaminharMidia(req, res) {
                 mediaPath: true,
                 thumbPath: true,
                 mediaDuracao: true,
+                foiApagada: true,
             },
         });
 
         if (!m) return res.status(404).json({ erro: "Mensagem não encontrada" });
+        if (m.foiApagada) return res.status(410).json({ erro: "Mensagem apagada" });
         if (m.tipo !== "FOTO" && m.tipo !== "AUDIO") {
             return res.status(400).json({ erro: "Só é possível encaminhar FOTO ou AUDIO" });
         }
 
-        // valida acesso origem
         const convOrigem = await prisma.conversa.findUnique({
             where: { id: m.conversaId },
             include: { match: true },
@@ -492,7 +484,6 @@ export async function encaminharMidia(req, res) {
             return res.status(403).json({ erro: "Sem acesso à conversa de origem" });
         }
 
-        // valida acesso destino
         const convDestino = await prisma.conversa.findUnique({
             where: { id: String(conversaIdDestino) },
             include: { match: true },
@@ -502,7 +493,6 @@ export async function encaminharMidia(req, res) {
         }
 
         const idiomaOriginal = String(req.usuario?.idioma || "pt").toLowerCase();
-
         const custo = (m.tipo === "FOTO") ? DEFAULT_FOTO_UNLOCK_COST : DEFAULT_AUDIO_UNLOCK_COST;
 
         const nova = await prisma.mensagem.create({
@@ -513,15 +503,11 @@ export async function encaminharMidia(req, res) {
                 texto: m.tipo === "FOTO" ? "📷 Foto" : "🎙️ Áudio",
                 textoOriginal: m.tipo === "FOTO" ? "📷 Foto" : "🎙️ Áudio",
                 idiomaOriginal,
-
                 mediaPath: m.mediaPath,
                 thumbPath: m.thumbPath,
-
                 mediaDuracao: m.mediaDuracao ?? null,
-
                 bloqueada: true,
                 custoMoedas: custo > 0 ? custo : 0,
-
                 metaJson: {
                     kind: m.tipo === "FOTO" ? "photo" : "audio",
                     locked: true,
@@ -540,5 +526,91 @@ export async function encaminharMidia(req, res) {
         return res.json({ ok: true, mensagem: nova });
     } catch (e) {
         return res.status(500).json({ erro: "Erro ao encaminhar", detalhe: e.message });
+    }
+}
+
+// ============================
+// APAGAR: DELETE /mensagens/:id
+// ============================
+export async function apagarMensagem(req, res) {
+    try {
+        const userId = req.usuario.id;
+        const { id } = req.params;
+
+        const mensagem = await prisma.mensagem.findUnique({
+            where: { id: String(id) },
+            select: {
+                id: true,
+                conversaId: true,
+                autorId: true,
+                tipo: true,
+                foiApagada: true,
+                metaJson: true,
+            },
+        });
+
+        if (!mensagem) {
+            return res.status(404).json({ erro: "Mensagem não encontrada" });
+        }
+
+        if (mensagem.foiApagada) {
+            return res.json({ ok: true, jaApagada: true });
+        }
+
+        if (String(mensagem.autorId) !== String(userId)) {
+            return res.status(403).json({ erro: "Você só pode apagar mensagens enviadas por você" });
+        }
+
+        const conv = await prisma.conversa.findUnique({
+            where: { id: mensagem.conversaId },
+            include: { match: { select: { usuarioAId: true, usuarioBId: true } } },
+        });
+
+        if (!conv) {
+            return res.status(404).json({ erro: "Conversa não encontrada" });
+        }
+
+        const isParte = conv.match?.usuarioAId === userId || conv.match?.usuarioBId === userId;
+        if (!isParte) {
+            return res.status(403).json({ erro: "Sem acesso a esta conversa" });
+        }
+
+        const metaAtual =
+            mensagem.metaJson && typeof mensagem.metaJson === "object"
+                ? mensagem.metaJson
+                : {};
+
+        const msgAtualizada = await prisma.mensagem.update({
+            where: { id: String(id) },
+            data: {
+                foiApagada: true,
+                apagadaEm: new Date(),
+                apagadaPorId: userId,
+                texto: "Mensagem apagada",
+                textoOriginal: "Mensagem apagada",
+                mediaPath: null,
+                thumbPath: null,
+                mediaMime: null,
+                mediaSize: null,
+                mediaDuracao: null,
+                bloqueada: false,
+                custoMoedas: null,
+                metaJson: {
+                    ...metaAtual,
+                    deleted: true,
+                    deletedForEveryone: true,
+                },
+            },
+        });
+
+        return res.json({
+            ok: true,
+            mensagem: msgAtualizada,
+        });
+    } catch (e) {
+        return res.status(500).json({
+            erro: "Erro ao apagar mensagem",
+            detalhe: e.message,
+        });
     }
 }
