@@ -869,3 +869,93 @@ export async function verifyEmail(req, res) {
         return res.status(500).send("Erro ao verificar e-mail");
     }
 }
+
+export async function excluirConta(req, res) {
+    try {
+        const userId = req.usuario.id;
+        const { senha, confirmacao } = req.body || {};
+
+        if (!senha || !String(senha).trim()) {
+            return res.status(400).json({ erro: "A senha atual é obrigatória" });
+        }
+
+        if (String(confirmacao || "").trim().toUpperCase() !== "EXCLUIR") {
+            return res.status(400).json({ erro: 'Confirmação inválida. Digite "EXCLUIR"' });
+        }
+
+        const usuario = await prisma.usuario.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                email: true,
+                senhaHash: true,
+            },
+        });
+
+        if (!usuario) {
+            return res.status(404).json({ erro: "Usuário não encontrado" });
+        }
+
+        const senhaOk = await bcrypt.compare(senha, usuario.senhaHash);
+        if (!senhaOk) {
+            logAcesso(req, {
+                evento: "EXCLUIR_CONTA_FALHA",
+                status: 401,
+                usuarioId: usuario.id,
+                email: usuario.email,
+                detalhe: "Senha inválida",
+            });
+
+            return res.status(401).json({ erro: "Senha atual inválida" });
+        }
+
+        const emailOriginal = usuario.email;
+
+        await prisma.$transaction(async (tx) => {
+            // remove tokens soltos antes, se existirem
+            await tx.emailVerificacaoToken.deleteMany({
+                where: { usuarioId: userId },
+            });
+
+            await tx.resetSenhaToken.deleteMany({
+                where: { usuarioId: userId },
+            });
+
+            await tx.passkey.deleteMany({
+                where: { usuarioId: userId },
+            });
+
+            // exclusão física total do usuário
+            // o restante será apagado em cascata conforme seu schema
+            await tx.usuario.delete({
+                where: { id: userId },
+            });
+        });
+
+        logAcesso(req, {
+            evento: "EXCLUIR_CONTA_OK",
+            status: 200,
+            usuarioId: userId,
+            email: emailOriginal,
+            detalhe: "Conta excluída definitivamente pelo próprio usuário",
+        });
+
+        return res.json({
+            ok: true,
+            mensagem: "Conta excluída definitivamente com sucesso",
+        });
+    } catch (e) {
+        logAcesso(req, {
+            evento: "EXCLUIR_CONTA_ERRO",
+            status: 500,
+            usuarioId: req.usuario?.id,
+            email: req.usuario?.email,
+            detalhe: e?.message || String(e),
+        });
+
+        return res.status(500).json({
+            erro: "Erro ao excluir conta definitivamente",
+            detalhe: e.message,
+        });
+    }
+}

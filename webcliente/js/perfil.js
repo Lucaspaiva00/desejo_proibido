@@ -27,7 +27,7 @@ const btnBoost = document.getElementById("btnBoost");
 const msgBoost = document.getElementById("msgBoost");
 
 const pill = document.getElementById("premiumPill");
-
+const btnExcluirConta = document.getElementById("btnExcluirConta");
 // botão Fotos
 const btnIrFotos = document.getElementById("btnIrFotos");
 if (btnIrFotos) btnIrFotos.onclick = () => (location.href = "fotos.html");
@@ -439,6 +439,50 @@ document.getElementById("btnSalvar").onclick = async () => {
         setMsg(e.message);
     }
 };
+
+async function excluirConta() {
+    try {
+        const senha = prompt("Digite sua senha atual para confirmar a exclusão da conta:");
+        if (!senha) return;
+
+        const confirmacao = prompt('Digite EXCLUIR para confirmar permanentemente:');
+        if (!confirmacao) return;
+
+        const ok = confirm(
+            "Tem certeza absoluta?\n\nEssa ação vai apagar sua conta definitivamente e não poderá ser desfeita."
+        );
+        if (!ok) return;
+
+        if (btnExcluirConta) {
+            btnExcluirConta.disabled = true;
+            btnExcluirConta.textContent = "Excluindo conta...";
+        }
+
+        await apiFetch("/auth/me", {
+            method: "DELETE",
+            body: {
+                senha,
+                confirmacao,
+            },
+        });
+
+        alert("Sua conta foi excluída com sucesso.");
+
+        localStorage.clear();
+        window.location.href = "index.html";
+    } catch (e) {
+        alert(e?.message || "Erro ao excluir conta.");
+    } finally {
+        if (btnExcluirConta) {
+            btnExcluirConta.disabled = false;
+            btnExcluirConta.textContent = "Excluir minha conta";
+        }
+    }
+}
+
+if (btnExcluirConta) {
+    btnExcluirConta.addEventListener("click", excluirConta);
+}
 
 async function init() {
     await carregarPerfil();

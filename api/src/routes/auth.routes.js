@@ -12,6 +12,7 @@ import {
     passkeyRegisterVerify,
     passkeyLoginOptions,
     passkeyLoginVerify,
+    excluirConta,
 } from "../controllers/auth.controller.js";
 import { auth } from "../middlewares/auth.middleware.js";
 
@@ -20,6 +21,9 @@ const router = Router();
 router.post("/registrar", registrar);
 router.post("/login", login);
 router.get("/me", auth, me);
+
+// ✅ excluir conta DEFINITIVAMENTE
+router.delete("/me", auth, excluirConta);
 
 // ✅ ESQUECI SENHA
 router.post("/forgot-password", forgotPassword);

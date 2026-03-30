@@ -338,3 +338,40 @@
     transform: scale(1.02);
     transition: transform .18s ease;
 }
+
+.danger-block {
+    margin-top: 18px;
+    padding: 18px;
+    border: 1px solid rgba(255, 70, 70, 0.35);
+    border-radius: 16px;
+    background: rgba(120, 0, 0, 0.12);
+}
+
+.danger-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #ff8c8c;
+    margin-bottom: 6px;
+}
+
+.danger-sub {
+    font-size: 14px;
+    line-height: 1.5;
+    color: #ffd6d6;
+    margin-bottom: 14px;
+}
+
+.danger-actions {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.pbtn-danger {
+    background: linear-gradient(180deg, #ff4d4f 0%, #c9181b 100%);
+    color: #fff;
+    border: none;
+}
+
+.pbtn-danger:hover {
+    filter: brightness(1.05);
+}
