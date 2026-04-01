@@ -81,6 +81,73 @@ const audioRecorderTime = document.getElementById("audioRecorderTime");
 const audioRecorderSlide = document.getElementById("audioRecorderSlide");
 const audioRecorderHint = document.getElementById("audioRecorderHint");
 
+
+function bindAcoesChat() {
+
+    const btnBloquear = document.getElementById("btnBloquear");
+    const btnDenunciar = document.getElementById("btnDenunciar");
+
+    if (btnBloquear) {
+        btnBloquear.onclick = async () => {
+
+            const c = state.conversas.find(x => x.id === state.conversaId);
+            const outro = c?.outro;
+
+            if (!outro?.id) return;
+
+            if (!confirm("Deseja bloquear este usuário?")) return;
+
+            try {
+                await apiFetch(`/bloqueios/${outro.id}`, {
+                    method: "POST"
+                });
+
+                alert("Usuário bloqueado");
+
+                state.conversas = state.conversas.filter(x => x.id !== c.id);
+
+                renderLista();
+
+                const chat = document.querySelector(".panel.right.chat");
+                if (chat) chat.style.display = "none";
+
+            } catch (e) {
+                console.error(e);
+                alert("Erro ao bloquear");
+            }
+        };
+    }
+
+    if (btnDenunciar) {
+        btnDenunciar.onclick = async () => {
+
+            const c = state.conversas.find(x => x.id === state.conversaId);
+            const outro = c?.outro;
+
+            if (!outro?.id) return;
+
+            const motivo = prompt("Digite o motivo da denúncia:");
+            if (!motivo) return;
+
+            try {
+                await apiFetch(`/denuncias`, {
+                    method: "POST",
+                    body: {
+                        denunciadoId: outro.id,
+                        motivo
+                    }
+                });
+
+                alert("Denúncia enviada");
+
+            } catch (e) {
+                console.error(e);
+                alert("Erro ao denunciar");
+            }
+        };
+    }
+}
+
 function garantirAcoesChat() {
     let header = document.querySelector(".chat-header");
 
@@ -104,86 +171,12 @@ function garantirAcoesChat() {
     bindAcoesChat();
 }
 
-function bindAcoesChat() {
-
-    const btnBloquear = document.getElementById("btnBloquear");
-    const btnDenunciar = document.getElementById("btnDenunciar");
-
-    if (btnBloquear) {
-        btnBloquear.onclick = async () => {
-
-            const c = state.conversas.find(x => x.id === state.conversaAtualId);
-            const outro = c?.outro;
-
-            if (!outro?.id) return;
-
-            if (!confirm("Deseja bloquear este usuário?")) return;
-
-            try {
-                await fetch(`${API_BASE}/bloqueios/${outro.id}`, {
-                    method: "POST",
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                });
-
-                alert("Usuário bloqueado");
-
-                state.conversas = state.conversas.filter(x => x.id !== c.id);
-
-                if (typeof renderConversas === "function") {
-                    renderConversas();
-                }
-
-                document.getElementById("chatArea").style.display = "none";
-
-            } catch (e) {
-                console.error(e);
-                alert("Erro ao bloquear");
-            }
-        };
-    }
-
-    if (btnDenunciar) {
-        btnDenunciar.onclick = async () => {
-
-            const c = state.conversas.find(x => x.id === state.conversaAtualId);
-            const outro = c?.outro;
-
-            if (!outro?.id) return;
-
-            const motivo = prompt("Digite o motivo da denúncia:");
-            if (!motivo) return;
-
-            try {
-                await fetch(`${API_BASE}/denuncias`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        denunciadoId: outro.id,
-                        motivo
-                    })
-                });
-
-                alert("Denúncia enviada");
-
-            } catch (e) {
-                console.error(e);
-                alert("Erro ao denunciar");
-            }
-        };
-    }
-}
-
-function abrirChatMobile() {
-    if (window.innerWidth <= 980) {
-        document.querySelector(".panel.left").style.display = "none";
-        document.querySelector(".panel.right.chat").style.display = "flex";
-    }
-}
+// function abrirChatMobile() {
+//     if (window.innerWidth <= 980) {
+//         document.querySelector(".panel.left").style.display = "none";
+//         document.querySelector(".panel.right.chat").style.display = "flex";
+//     }
+// }
 
 // ==============================
 // Scroll helpers
