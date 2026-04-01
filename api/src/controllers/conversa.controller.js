@@ -265,8 +265,20 @@ export async function listarConversas(req, res) {
 
     const data = conversas.map((c) => {
         const outroId = c.match.usuarioAId === userId ? c.match.usuarioBId : c.match.usuarioAId;
-        const outro = outroById.get(outroId) || null;
+        const outroRaw = outroById.get(outroId) || null;
         const ultima = lastByConversa.get(c.id) || null;
+
+        const outro = outroRaw
+            ? {
+                id: outroRaw.id,
+                nome: outroRaw.nome || outroRaw.email,
+                email: outroRaw.email,
+                fotos: outroRaw.fotos,
+                perfil: outroRaw.perfil,
+                cidade: outroRaw.perfil?.cidade || null,
+                estado: outroRaw.perfil?.estado || outroRaw.perfil?.uf || null,
+            }
+            : null;
 
         return {
             id: c.id,

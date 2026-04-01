@@ -81,6 +81,103 @@ const audioRecorderTime = document.getElementById("audioRecorderTime");
 const audioRecorderSlide = document.getElementById("audioRecorderSlide");
 const audioRecorderHint = document.getElementById("audioRecorderHint");
 
+function garantirAcoesChat() {
+    let header = document.querySelector(".chat-header");
+
+    if (!header) return;
+
+    if (document.getElementById("chatActions")) return;
+
+    const div = document.createElement("div");
+    div.id = "chatActions";
+    div.style.display = "flex";
+    div.style.gap = "10px";
+    div.style.marginLeft = "auto";
+
+    div.innerHTML = `
+        <button id="btnBloquear">🚫</button>
+        <button id="btnDenunciar">⚠️</button>
+    `;
+
+    header.appendChild(div);
+
+    bindAcoesChat();
+}
+
+function bindAcoesChat() {
+
+    const btnBloquear = document.getElementById("btnBloquear");
+    const btnDenunciar = document.getElementById("btnDenunciar");
+
+    if (btnBloquear) {
+        btnBloquear.onclick = async () => {
+
+            const c = state.conversas.find(x => x.id === state.conversaAtualId);
+            const outro = c?.outro;
+
+            if (!outro?.id) return;
+
+            if (!confirm("Deseja bloquear este usuário?")) return;
+
+            try {
+                await fetch(`${API_BASE}/bloqueios/${outro.id}`, {
+                    method: "POST",
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+
+                alert("Usuário bloqueado");
+
+                state.conversas = state.conversas.filter(x => x.id !== c.id);
+
+                if (typeof renderConversas === "function") {
+                    renderConversas();
+                }
+
+                document.getElementById("chatArea").style.display = "none";
+
+            } catch (e) {
+                console.error(e);
+                alert("Erro ao bloquear");
+            }
+        };
+    }
+
+    if (btnDenunciar) {
+        btnDenunciar.onclick = async () => {
+
+            const c = state.conversas.find(x => x.id === state.conversaAtualId);
+            const outro = c?.outro;
+
+            if (!outro?.id) return;
+
+            const motivo = prompt("Digite o motivo da denúncia:");
+            if (!motivo) return;
+
+            try {
+                await fetch(`${API_BASE}/denuncias`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        denunciadoId: outro.id,
+                        motivo
+                    })
+                });
+
+                alert("Denúncia enviada");
+
+            } catch (e) {
+                console.error(e);
+                alert("Erro ao denunciar");
+            }
+        };
+    }
+}
+
 function abrirChatMobile() {
     if (window.innerWidth <= 980) {
         document.querySelector(".panel.left").style.display = "none";
@@ -822,12 +919,15 @@ async function abrirConversa(conversaId) {
 
     const outro = c.outro || null;
     const nome = outro?.perfil?.nome || c.outroNome || outro?.email || "Conversa";
-    const sub = outro?.email ? outro.email : "";
+    const cidade = outro?.cidade || outro?.perfil?.cidade || "";
+    const estado = outro?.estado || outro?.perfil?.estado || outro?.perfil?.uf || "";
+
+    const localizacao = [cidade, estado].filter(Boolean).join(" - ");
 
     state.outroUsuarioId = c.outroUsuarioId || outro?.id || null;
 
     chatNome.textContent = nome;
-    chatSub.textContent = sub;
+    chatSub.textContent = localizacao || "";
 
     const foto = outro?.fotos?.find?.((f) => f.principal)?.url || null;
     if (foto) {
@@ -846,6 +946,7 @@ async function abrirConversa(conversaId) {
     await checarPremium();
     await atualizarStatusChat();
     await carregarMensagens({ forceRender: true });
+    garantirAcoesChat();
 }
 
 // Mensagens
