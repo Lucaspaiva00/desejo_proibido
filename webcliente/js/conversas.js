@@ -902,6 +902,30 @@ btnLiberarChat?.addEventListener("click", async () => {
     }
 });
 
+function garantirAcoesChat() {
+    let header = document.querySelector(".chat-header");
+
+    if (!header) return;
+
+    const old = document.getElementById("chatActions");
+    if (old) old.remove();
+
+    const div = document.createElement("div");
+    div.id = "chatActions";
+    div.style.display = "flex";
+    div.style.gap = "10px";
+    div.style.marginLeft = "auto";
+
+    div.innerHTML = `
+        <button id="btnBloquear" type="button">🚫</button>
+        <button id="btnDenunciar" type="button">⚠️</button>
+    `;
+
+    header.appendChild(div);
+
+    bindAcoesChat();
+}
+
 // Abrir conversa
 async function abrirConversa(conversaId) {
     state.conversaId = conversaId;
@@ -935,11 +959,11 @@ async function abrirConversa(conversaId) {
     }
 
     renderLista();
-
+    garantirAcoesChat();
     await checarPremium();
     await atualizarStatusChat();
     await carregarMensagens({ forceRender: true });
-    garantirAcoesChat();
+
 }
 
 // Mensagens
