@@ -83,13 +83,11 @@ const audioRecorderHint = document.getElementById("audioRecorderHint");
 
 
 function bindAcoesChat() {
-
     const btnBloquear = document.getElementById("btnBloquear");
     const btnDenunciar = document.getElementById("btnDenunciar");
 
     if (btnBloquear) {
         btnBloquear.onclick = async () => {
-
             const c = state.conversas.find(x => x.id === state.conversaId);
             const outro = c?.outro;
 
@@ -105,12 +103,33 @@ function bindAcoesChat() {
                 alert("Usuário bloqueado");
 
                 state.conversas = state.conversas.filter(x => x.id !== c.id);
+                state.conversaId = null;
+                state.outroUsuarioId = null;
 
                 renderLista();
 
-                const chat = document.querySelector(".panel.right.chat");
-                if (chat) chat.style.display = "none";
+                if (msgs) {
+                    msgs.innerHTML = `<div class="empty">Escolha uma conversa à esquerda para iniciar uma interação privada.</div>`;
+                }
 
+                if (chatNome) chatNome.textContent = "Selecione uma conversa";
+                if (chatSub) chatSub.textContent = "";
+                if (chatStatus) chatStatus.textContent = "";
+
+                if (chatAvatar) {
+                    chatAvatar.removeAttribute("src");
+                    chatAvatar.style.display = "none";
+                }
+
+                if (chatAvatarFallback) {
+                    chatAvatarFallback.style.display = "grid";
+                    chatAvatarFallback.textContent = "DP";
+                }
+
+                const old = document.getElementById("chatActions");
+                if (old) old.remove();
+
+                applyChatLockUI();
             } catch (e) {
                 console.error(e);
                 alert("Erro ao bloquear");
@@ -120,55 +139,30 @@ function bindAcoesChat() {
 
     if (btnDenunciar) {
         btnDenunciar.onclick = async () => {
-
             const c = state.conversas.find(x => x.id === state.conversaId);
             const outro = c?.outro;
 
             if (!outro?.id) return;
 
             const motivo = prompt("Digite o motivo da denúncia:");
-            if (!motivo) return;
+            if (!motivo || !motivo.trim()) return;
 
             try {
                 await apiFetch(`/denuncias`, {
                     method: "POST",
                     body: {
                         denunciadoId: outro.id,
-                        motivo
+                        motivo: motivo.trim()
                     }
                 });
 
                 alert("Denúncia enviada");
-
             } catch (e) {
                 console.error(e);
                 alert("Erro ao denunciar");
             }
         };
     }
-}
-
-function garantirAcoesChat() {
-    let header = document.querySelector(".chat-header");
-
-    if (!header) return;
-
-    if (document.getElementById("chatActions")) return;
-
-    const div = document.createElement("div");
-    div.id = "chatActions";
-    div.style.display = "flex";
-    div.style.gap = "10px";
-    div.style.marginLeft = "auto";
-
-    div.innerHTML = `
-        <button id="btnBloquear">🚫</button>
-        <button id="btnDenunciar">⚠️</button>
-    `;
-
-    header.appendChild(div);
-
-    bindAcoesChat();
 }
 
 // function abrirChatMobile() {
@@ -562,6 +556,32 @@ function escapeHtml(s) {
         .replaceAll("'", "&#039;");
 }
 
+function garantirAcoesChat() {
+    let header = document.querySelector(".dp-userRight");
+
+    if (!header) return;
+
+    const old = document.getElementById("chatActions");
+    if (old) old.remove();
+
+    const div = document.createElement("div");
+    div.id = "chatActions";
+    div.style.display = "flex";
+    div.style.gap = "8px";
+    div.style.marginTop = "8px";
+    div.style.justifyContent = "flex-end";
+    div.style.flexWrap = "wrap";
+
+    div.innerHTML = `
+        <button id="btnBloquear" type="button" class="dp-actionBtn">🚫 <span class="lbl">Bloquear</span></button>
+        <button id="btnDenunciar" type="button" class="dp-actionBtn">⚠️ <span class="lbl">Denunciar</span></button>
+    `;
+
+    header.appendChild(div);
+
+    bindAcoesChat();
+}
+
 function splitEmojiAndText(nome) {
     const chars = Array.from(String(nome || "").trim());
     const emoji = chars.shift() || "🎁";
@@ -902,29 +922,7 @@ btnLiberarChat?.addEventListener("click", async () => {
     }
 });
 
-function garantirAcoesChat() {
-    let header = document.querySelector(".chat-header");
 
-    if (!header) return;
-
-    const old = document.getElementById("chatActions");
-    if (old) old.remove();
-
-    const div = document.createElement("div");
-    div.id = "chatActions";
-    div.style.display = "flex";
-    div.style.gap = "10px";
-    div.style.marginLeft = "auto";
-
-    div.innerHTML = `
-        <button id="btnBloquear" type="button">🚫</button>
-        <button id="btnDenunciar" type="button">⚠️</button>
-    `;
-
-    header.appendChild(div);
-
-    bindAcoesChat();
-}
 
 // Abrir conversa
 async function abrirConversa(conversaId) {
