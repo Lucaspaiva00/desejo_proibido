@@ -81,19 +81,51 @@ const audioRecorderTime = document.getElementById("audioRecorderTime");
 const audioRecorderSlide = document.getElementById("audioRecorderSlide");
 const audioRecorderHint = document.getElementById("audioRecorderHint");
 
-
 function bindAcoesChat() {
+    const btnChatMenu = document.getElementById("btnChatMenu");
+    const dropdown = document.getElementById("chatMenuDropdown");
+    const btnVerPerfil = document.getElementById("btnVerPerfil");
     const btnBloquear = document.getElementById("btnBloquear");
     const btnDenunciar = document.getElementById("btnDenunciar");
+
+    if (btnChatMenu && dropdown) {
+        btnChatMenu.onclick = (e) => {
+            e.stopPropagation();
+            const isHidden = dropdown.hasAttribute("hidden");
+            if (isHidden) {
+                dropdown.removeAttribute("hidden");
+            } else {
+                dropdown.setAttribute("hidden", "hidden");
+            }
+        };
+
+        document.addEventListener("click", (e) => {
+            const wrap = document.getElementById("chatMenuWrap");
+            if (!wrap) return;
+            if (!wrap.contains(e.target)) {
+                dropdown.setAttribute("hidden", "hidden");
+            }
+        });
+    }
+
+    if (btnVerPerfil) {
+        btnVerPerfil.onclick = () => {
+            const c = state.conversas.find(x => x.id === state.conversaId);
+            const outro = c?.outro;
+            if (!outro?.id) return;
+
+            window.location.href = `perfil-match.html?id=${encodeURIComponent(outro.id)}`;
+        };
+    }
 
     if (btnBloquear) {
         btnBloquear.onclick = async () => {
             const c = state.conversas.find(x => x.id === state.conversaId);
             const outro = c?.outro;
-
             if (!outro?.id) return;
 
-            if (!confirm("Deseja bloquear este usuário?")) return;
+            const ok = confirm("Deseja bloquear este usuário?");
+            if (!ok) return;
 
             try {
                 await apiFetch(`/bloqueios/${outro.id}`, {
@@ -126,7 +158,7 @@ function bindAcoesChat() {
                     chatAvatarFallback.textContent = "DP";
                 }
 
-                const old = document.getElementById("chatActions");
+                const old = document.getElementById("chatMenuWrap");
                 if (old) old.remove();
 
                 applyChatLockUI();
@@ -141,7 +173,6 @@ function bindAcoesChat() {
         btnDenunciar.onclick = async () => {
             const c = state.conversas.find(x => x.id === state.conversaId);
             const outro = c?.outro;
-
             if (!outro?.id) return;
 
             const motivo = prompt("Digite o motivo da denúncia:");
@@ -557,27 +588,29 @@ function escapeHtml(s) {
 }
 
 function garantirAcoesChat() {
-    let header = document.querySelector(".dp-userRight");
+    const actionsRow = document.querySelector(".dp-rightActions");
+    if (!actionsRow) return;
 
-    if (!header) return;
-
-    const old = document.getElementById("chatActions");
+    const old = document.getElementById("chatMenuWrap");
     if (old) old.remove();
 
-    const div = document.createElement("div");
-    div.id = "chatActions";
-    div.style.display = "flex";
-    div.style.gap = "8px";
-    div.style.marginTop = "8px";
-    div.style.justifyContent = "flex-end";
-    div.style.flexWrap = "wrap";
+    const wrap = document.createElement("div");
+    wrap.id = "chatMenuWrap";
+    wrap.className = "chatMenuWrap";
 
-    div.innerHTML = `
-        <button id="btnBloquear" type="button" class="dp-actionBtn">🚫 <span class="lbl">Bloquear</span></button>
-        <button id="btnDenunciar" type="button" class="dp-actionBtn">⚠️ <span class="lbl">Denunciar</span></button>
+    wrap.innerHTML = `
+        <button id="btnChatMenu" type="button" class="dp-actionBtn chatMenuBtn" aria-label="Mais opções" title="Mais opções">
+            ⋮
+        </button>
+
+        <div id="chatMenuDropdown" class="chatMenuDropdown" hidden>
+            <button id="btnVerPerfil" type="button" class="chatMenuItem">👤 Ver perfil</button>
+            <button id="btnBloquear" type="button" class="chatMenuItem">🚫 Bloquear</button>
+            <button id="btnDenunciar" type="button" class="chatMenuItem danger">⚠️ Denunciar</button>
+        </div>
     `;
 
-    header.appendChild(div);
+    actionsRow.appendChild(wrap);
 
     bindAcoesChat();
 }

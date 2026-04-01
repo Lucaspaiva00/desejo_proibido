@@ -1511,3 +1511,53 @@ body.dp-no-context-menu {
     color: #ffd966;
     line-height: 1;
 }
+
+.chatMenuWrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.chatMenuBtn {
+    min-width: 48px;
+    font-size: 22px;
+    line-height: 1;
+    padding: 0 14px;
+}
+
+.chatMenuDropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 190px;
+    background: linear-gradient(180deg, #1a0207 0%, #100105 100%);
+    border: 1px solid rgba(255, 0, 40, 0.28);
+    border-radius: 14px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+    padding: 8px;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.chatMenuItem {
+    width: 100%;
+    border: 0;
+    background: rgba(255, 255, 255, 0.03);
+    color: #fff;
+    text-align: left;
+    padding: 12px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: 0.2s ease;
+}
+
+.chatMenuItem:hover {
+    background: rgba(255, 0, 51, 0.14);
+}
+
+.chatMenuItem.danger {
+    color: #ffcccb;
+}
