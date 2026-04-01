@@ -88,25 +88,31 @@ function bindAcoesChat() {
     const btnBloquear = document.getElementById("btnBloquear");
     const btnDenunciar = document.getElementById("btnDenunciar");
 
-    if (btnChatMenu && dropdown) {
-        btnChatMenu.onclick = (e) => {
-            e.stopPropagation();
-            const isHidden = dropdown.hasAttribute("hidden");
-            if (isHidden) {
-                dropdown.removeAttribute("hidden");
-            } else {
-                dropdown.setAttribute("hidden", "hidden");
-            }
-        };
-
-        document.addEventListener("click", (e) => {
-            const wrap = document.getElementById("chatMenuWrap");
-            if (!wrap) return;
-            if (!wrap.contains(e.target)) {
-                dropdown.setAttribute("hidden", "hidden");
-            }
-        });
+    function fecharMenu() {
+        if (dropdown) dropdown.setAttribute("hidden", "hidden");
     }
+
+    function alternarMenu(e) {
+        e.stopPropagation();
+        if (!dropdown) return;
+
+        const aberto = !dropdown.hasAttribute("hidden");
+        if (aberto) fecharMenu();
+        else dropdown.removeAttribute("hidden");
+    }
+
+    if (btnChatMenu && dropdown) {
+        btnChatMenu.onclick = alternarMenu;
+    }
+
+    document.addEventListener("click", (e) => {
+        const wrap = document.getElementById("chatMenuWrap");
+        if (!wrap || !dropdown) return;
+
+        if (!wrap.contains(e.target)) {
+            fecharMenu();
+        }
+    });
 
     if (btnVerPerfil) {
         btnVerPerfil.onclick = () => {
@@ -114,6 +120,7 @@ function bindAcoesChat() {
             const outro = c?.outro;
             if (!outro?.id) return;
 
+            fecharMenu();
             window.location.href = `perfil-match.html?id=${encodeURIComponent(outro.id)}`;
         };
     }
@@ -123,6 +130,8 @@ function bindAcoesChat() {
             const c = state.conversas.find(x => x.id === state.conversaId);
             const outro = c?.outro;
             if (!outro?.id) return;
+
+            fecharMenu();
 
             const ok = confirm("Deseja bloquear este usuário?");
             if (!ok) return;
@@ -175,6 +184,8 @@ function bindAcoesChat() {
             const outro = c?.outro;
             if (!outro?.id) return;
 
+            fecharMenu();
+
             const motivo = prompt("Digite o motivo da denúncia:");
             if (!motivo || !motivo.trim()) return;
 
@@ -195,7 +206,6 @@ function bindAcoesChat() {
         };
     }
 }
-
 // function abrirChatMobile() {
 //     if (window.innerWidth <= 980) {
 //         document.querySelector(".panel.left").style.display = "none";

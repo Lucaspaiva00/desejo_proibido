@@ -1525,6 +1525,10 @@ body.dp-no-context-menu {
     padding: 0 14px;
 }
 
+.chatMenuDropdown[hidden] {
+    display: none !important;
+}
+
 .chatMenuDropdown {
     position: absolute;
     top: calc(100% + 8px);
