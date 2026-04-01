@@ -1478,7 +1478,8 @@ body.dp-no-context-menu {
 
 .btnMsgDelete {
     border: 0;
-    background: white;
+    background: transparent;
+    color: white;
     font-size: 12px;
     cursor: pointer;
     opacity: 0.75;
