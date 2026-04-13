@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bloqueados – Desejo Proibido</title>
+
+    <link rel="stylesheet" href="css/dating.css" />
+    <link rel="stylesheet" href="css/bloqueados.css" />
+</head>
+
+<body>
+    <div class="grain"></div>
+
+    <nav class="topnav" role="navigation" aria-label="Navegação principal">
+        <div class="brand">
+            <div class="brand-badge">DP</div>
+            <span class="brand-name">Desejo Proibido</span>
+        </div>
+
+        <div class="navlinks navlinks-desktop" aria-label="Links do menu">
+            <a href="perfil.html">Perfil</a>
+            <a href="home.html">Feed</a>
+            <a href="fotos.html">Fotos</a>
+            <a href="matches.html">Matches</a>
+            <a href="conversas.html">Chat</a>
+            <a href="bloqueados.html" class="active">Bloqueados</a>
+        </div>
+
+        <div class="spacer"></div>
+
+        <button id="btnSair" class="btn btn-ghost">Sair</button>
+
+        <button class="nav-toggle" id="navToggle" aria-label="Abrir menu" aria-expanded="false"
+            aria-controls="navDrawer">
+            <span></span><span></span><span></span>
+        </button>
+    </nav>
+
+    <div class="nav-overlay" id="navOverlay" aria-hidden="true"></div>
+
+    <aside class="nav-drawer" id="navDrawer" aria-hidden="true">
+        <div class="nav-drawer-head">
+            <div class="brand">
+                <div class="brand-badge">DP</div>
+                <span class="brand-name">Desejo Proibido</span>
+            </div>
+
+            <button class="iconbtn" id="navClose" aria-label="Fechar menu">
+                <span class="xicon"></span>
+            </button>
+        </div>
+
+        <div class="nav-drawer-links">
+            <a href="home.html">Feed</a>
+            <a href="perfil.html">Perfil</a>
+            <a href="fotos.html">Fotos</a>
+            <a href="matches.html">Matches</a>
+            <a href="conversas.html">Chat</a>
+            <a href="bloqueados.html" class="active">Bloqueados</a>
+        </div>
+
+        <div class="nav-drawer-foot">
+            <button id="btnSairMobile" class="btn btn-ghost w100">Sair</button>
+        </div>
+    </aside>
+
+    <div class="wrap">
+        <div class="bloqueados-page">
+            <div class="bloqueados-hero panel">
+                <div class="bloqueados-hero-content">
+                    <div>
+                        <h1 class="h-title">Usuários bloqueados</h1>
+                        <div class="muted bloqueados-sub">
+                            Gerencie sua lista de bloqueios e desbloqueie quem quiser.
+                        </div>
+                    </div>
+
+                    <div class="bloqueados-actions">
+                        <button id="btnRecarregar" class="btn btn-ghost" type="button">Atualizar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bloqueados-grid panel">
+                <div class="panel-head bloqueados-head">
+                    <div class="bloqueados-head-left">
+                        <strong>Lista de bloqueados</strong>
+                        <span id="contadorBloqueados" class="muted">0 usuários</span>
+                    </div>
+
+                    <div class="bloqueados-search-wrap">
+                        <input id="q" class="input" type="text" placeholder="Buscar usuário bloqueado..." />
+                    </div>
+                </div>
+
+                <div class="panel-body">
+                    <div id="msg" class="msgline muted"></div>
+                    <div id="listaBloqueados" class="bloqueados-lista"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast hidden" role="status" aria-live="polite">
+        <div id="toastText" class="toast-text"></div>
+    </div>
+
+    <script>
+        const navToggle = document.getElementById("navToggle");
+        const navDrawer = document.getElementById("navDrawer");
+        const navOverlay = document.getElementById("navOverlay");
+        const navClose = document.getElementById("navClose");
+
+        function openNav() {
+            navDrawer.classList.add("open");
+            navOverlay.classList.add("show");
+            navToggle.classList.add("open");
+            navToggle.setAttribute("aria-expanded", "true");
+            navDrawer.setAttribute("aria-hidden", "false");
+            navOverlay.setAttribute("aria-hidden", "false");
+            document.body.classList.add("no-scroll");
+        }
+
+        function closeNav() {
+            navDrawer.classList.remove("open");
+            navOverlay.classList.remove("show");
+            navToggle.classList.remove("open");
+            navToggle.setAttribute("aria-expanded", "false");
+            navDrawer.setAttribute("aria-hidden", "true");
+            navOverlay.setAttribute("aria-hidden", "true");
+            document.body.classList.remove("no-scroll");
+        }
+
+        navToggle?.addEventListener("click", () => {
+            if (navDrawer.classList.contains("open")) closeNav();
+            else openNav();
+        });
+
+        navOverlay?.addEventListener("click", closeNav);
+        navClose?.addEventListener("click", closeNav);
+
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") closeNav();
+        });
+
+        const btnSair = document.getElementById("btnSair");
+        const btnSairMobile = document.getElementById("btnSairMobile");
+        if (btnSair && btnSairMobile) {
+            btnSairMobile.addEventListener("click", () => btnSair.click());
+        }
+    </script>
+
+    <script type="module" src="js/bloqueados.js"></script>
+</body>
+
+</html>
