@@ -1180,16 +1180,22 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
         }
 
         const podeEditar = isMe && !foiApagada && tipo === "TEXTO";
-        const textoAtualEdicao = escapeHtml(m.textoOriginal ?? m.texto ?? "");
 
         const actions = isMe && !foiApagada ? `
-            <div class="msgActions">
-                ${podeEditar ? `
-                    <button class="btnMsgEdit" onclick="iniciarEdicaoMensagem('${m.id}', ${JSON.stringify(m.textoOriginal ?? m.texto ?? "")})">Editar</button>
-                ` : ""}
-                <button class="btnMsgDelete" onclick="apagarMensagem('${m.id}')">Apagar</button>
-            </div>
-        ` : "";
+    <div class="msgActions">
+        ${podeEditar ? `
+            <button 
+                class="btnMsgEdit" 
+                data-edit-id="${m.id}" 
+                data-edit-text="${escapeHtml(m.textoOriginal ?? m.texto ?? "")}"
+                type="button"
+            >
+                Editar
+            </button>
+        ` : ""}
+        <button class="btnMsgDelete" onclick="apagarMensagem('${m.id}')" type="button">Apagar</button>
+    </div>
+` : "";
 
         return `
             <div class="msgRow ${isMe ? "me" : "other"} ${foiApagada ? "deleted" : ""}">
@@ -1213,6 +1219,13 @@ if (msgs && !msgs.__dpMediaHandlerAttached) {
     msgs.__dpMediaHandlerAttached = true;
 
     msgs.addEventListener("click", async (ev) => {
+        const editBtn = ev.target?.closest?.(".btnMsgEdit");
+        if (editBtn) {
+            const mensagemId = editBtn.getAttribute("data-edit-id");
+            const textoAtual = editBtn.getAttribute("data-edit-text") || "";
+            iniciarEdicaoMensagem(mensagemId, textoAtual);
+            return;
+        }
         const openedImg = ev.target?.closest?.(".msgPhotoOpen");
         if (openedImg) {
             const full = openedImg.getAttribute("data-full") || openedImg.getAttribute("src");
