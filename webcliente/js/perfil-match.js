@@ -20,18 +20,63 @@ const btnVoltar = document.getElementById("btnVoltar");
 const btnVoltarTop = document.getElementById("btnVoltarTop");
 const btnBloquear = document.getElementById("btnBloquear");
 
+const fotoModal = document.getElementById("fotoModal");
+const fotoModalImg = document.getElementById("fotoModalImg");
+const fotoModalClose = document.getElementById("fotoModalClose");
+const fotoModalBackdrop = document.getElementById("fotoModalBackdrop");
+
+let heroAtualUrl = "";
+
 // ==============================
-// ✅ pega id de qualquer param
+// util
 // ==============================
 function getUserId() {
     const params = new URL(location.href).searchParams;
     return params.get("userId") || params.get("usuarioId") || params.get("id");
 }
 
+function fullUrl(pathOrUrl) {
+    if (!pathOrUrl) return "";
+    if (String(pathOrUrl).startsWith("http")) return pathOrUrl;
+    return `${API_BASE}${pathOrUrl.startsWith("/") ? "" : "/"}${pathOrUrl}`;
+}
+
+function openFotoModal(src, alt = "Foto ampliada") {
+    if (!fotoModal || !fotoModalImg || !src) return;
+
+    fotoModalImg.src = src;
+    fotoModalImg.alt = alt;
+    fotoModal.classList.remove("hidden");
+    fotoModal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("no-scroll");
+}
+
+function closeFotoModal() {
+    if (!fotoModal || !fotoModalImg) return;
+
+    fotoModal.classList.add("hidden");
+    fotoModal.setAttribute("aria-hidden", "true");
+    fotoModalImg.src = "";
+    fotoModalImg.alt = "Foto ampliada";
+    document.body.classList.remove("no-scroll");
+}
+
+fotoModalClose?.addEventListener("click", closeFotoModal);
+fotoModalBackdrop?.addEventListener("click", closeFotoModal);
+
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && fotoModal && !fotoModal.classList.contains("hidden")) {
+        closeFotoModal();
+    }
+});
+
 function setHero(url) {
+    heroAtualUrl = url || "";
+
     if (!url) {
         fotoPrincipal.style.display = "none";
         heroFallback.style.display = "flex";
+        fotoPrincipal.removeAttribute("src");
         return;
     }
 
@@ -51,14 +96,6 @@ function marcarSelecionada(url) {
     });
 }
 
-function fullUrl(pathOrUrl) {
-    if (!pathOrUrl) return "";
-    // se já é URL absoluta, retorna direto
-    if (String(pathOrUrl).startsWith("http")) return pathOrUrl;
-    // garante 1 barra
-    return `${API_BASE}${pathOrUrl.startsWith("/") ? "" : "/"}${pathOrUrl}`;
-}
-
 async function carregar() {
     try {
         msg.textContent = "";
@@ -66,36 +103,48 @@ async function carregar() {
         const userId = getUserId();
         if (!userId) throw new Error("ID do usuário não informado na URL (use ?id=...)");
 
-        // ✅ pega o usuário
         const u = await apiFetch(`/usuarios/${userId}`);
 
-        elNome.textContent = u.perfil?.nome || "Sem nome";
-        elLocal.textContent = `${u.perfil?.cidade || ""} ${u.perfil?.estado || ""}`.trim();
-        elBio.textContent = u.perfil?.bio || "";
+        const nome = u.perfil?.nome || "Sem nome";
+        const cidade = u.perfil?.cidade || "";
+        const estado = u.perfil?.estado || "";
+        const bio = u.perfil?.bio || "";
 
-        // ✅ foto principal: tenta fotoPrincipal, senão acha no array fotos
+        elNome.textContent = nome;
+        elLocal.textContent = `${cidade} ${estado}`.trim();
+        elBio.textContent = bio;
+
         const fotos = Array.isArray(u.fotos) ? u.fotos : [];
         const fotoPrincipalObj = fotos.find((f) => f.principal) || fotos[0] || null;
 
         const principalUrl =
-            u.fotoPrincipal ? fullUrl(u.fotoPrincipal) :
-                (fotoPrincipalObj?.url ? fullUrl(fotoPrincipalObj.url) : "");
+            u.fotoPrincipal
+                ? fullUrl(u.fotoPrincipal)
+                : (fotoPrincipalObj?.url ? fullUrl(fotoPrincipalObj.url) : "");
 
         setHero(principalUrl);
 
-        // ✅ galeria
+        // clique na hero abre ampliada
+        fotoPrincipal.onclick = () => {
+            if (!heroAtualUrl) return;
+            openFotoModal(heroAtualUrl, `Foto de ${nome}`);
+        };
+
         if (!fotos.length) {
             galeria.innerHTML = `<div class="muted">Usuário ainda não tem fotos.</div>`;
         } else {
             galeria.innerHTML = fotos
-                .map((f) => {
+                .map((f, index) => {
                     const url = fullUrl(f.url);
-                    return `<img class="gFoto" src="${url}" data-url="${url}" alt="foto" />`;
+                    return `<img class="gFoto" src="${url}" data-url="${url}" alt="Foto ${index + 1} de ${nome}" />`;
                 })
                 .join("");
 
             document.querySelectorAll(".gFoto").forEach((img) => {
-                img.onerror = () => (img.style.opacity = 0.25);
+                img.onerror = () => {
+                    img.style.opacity = 0.25;
+                };
+
                 img.onclick = () => {
                     const url = img.getAttribute("data-url");
                     setHero(url);
@@ -106,16 +155,13 @@ async function carregar() {
             if (principalUrl) marcarSelecionada(principalUrl);
         }
 
-        // ==============================
-        // ✅ Chat: usa o endpoint novo /conversas
-        // ==============================
+        // conversa
         btnChat.disabled = true;
         btnChat.textContent = "Carregando conversa...";
 
         const conversas = await apiFetch(`/conversas`);
         const conversa = (Array.isArray(conversas) ? conversas : []).find((c) => {
-            // controller novo retorna: outroUsuarioId + outro
-            return (c.outroUsuarioId === userId) || (c.outro?.id === userId);
+            return String(c.outroUsuarioId) === String(userId) || String(c.outro?.id) === String(userId);
         });
 
         if (conversa?.id) {
@@ -130,12 +176,10 @@ async function carregar() {
             btnChat.textContent = "Sem conversa";
         }
 
-        // Voltar
         const voltar = () => history.back();
         if (btnVoltar) btnVoltar.onclick = voltar;
         if (btnVoltarTop) btnVoltarTop.onclick = voltar;
 
-        // Bloquear
         if (btnBloquear) {
             btnBloquear.onclick = async () => {
                 if (!confirm("Bloquear este usuário? Isso remove match e conversa.")) return;

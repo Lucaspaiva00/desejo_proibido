@@ -10,61 +10,60 @@
 </head>
 
 <body>
-   <!-- TOPNAV: Desktop normal + Mobile com menu sanduíche -->
-    <nav class="topnav" role="navigation" aria-label="Navegação principal">
-        <div class="brand">
-            <div class="brand-badge">DP</div>
-            <span class="brand-name">Desejo Proibido</span>
-        </div>
+  <!-- TOPNAV: Desktop normal + Mobile com menu sanduíche -->
+  <nav class="topnav" role="navigation" aria-label="Navegação principal">
+    <div class="brand">
+      <div class="brand-badge">DP</div>
+      <span class="brand-name">Desejo Proibido</span>
+    </div>
 
-        <!-- Desktop links -->
-        <div class="navlinks navlinks-desktop" aria-label="Links do menu">
-            <a href="home.html" class="active">Feed</a>
-            <a href="perfil.html">Perfil</a>
-            <a href="fotos.html">Fotos</a>
-            <a href="matches.html">Matches</a>
-            <a href="conversas.html">Chat</a>
-        </div>
+    <!-- Desktop links -->
+    <div class="navlinks navlinks-desktop" aria-label="Links do menu">
+      <a href="home.html" class="active">Feed</a>
+      <a href="perfil.html">Perfil</a>
+      <a href="fotos.html">Fotos</a>
+      <a href="matches.html">Matches</a>
+      <a href="conversas.html">Chat</a>
+    </div>
 
-        <div class="spacer"></div>
+    <div class="spacer"></div>
 
-        <!-- Botão sair (sempre visível) -->
-        <button id="btnSair" class="btn btn-ghost">Sair</button>
+    <!-- Botão sair (sempre visível) -->
+    <button id="btnSair" class="btn btn-ghost">Sair</button>
 
-        <!-- Botão hambúrguer (mobile) -->
-        <button class="nav-toggle" id="navToggle" aria-label="Abrir menu" aria-expanded="false"
-            aria-controls="navDrawer">
-            <span></span><span></span><span></span>
-        </button>
-    </nav>
+    <!-- Botão hambúrguer (mobile) -->
+    <button class="nav-toggle" id="navToggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="navDrawer">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
 
-    <!-- Overlay + Drawer Mobile -->
-    <div class="nav-overlay" id="navOverlay" aria-hidden="true"></div>
+  <!-- Overlay + Drawer Mobile -->
+  <div class="nav-overlay" id="navOverlay" aria-hidden="true"></div>
 
-    <aside class="nav-drawer" id="navDrawer" aria-hidden="true">
-        <div class="nav-drawer-head">
-            <div class="brand">
-                <div class="brand-badge">DP</div>
-                <span class="brand-name">Desejo Proibido</span>
-            </div>
+  <aside class="nav-drawer" id="navDrawer" aria-hidden="true">
+    <div class="nav-drawer-head">
+      <div class="brand">
+        <div class="brand-badge">DP</div>
+        <span class="brand-name">Desejo Proibido</span>
+      </div>
 
-            <button class="iconbtn" id="navClose" aria-label="Fechar menu">
-                <span class="xicon"></span>
-            </button>
-        </div>
+      <button class="iconbtn" id="navClose" aria-label="Fechar menu">
+        <span class="xicon"></span>
+      </button>
+    </div>
 
-        <div class="nav-drawer-links">
-            <a href="home.html" class="active">Feed</a>
-            <a href="perfil.html">Perfil</a>
-            <a href="fotos.html">Fotos</a>
-            <a href="matches.html">Matches</a>
-            <a href="conversas.html">Chat</a>
-        </div>
+    <div class="nav-drawer-links">
+      <a href="home.html" class="active">Feed</a>
+      <a href="perfil.html">Perfil</a>
+      <a href="fotos.html">Fotos</a>
+      <a href="matches.html">Matches</a>
+      <a href="conversas.html">Chat</a>
+    </div>
 
-        <div class="nav-drawer-foot">
-            <button id="btnSairMobile" class="btn btn-ghost w100">Sair</button>
-        </div>
-    </aside>
+    <div class="nav-drawer-foot">
+      <button id="btnSairMobile" class="btn btn-ghost w100">Sair</button>
+    </div>
+  </aside>
 
   <div class="wrap">
     <div class="headRow">
@@ -119,55 +118,66 @@
       </div>
     </div>
   </div>
+
+  <!-- MODAL VISUALIZAR FOTO -->
+  <div id="fotoModal" class="foto-modal hidden" aria-hidden="true">
+    <div class="foto-modal-backdrop" id="fotoModalBackdrop"></div>
+
+    <div class="foto-modal-content" role="dialog" aria-modal="true" aria-label="Visualizar foto">
+      <button id="fotoModalClose" class="foto-modal-close" type="button" aria-label="Fechar foto">×</button>
+      <img id="fotoModalImg" class="foto-modal-img" src="" alt="Foto ampliada" />
+    </div>
+  </div>
+
   <script type="module" src="js/perfil-match.js"></script>
   <!-- JS do Menu (inline) -->
   <script>
-        // Drawer Mobile (hambúrguer) - padrão Tinder
-        const navToggle = document.getElementById("navToggle");
-        const navDrawer = document.getElementById("navDrawer");
-        const navOverlay = document.getElementById("navOverlay");
-        const navClose = document.getElementById("navClose");
+    // Drawer Mobile (hambúrguer) - padrão Tinder
+    const navToggle = document.getElementById("navToggle");
+    const navDrawer = document.getElementById("navDrawer");
+    const navOverlay = document.getElementById("navOverlay");
+    const navClose = document.getElementById("navClose");
 
-        function openNav() {
-            navDrawer.classList.add("open");
-            navOverlay.classList.add("show");
-            navToggle.classList.add("open");
-            navToggle.setAttribute("aria-expanded", "true");
-            navDrawer.setAttribute("aria-hidden", "false");
-            navOverlay.setAttribute("aria-hidden", "false");
-            document.body.classList.add("no-scroll");
-        }
+    function openNav() {
+      navDrawer.classList.add("open");
+      navOverlay.classList.add("show");
+      navToggle.classList.add("open");
+      navToggle.setAttribute("aria-expanded", "true");
+      navDrawer.setAttribute("aria-hidden", "false");
+      navOverlay.setAttribute("aria-hidden", "false");
+      document.body.classList.add("no-scroll");
+    }
 
-        function closeNav() {
-            navDrawer.classList.remove("open");
-            navOverlay.classList.remove("show");
-            navToggle.classList.remove("open");
-            navToggle.setAttribute("aria-expanded", "false");
-            navDrawer.setAttribute("aria-hidden", "true");
-            navOverlay.setAttribute("aria-hidden", "true");
-            document.body.classList.remove("no-scroll");
-        }
+    function closeNav() {
+      navDrawer.classList.remove("open");
+      navOverlay.classList.remove("show");
+      navToggle.classList.remove("open");
+      navToggle.setAttribute("aria-expanded", "false");
+      navDrawer.setAttribute("aria-hidden", "true");
+      navOverlay.setAttribute("aria-hidden", "true");
+      document.body.classList.remove("no-scroll");
+    }
 
-        navToggle?.addEventListener("click", () => {
-            if (navDrawer.classList.contains("open")) closeNav();
-            else openNav();
-        });
+    navToggle?.addEventListener("click", () => {
+      if (navDrawer.classList.contains("open")) closeNav();
+      else openNav();
+    });
 
-        navOverlay?.addEventListener("click", closeNav);
-        navClose?.addEventListener("click", closeNav);
+    navOverlay?.addEventListener("click", closeNav);
+    navClose?.addEventListener("click", closeNav);
 
-        // Fecha com ESC
-        document.addEventListener("keydown", (e) => {
-            if (e.key === "Escape") closeNav();
-        });
+    // Fecha com ESC
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeNav();
+    });
 
-        // Sair: desktop + drawer
-        const btnSair = document.getElementById("btnSair");
-        const btnSairMobile = document.getElementById("btnSairMobile");
-        if (btnSair && btnSairMobile) {
-            btnSairMobile.addEventListener("click", () => btnSair.click());
-        }
-    </script>
+    // Sair: desktop + drawer
+    const btnSair = document.getElementById("btnSair");
+    const btnSairMobile = document.getElementById("btnSairMobile");
+    if (btnSair && btnSairMobile) {
+      btnSairMobile.addEventListener("click", () => btnSair.click());
+    }
+  </script>
 </body>
 
 </html>
