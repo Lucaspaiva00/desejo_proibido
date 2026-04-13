@@ -2501,10 +2501,17 @@ function cancelarEdicaoMensagem() {
 async function editarMensagem(mensagemId, novoTexto) {
     if (!mensagemId) return;
 
-    await apiFetch(`/mensagens/${mensagemId}`, {
-        method: "PUT",
-        body: { texto: novoTexto },
-    });
+    try {
+        await apiFetch(`/mensagens/${mensagemId}`, {
+            method: "PUT",
+            body: { texto: novoTexto },
+        });
+    } catch (e) {
+        console.log("ERRO EDITAR STATUS:", e?.status);
+        console.log("ERRO EDITAR DATA:", e?.data);
+        console.log("ERRO EDITAR MESSAGE:", e?.message);
+        throw e;
+    }
 }
 
 window.iniciarEdicaoMensagem = iniciarEdicaoMensagem;

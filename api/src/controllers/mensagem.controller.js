@@ -615,15 +615,15 @@ export async function apagarMensagem(req, res) {
     }
 }
 
-
-// ============================
-// EDITAR: PUT /mensagens/:id
-// ============================
 export async function editarMensagem(req, res) {
     try {
         const userId = req.usuario.id;
         const { id } = req.params;
         const { texto } = req.body;
+
+        console.log("EDITAR req.params.id =", id);
+        console.log("EDITAR req.body =", req.body);
+        console.log("EDITAR texto =", texto);
 
         if (!texto || !String(texto).trim()) {
             return res.status(400).json({ erro: "Texto é obrigatório" });
@@ -637,8 +637,11 @@ export async function editarMensagem(req, res) {
                 autorId: true,
                 tipo: true,
                 foiApagada: true,
+                metaJson: true,
             },
         });
+
+        console.log("EDITAR mensagem encontrada =", mensagem);
 
         if (!mensagem) {
             return res.status(404).json({ erro: "Mensagem não encontrada" });
@@ -658,14 +661,6 @@ export async function editarMensagem(req, res) {
 
         const textoLimpo = String(texto).trim();
 
-        if (containsContato(textoLimpo)) {
-            return res.status(400).json({
-                erro: "Não é permitido enviar dados de contato (WhatsApp, Instagram, links ou e-mail).",
-                code: "CONTATO_BLOQUEADO",
-                motivo: contatoReason(textoLimpo),
-            });
-        }
-
         const atualizada = await prisma.mensagem.update({
             where: { id: String(id) },
             data: {
@@ -676,6 +671,7 @@ export async function editarMensagem(req, res) {
 
         return res.json({ ok: true, mensagem: atualizada });
     } catch (e) {
+        console.error("ERRO EDITAR BACK:", e);
         return res.status(500).json({
             erro: "Erro ao editar mensagem",
             detalhe: e.message,
