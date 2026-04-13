@@ -1570,3 +1570,19 @@ body.dp-no-context-menu {
 #chatAvatar {
     cursor: zoom-in;
 }
+
+.btnMsgEdit,
+.btnMsgDelete {
+    border: 0;
+    background: transparent;
+    color: white;
+    font-size: 12px;
+    cursor: pointer;
+    opacity: 0.75;
+    margin-left: 8px;
+}
+
+.btnMsgEdit:hover,
+.btnMsgDelete:hover {
+    opacity: 1;
+}

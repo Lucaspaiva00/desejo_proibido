@@ -299,6 +299,8 @@ const state = {
     custoChat: 0,
     saldoCreditos: 0,
 
+    editingMessageId: null,
+
     // Cache visual do chat
     lastMessagesHash: null,
     isLoadingMessages: false,
@@ -1177,8 +1179,14 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
             conteudo = `<div>${escapeHtml(textToShow)}</div>`;
         }
 
+        const podeEditar = isMe && !foiApagada && tipo === "TEXTO";
+        const textoAtualEdicao = escapeHtml(m.textoOriginal ?? m.texto ?? "");
+
         const actions = isMe && !foiApagada ? `
             <div class="msgActions">
+                ${podeEditar ? `
+                    <button class="btnMsgEdit" onclick="iniciarEdicaoMensagem('${m.id}', ${JSON.stringify(m.textoOriginal ?? m.texto ?? "")})">Editar</button>
+                ` : ""}
                 <button class="btnMsgDelete" onclick="apagarMensagem('${m.id}')">Apagar</button>
             </div>
         ` : "";
@@ -1286,10 +1294,21 @@ async function enviarMensagem() {
         return;
     }
 
+    const isEdicao = !!state.editingMessageId;
+
     texto.value = "";
     btnEnviar.disabled = true;
 
     try {
+        if (isEdicao) {
+            await editarMensagem(state.editingMessageId, t);
+            cancelarEdicaoMensagem();
+            await carregarMensagens({ forceRender: true });
+            setMsg("Mensagem editada ✅", "ok");
+            setTimeout(() => setMsg(""), 1200);
+            return;
+        }
+
         const r = await apiFetch(API.enviarMensagem, {
             method: "POST",
             body: { conversaId: state.conversaId, texto: t },
@@ -1327,9 +1346,12 @@ async function enviarMensagem() {
 
         if (enforcePremiumFromError(e)) return;
 
-        alert("Erro ao enviar: " + (e?.message || "Erro desconhecido"));
+        alert("Erro ao " + (isEdicao ? "editar" : "enviar") + ": " + (e?.message || "Erro desconhecido"));
     } finally {
         btnEnviar.disabled = false;
+        if (!state.editingMessageId && btnEnviar) {
+            btnEnviar.textContent = "Enviar";
+        }
         texto.focus();
     }
 }
@@ -2415,5 +2437,63 @@ async function apagarMensagem(mensagemId) {
         alert("Erro ao apagar mensagem: " + (e?.message || "erro"));
     }
 }
+
+function iniciarEdicaoMensagem(mensagemId, textoAtual) {
+    if (!mensagemId) return;
+
+    state.editingMessageId = mensagemId;
+
+    if (texto) {
+        texto.value = textoAtual || "";
+        texto.focus();
+        texto.setSelectionRange(texto.value.length, texto.value.length);
+    }
+
+    if (btnEnviar) {
+        btnEnviar.textContent = "Salvar";
+    }
+
+    let btnCancelarEdicao = document.getElementById("btnCancelarEdicao");
+    if (!btnCancelarEdicao) {
+        btnCancelarEdicao = document.createElement("button");
+        btnCancelarEdicao.id = "btnCancelarEdicao";
+        btnCancelarEdicao.className = "btn btn-ghost";
+        btnCancelarEdicao.type = "button";
+        btnCancelarEdicao.textContent = "Cancelar";
+
+        btnCancelarEdicao.addEventListener("click", cancelarEdicaoMensagem);
+
+        btnEnviar?.insertAdjacentElement("afterend", btnCancelarEdicao);
+    }
+
+    setMsg("Editando mensagem...", "muted");
+}
+
+function cancelarEdicaoMensagem() {
+    state.editingMessageId = null;
+
+    if (texto) texto.value = "";
+
+    if (btnEnviar) {
+        btnEnviar.textContent = "Enviar";
+        btnEnviar.disabled = false;
+    }
+
+    const btnCancelarEdicao = document.getElementById("btnCancelarEdicao");
+    if (btnCancelarEdicao) btnCancelarEdicao.remove();
+
+    setMsg("", "muted");
+}
+
+async function editarMensagem(mensagemId, novoTexto) {
+    if (!mensagemId) return;
+
+    await apiFetch(`/mensagens/${mensagemId}`, {
+        method: "PUT",
+        body: { texto: novoTexto },
+    });
+}
+
+window.iniciarEdicaoMensagem = iniciarEdicaoMensagem;
 
 window.apagarMensagem = apagarMensagem;

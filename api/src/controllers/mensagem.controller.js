@@ -614,3 +614,71 @@ export async function apagarMensagem(req, res) {
         });
     }
 }
+
+
+// ============================
+// EDITAR: PUT /mensagens/:id
+// ============================
+export async function editarMensagem(req, res) {
+    try {
+        const userId = req.usuario.id;
+        const { id } = req.params;
+        const { texto } = req.body;
+
+        if (!texto || !String(texto).trim()) {
+            return res.status(400).json({ erro: "Texto é obrigatório" });
+        }
+
+        const mensagem = await prisma.mensagem.findUnique({
+            where: { id: String(id) },
+            select: {
+                id: true,
+                conversaId: true,
+                autorId: true,
+                tipo: true,
+                foiApagada: true,
+            },
+        });
+
+        if (!mensagem) {
+            return res.status(404).json({ erro: "Mensagem não encontrada" });
+        }
+
+        if (mensagem.foiApagada) {
+            return res.status(400).json({ erro: "Mensagem já foi apagada" });
+        }
+
+        if (mensagem.tipo !== "TEXTO") {
+            return res.status(400).json({ erro: "Só é possível editar mensagens de texto" });
+        }
+
+        if (String(mensagem.autorId) !== String(userId)) {
+            return res.status(403).json({ erro: "Você só pode editar suas próprias mensagens" });
+        }
+
+        const textoLimpo = String(texto).trim();
+
+        if (containsContato(textoLimpo)) {
+            return res.status(400).json({
+                erro: "Não é permitido enviar dados de contato (WhatsApp, Instagram, links ou e-mail).",
+                code: "CONTATO_BLOQUEADO",
+                motivo: contatoReason(textoLimpo),
+            });
+        }
+
+        const atualizada = await prisma.mensagem.update({
+            where: { id: String(id) },
+            data: {
+                texto: textoLimpo,
+                textoOriginal: textoLimpo,
+            },
+        });
+
+        return res.json({ ok: true, mensagem: atualizada });
+    } catch (e) {
+        return res.status(500).json({
+            erro: "Erro ao editar mensagem",
+            detalhe: e.message,
+        });
+    }
+}
