@@ -1566,3 +1566,7 @@ body.dp-no-context-menu {
 .chatMenuItem.danger {
     color: #ffcccb;
 }
+
+#chatAvatar {
+    cursor: zoom-in;
+}

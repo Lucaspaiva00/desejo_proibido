@@ -16,6 +16,7 @@ const chatSub = document.getElementById("chatSub");
 const chatAvatar = document.getElementById("chatAvatar");
 const chatAvatarFallback = document.getElementById("chatAvatarFallback");
 const chatStatus = document.getElementById("chatStatus");
+let chatAvatarFullSrc = "";
 
 const msgs = document.getElementById("msgs");
 const texto = document.getElementById("texto");
@@ -158,8 +159,10 @@ function bindAcoesChat() {
                 if (chatStatus) chatStatus.textContent = "";
 
                 if (chatAvatar) {
+                    chatAvatarFullSrc = "";
                     chatAvatar.removeAttribute("src");
                     chatAvatar.style.display = "none";
+                    chatAvatar.style.cursor = "default";
                 }
 
                 if (chatAvatarFallback) {
@@ -988,13 +991,18 @@ async function abrirConversa(conversaId) {
     chatSub.textContent = localizacao || "";
 
     const foto = outro?.fotos?.find?.((f) => f.principal)?.url || null;
+
     if (foto) {
+        chatAvatarFullSrc = foto;
         chatAvatar.src = foto;
         chatAvatar.style.display = "block";
+        chatAvatar.style.cursor = "zoom-in";
         chatAvatarFallback.style.display = "none";
     } else {
+        chatAvatarFullSrc = "";
         chatAvatar.removeAttribute("src");
         chatAvatar.style.display = "none";
+        chatAvatar.style.cursor = "default";
         chatAvatarFallback.style.display = "grid";
         chatAvatarFallback.textContent = (nome || "DP").slice(0, 2).toUpperCase();
     }
@@ -1374,6 +1382,12 @@ function closeImageViewer() {
     document.body.classList.remove("no-scroll");
     document.body.classList.remove("dp-no-context-menu");
 }
+
+chatAvatar?.addEventListener("click", () => {
+    if (!chatAvatarFullSrc) return;
+    openImageViewer(chatAvatarFullSrc);
+});
+
 imageViewerClose?.addEventListener("click", closeImageViewer);
 
 imageViewerOverlay?.addEventListener("click", (e) => {
