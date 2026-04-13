@@ -64,7 +64,6 @@
   <div class="wrap">
     <div class="chat-layout">
 
-      <!-- SIDEBAR -->
       <aside class="panel left">
         <div class="panel-header">
           <input id="q" class="search" placeholder="Buscar conversa..." />
@@ -72,10 +71,8 @@
         <div id="lista" class="list"></div>
       </aside>
 
-      <!-- CHAT -->
       <section class="panel right chat" id="chatPanel">
 
-        <!-- HEADER APP COMPACTO (1 LINHA) -->
         <div class="dp-appHeader">
           <div class="dp-userCard">
 
@@ -118,17 +115,14 @@
           </div>
         </div>
 
-        <!-- MENSAGENS -->
         <div id="msgs" class="msgs">
           <div class="empty">
             Escolha uma conversa à esquerda para iniciar uma interação privada.
           </div>
         </div>
 
-        <!-- BARRA DE PRESENTES RÁPIDOS -->
         <div class="quickGiftsBar" id="quickGiftsBar"></div>
 
-        <!-- creditwall (intacto) -->
         <div class="creditwall" id="creditwall" aria-hidden="true">
           <div class="creditwallCard">
             <div class="creditwallTitle">🔒 Acesso restrito</div>
@@ -158,7 +152,6 @@
           </div>
         </div>
 
-        <!-- paywall (intacto) -->
         <div class="paywall" id="paywall" hidden>
           <div class="paywallCard">
             <div class="paywallTitle">
@@ -186,18 +179,11 @@
           </div>
         </div>
 
-        <!-- composer -->
         <div class="composer" id="composer">
           <button class="iconbtn" id="btnFoto" title="Enviar foto" aria-label="Enviar foto">📷</button>
 
           <button class="iconbtn" id="btnAudio" type="button" title="Segure para gravar áudio"
             aria-label="Segure para gravar áudio">🎙️</button>
-
-          <!-- Mantido para não apagar funcionalidade existente -->
-          <!-- <button class="iconbtn cancelAudioBtn" id="btnCancelarAudio" type="button" title="Cancelar gravação"
-            aria-label="Cancelar gravação" hidden>
-            ✕
-          </button> -->
 
           <textarea id="texto" placeholder="Digite uma mensagem..." disabled></textarea>
 
@@ -205,7 +191,6 @@
             Enviar
           </button>
 
-          <!-- NOVA UI DE GRAVAÇÃO -->
           <div class="audioRecorderBar" id="audioRecorderBar" hidden aria-hidden="true">
             <div class="audioRecorderLeft">
               <span class="audioRecorderDot"></span>
@@ -286,7 +271,6 @@
   <script src="/api/socket.io/socket.io.js"></script>
   <script type="module" src="js/conversas.js?v=20260213-2"></script>
 
-  <!-- ✅ MOBILE NAV: lista -> chat full screen -->
   <script>
     (function () {
       const mq = window.matchMedia("(max-width: 980px)");
@@ -356,6 +340,7 @@
 
     const btnSair = document.getElementById("btnSair");
     const btnSairMobile = document.getElementById("btnSairMobile");
+
     if (btnSair && btnSairMobile) {
       btnSairMobile.addEventListener("click", () => btnSair.click());
     }
