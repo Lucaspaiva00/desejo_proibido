@@ -288,3 +288,72 @@
     grid-column: 1 / -1;
     padding: 16px 8px;
 }
+
+/* =========================
+   CLIQUE PARA AMPLIAR
+========================= */
+.foto-img {
+    cursor: zoom-in;
+}
+
+/* =========================
+   MODAL DE FOTO
+========================= */
+.foto-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.foto-modal.hidden {
+    display: none;
+}
+
+.foto-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, .84);
+    backdrop-filter: blur(4px);
+}
+
+.foto-modal-content {
+    position: relative;
+    z-index: 2;
+    width: min(92vw, 900px);
+    max-height: 90vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+}
+
+.foto-modal-img {
+    max-width: 100%;
+    max-height: 86vh;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 18px;
+    background: #111;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .45);
+}
+
+.foto-modal-close {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    z-index: 3;
+    width: 42px;
+    height: 42px;
+    border: 0;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 28px;
+    line-height: 1;
+    background: #fff;
+    color: #111;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .35);
+}

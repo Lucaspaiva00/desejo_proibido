@@ -70,7 +70,6 @@
         <div class="fotos-title">
           Galeria Premium
           <span class="sparkle" aria-hidden="true">
-            <!-- ✨ dourado real (SVG com gradiente) -->
             <svg viewBox="0 0 64 64" class="sparkle-svg">
               <defs>
                 <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
@@ -90,14 +89,13 @@
         <div class="fotos-sub muted">Sua foto principal define sua posição no feed.</div>
       </header>
 
-      <!-- UPLOAD (igual referência: sem input aparente) -->
+      <!-- UPLOAD -->
       <div class="upload-area">
         <button id="btnUpload" class="upload-btn" type="button">
           <span class="upload-btn-title">Adicionar Foto</span>
           <span class="upload-btn-sub">JPG ou PNG • até 10MB</span>
         </button>
 
-        <!-- input escondido -->
         <input id="arquivo" class="upload-input" type="file" accept="image/*" />
 
         <div class="upload-hint muted" id="uploadHint">Selecione uma foto para enviar.</div>
@@ -107,6 +105,16 @@
       <!-- GRID -->
       <div id="lista" class="fotos-grid"></div>
     </section>
+  </div>
+
+  <!-- MODAL VISUALIZAR FOTO -->
+  <div id="fotoModal" class="foto-modal hidden" aria-hidden="true">
+    <div class="foto-modal-backdrop" id="fotoModalBackdrop"></div>
+
+    <div class="foto-modal-content" role="dialog" aria-modal="true" aria-label="Visualizar foto">
+      <button id="fotoModalClose" class="foto-modal-close" type="button" aria-label="Fechar foto">×</button>
+      <img id="fotoModalImg" class="foto-modal-img" src="" alt="Foto ampliada" />
+    </div>
   </div>
 
   <script type="module" src="js/fotos.js"></script>

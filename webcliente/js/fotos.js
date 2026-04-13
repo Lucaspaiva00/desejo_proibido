@@ -6,6 +6,11 @@ const arquivo = document.getElementById("arquivo");
 const btnUpload = document.getElementById("btnUpload");
 const uploadHint = document.getElementById("uploadHint");
 
+const fotoModal = document.getElementById("fotoModal");
+const fotoModalImg = document.getElementById("fotoModalImg");
+const fotoModalClose = document.getElementById("fotoModalClose");
+const fotoModalBackdrop = document.getElementById("fotoModalBackdrop");
+
 document.getElementById("btnSair").onclick = logout;
 
 function setMsg(text, isError = false) {
@@ -33,41 +38,36 @@ function setLoading(on) {
   }
 }
 
-async function listar() {
-  setMsg("");
-  lista.innerHTML = `<div style="padding:14px; color:rgba(255,255,255,.72);">Carregando...</div>`;
+function openFotoModal(src, alt = "Foto ampliada") {
+  if (!fotoModal || !fotoModalImg || !src) return;
 
-  const fotos = await apiFetch("/fotos/minhas");
-  if (!fotos?.length) {
-    lista.innerHTML = `<div style="padding:14px; color:rgba(255,255,255,.72);">Você ainda não enviou fotos.</div>`;
-    return;
+  fotoModalImg.src = src;
+  fotoModalImg.alt = alt;
+  fotoModal.classList.remove("hidden");
+  fotoModal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("no-scroll");
+}
+
+function closeFotoModal() {
+  if (!fotoModal || !fotoModalImg) return;
+
+  fotoModal.classList.add("hidden");
+  fotoModal.setAttribute("aria-hidden", "true");
+  fotoModalImg.src = "";
+  fotoModalImg.alt = "Foto ampliada";
+  document.body.classList.remove("no-scroll");
+}
+
+fotoModalClose?.addEventListener("click", closeFotoModal);
+fotoModalBackdrop?.addEventListener("click", closeFotoModal);
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && fotoModal && !fotoModal.classList.contains("hidden")) {
+    closeFotoModal();
   }
+});
 
-  lista.innerHTML = fotos.map((f) => {
-    const principal = !!f.principal;
-
-    return `
-      <div class="foto-card">
-        <div class="foto-img-wrap">
-          <img class="foto-img" src="${f.url}" alt="Foto" />
-          ${principal ? `<div class="badge-destaque"><span class="badge-dot"></span>Em Destaque</div>` : ``}
-        </div>
-
-        <div class="foto-actions ${principal ? "uma" : "duas"}">
-          ${principal ? `` : `
-            <button class="fbtn fbtn-red" data-principal="${f.id}">
-              Definir como Destaque
-            </button>
-          `}
-          <button class="fbtn ${principal ? "fbtn-red" : "fbtn-dark"}" data-del="${f.id}">
-            Remover
-          </button>
-        </div>
-      </div>
-    `;
-  }).join("");
-
-  // definir principal
+function bindCardActions() {
   document.querySelectorAll("[data-principal]").forEach((btn) => {
     btn.onclick = async () => {
       try {
@@ -81,7 +81,6 @@ async function listar() {
     };
   });
 
-  // remover
   document.querySelectorAll("[data-del]").forEach((btn) => {
     btn.onclick = async () => {
       try {
@@ -95,12 +94,72 @@ async function listar() {
       }
     };
   });
+
+  document.querySelectorAll(".foto-img").forEach((img) => {
+    img.addEventListener("click", () => {
+      const src = img.getAttribute("data-full") || img.src;
+      openFotoModal(src, img.alt || "Foto ampliada");
+    });
+
+    img.addEventListener("error", () => {
+      img.style.opacity = "0.55";
+      img.alt = "Não foi possível carregar a foto";
+    });
+  });
+}
+
+async function listar() {
+  setMsg("");
+  lista.innerHTML = `<div style="padding:14px; color:rgba(255,255,255,.72);">Carregando...</div>`;
+
+  try {
+    const fotos = await apiFetch("/fotos/minhas");
+
+    if (!fotos?.length) {
+      lista.innerHTML = `<div class="fotos-empty" style="padding:14px; color:rgba(255,255,255,.72);">Você ainda não enviou fotos.</div>`;
+      return;
+    }
+
+    lista.innerHTML = fotos.map((f, index) => {
+      const principal = !!f.principal;
+      const alt = principal ? `Foto ${index + 1} em destaque` : `Foto ${index + 1}`;
+
+      return `
+        <div class="foto-card">
+          <div class="foto-img-wrap">
+            <img
+              class="foto-img"
+              src="${f.url}"
+              data-full="${f.url}"
+              alt="${alt}"
+              loading="lazy"
+            />
+            ${principal ? `<div class="badge-destaque"><span class="badge-dot"></span>Em Destaque</div>` : ``}
+          </div>
+
+          <div class="foto-actions ${principal ? "uma" : "duas"}">
+            ${principal ? `` : `
+              <button class="fbtn fbtn-red" data-principal="${f.id}">
+                Definir como Destaque
+              </button>
+            `}
+            <button class="fbtn ${principal ? "fbtn-red" : "fbtn-dark"}" data-del="${f.id}">
+              Remover
+            </button>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    bindCardActions();
+  } catch (e) {
+    lista.innerHTML = `<div class="fotos-empty" style="padding:14px; color:rgba(255,120,120,.95);">Erro ao carregar fotos.</div>`;
+    setMsg(e?.message || "Erro ao listar fotos", true);
+  }
 }
 
 /* =========================
-   UPLOAD igual print:
-   - botão abre seletor
-   - ao escolher arquivo, faz upload
+   UPLOAD
 ========================= */
 btnUpload.onclick = () => {
   setMsg("");
@@ -113,7 +172,7 @@ arquivo.onchange = async () => {
 
   try {
     setMsg("");
-    // validações
+
     const isImg = /^image\//.test(file.type);
     if (!isImg) throw new Error("Arquivo inválido (envie uma imagem).");
 
@@ -123,10 +182,9 @@ arquivo.onchange = async () => {
     setHint(`Selecionado: ${file.name}`);
     setLoading(true);
 
-    // ✅ Cloudinary unsigned (SEM SECRET NO FRONT)
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("upload_preset", "desejoproibido"); // precisa ser UNSIGNED
+    formData.append("upload_preset", "desejoproibido");
     formData.append("folder", "desejoproibido");
 
     const responseUpload = await fetch(
@@ -138,7 +196,6 @@ arquivo.onchange = async () => {
       throw new Error(responseUpload.error.message);
     }
 
-    // grava no seu backend
     const token = localStorage.getItem("token");
     const res = await fetch(`${API_BASE}/fotos/upload`, {
       method: "POST",
@@ -153,7 +210,6 @@ arquivo.onchange = async () => {
     const data = text ? JSON.parse(text) : null;
     if (!res.ok) throw new Error(data?.erro || `Erro HTTP ${res.status}`);
 
-    // se não veio principal, seta
     if (!data.principal) {
       await apiFetch(`/fotos/${data.id}/principal`, { method: "PATCH" });
     }
