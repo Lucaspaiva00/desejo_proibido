@@ -67,6 +67,22 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
+lista?.addEventListener("click", (e) => {
+  const img = e.target.closest(".foto-img");
+  if (!img) return;
+
+  const src = img.getAttribute("data-full") || img.getAttribute("src");
+  openFotoModal(src, img.getAttribute("alt") || "Foto ampliada");
+});
+
+lista?.addEventListener("error", (e) => {
+  const img = e.target.closest(".foto-img");
+  if (!img) return;
+
+  img.style.opacity = "0.55";
+  img.alt = "Não foi possível carregar a foto";
+}, true);
+
 function bindCardActions() {
   document.querySelectorAll("[data-principal]").forEach((btn) => {
     btn.onclick = async () => {
@@ -93,18 +109,6 @@ function bindCardActions() {
         setMsg(e?.message || "Erro ao remover foto", true);
       }
     };
-  });
-
-  document.querySelectorAll(".foto-img").forEach((img) => {
-    img.addEventListener("click", () => {
-      const src = img.getAttribute("data-full") || img.src;
-      openFotoModal(src, img.alt || "Foto ampliada");
-    });
-
-    img.addEventListener("error", () => {
-      img.style.opacity = "0.55";
-      img.alt = "Não foi possível carregar a foto";
-    });
   });
 }
 
@@ -158,9 +162,6 @@ async function listar() {
   }
 }
 
-/* =========================
-   UPLOAD
-========================= */
 btnUpload.onclick = () => {
   setMsg("");
   arquivo.click();
