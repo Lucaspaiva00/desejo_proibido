@@ -198,6 +198,16 @@
     <div id="toast" class="toast hidden" role="status" aria-live="polite">
         <div id="toastText" class="toast-text"></div>
     </div>
+    <!-- MODAL VISUALIZAR FOTO -->
+    <div id="fotoModal" class="foto-modal hidden" aria-hidden="true">
+        <div class="foto-modal-backdrop" id="fotoModalBackdrop"></div>
+
+        <div class="foto-modal-content" role="dialog" aria-modal="true" aria-label="Visualizar foto">
+            <button id="fotoModalClose" class="foto-modal-close" type="button" aria-label="Fechar foto">×</button>
+
+            <img id="fotoModalImg" class="foto-modal-img" src="" alt="Foto ampliada" />
+        </div>
+    </div>
 
     <script>
         // Drawer Mobile

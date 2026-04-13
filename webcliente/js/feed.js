@@ -3,6 +3,11 @@ import { apiFetch, logout } from "./api.js";
 const card = document.getElementById("card");
 const msg = document.getElementById("msg");
 
+const fotoModal = document.getElementById("fotoModal");
+const fotoModalImg = document.getElementById("fotoModalImg");
+const fotoModalClose = document.getElementById("fotoModalClose");
+const fotoModalBackdrop = document.getElementById("fotoModalBackdrop");
+
 let fila = [];
 let atual = null;
 
@@ -58,6 +63,36 @@ filtrosOverlay?.addEventListener("click", (e) => {
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && filtrosOverlay?.classList.contains("show")) {
     closeFiltros();
+  }
+});
+
+// ======== Modal foto ========
+function openFotoModal(src, alt = "Foto ampliada") {
+  if (!fotoModal || !fotoModalImg || !src) return;
+
+  fotoModalImg.src = src;
+  fotoModalImg.alt = alt;
+  fotoModal.classList.remove("hidden");
+  fotoModal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("no-scroll");
+}
+
+function closeFotoModal() {
+  if (!fotoModal || !fotoModalImg) return;
+
+  fotoModal.classList.add("hidden");
+  fotoModal.setAttribute("aria-hidden", "true");
+  fotoModalImg.src = "";
+  fotoModalImg.alt = "Foto ampliada";
+  document.body.classList.remove("no-scroll");
+}
+
+fotoModalClose?.addEventListener("click", closeFotoModal);
+fotoModalBackdrop?.addEventListener("click", closeFotoModal);
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && fotoModal && !fotoModal.classList.contains("hidden")) {
+    closeFotoModal();
   }
 });
 
@@ -172,7 +207,7 @@ function render(u) {
   const loc = `${cidade} ${estado}`.trim();
   const boostAtivo = isBoostAtivo(u.boostAte);
 
-  // ✅ monta lista de fotos (principal + extras), sem duplicar
+  // monta lista de fotos (principal + extras), sem duplicar
   const lista = [];
   const pushUnique = (x) => {
     const v = safe(x).trim();
@@ -194,6 +229,7 @@ function render(u) {
   if (Array.isArray(extras)) extras.forEach(pushUnique);
 
   let idx = 0;
+  let touchStartXFoto = null;
 
   function renderDots() {
     if (lista.length <= 1) return "";
@@ -224,7 +260,7 @@ function render(u) {
       ? `
       <div class="tmedia">
         <img class="tphoto-bg" src="${fotoAtual}" alt="" />
-        <img class="tphoto" src="${fotoAtual}" alt="Foto do perfil" />
+        <img class="tphoto" src="${fotoAtual}" alt="Foto do perfil de ${nome}" />
         <div class="toverlay"></div>
         ${renderNav()}
         ${renderDots()}
@@ -253,59 +289,92 @@ function render(u) {
     </div>
   `;
 
-  // ======= helpers de navegação =======
-  function setFoto(i) {
-    if (!temFoto) return;
-    idx = (i + lista.length) % lista.length;
-
-    const bg = card.querySelector(".tphoto-bg");
-    const fg = card.querySelector(".tphoto");
-    if (bg) bg.src = lista[idx];
-    if (fg) fg.src = lista[idx];
-
-    // atualiza dots
+  function atualizarDots() {
     card.querySelectorAll(".tdot").forEach((b, k) => {
       b.classList.toggle("active", k === idx);
     });
   }
 
-  // setas
+  function setFoto(i) {
+    if (!temFoto || !lista.length) return;
+
+    idx = (i + lista.length) % lista.length;
+
+    const bg = card.querySelector(".tphoto-bg");
+    const fg = card.querySelector(".tphoto");
+
+    if (bg) bg.src = lista[idx];
+    if (fg) {
+      fg.src = lista[idx];
+      fg.alt = `Foto do perfil de ${nome}`;
+    }
+
+    atualizarDots();
+  }
+
   const prev = card.querySelector("#btnFotoPrev");
   const next = card.querySelector("#btnFotoNext");
+  const fg = card.querySelector(".tphoto");
+  const bg = card.querySelector(".tphoto-bg");
+  const tmedia = card.querySelector(".tmedia");
 
-  prev?.addEventListener("click", () => setFoto(idx - 1));
-  next?.addEventListener("click", () => setFoto(idx + 1));
-
-  // dots
-  card.querySelectorAll(".tdot").forEach((b) => {
-    b.addEventListener("click", () => setFoto(Number(b.dataset.i)));
+  prev?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setFoto(idx - 1);
   });
 
-  // swipe mobile
-  let startX = null;
-  card.addEventListener("touchstart", (e) => {
-    startX = e.touches?.[0]?.clientX ?? null;
+  next?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setFoto(idx + 1);
+  });
+
+  card.querySelectorAll(".tdot").forEach((b) => {
+    b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const i = Number(b.dataset.i);
+      if (Number.isFinite(i)) setFoto(i);
+    });
+  });
+
+  // swipe mobile só na área da mídia
+  tmedia?.addEventListener("touchstart", (e) => {
+    touchStartXFoto = e.touches?.[0]?.clientX ?? null;
   }, { passive: true });
 
-  card.addEventListener("touchend", (e) => {
-    if (startX == null || lista.length <= 1) return;
+  tmedia?.addEventListener("touchend", (e) => {
+    if (touchStartXFoto == null || lista.length <= 1) return;
+
     const endX = e.changedTouches?.[0]?.clientX ?? null;
     if (endX == null) return;
 
-    const dx = endX - startX;
-    if (Math.abs(dx) < 35) return; // threshold
-    if (dx < 0) setFoto(idx + 1);
-    else setFoto(idx - 1);
+    const dx = endX - touchStartXFoto;
 
-    startX = null;
+    if (Math.abs(dx) >= 35) {
+      if (dx < 0) setFoto(idx + 1);
+      else setFoto(idx - 1);
+    }
+
+    touchStartXFoto = null;
   }, { passive: true });
 
+  // clique para abrir a foto ampliada
+  fg?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (!lista[idx]) return;
+    openFotoModal(lista[idx], `Foto ampliada de ${nome}`);
+  });
+
+  bg?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (!lista[idx]) return;
+    openFotoModal(lista[idx], `Foto ampliada de ${nome}`);
+  });
+
   // fallback se imagem quebrar
-  const fg = card.querySelector(".tphoto");
   if (fg) {
     fg.onerror = () => {
-      // remove foto atual e tenta próxima
       lista.splice(idx, 1);
+
       if (lista.length === 0) {
         card.innerHTML = `
           <div class="tfallback">
@@ -325,8 +394,18 @@ function render(u) {
         `;
         return;
       }
+
       if (idx >= lista.length) idx = 0;
       setFoto(idx);
+    };
+  }
+
+  if (bg) {
+    bg.onerror = () => {
+      const fgAtual = card.querySelector(".tphoto");
+      if (fgAtual && lista[idx]) {
+        bg.src = lista[idx];
+      }
     };
   }
 }
@@ -447,6 +526,11 @@ document.getElementById("btnFecharLimite")?.addEventListener("click", () => {
   const el = document.getElementById("limiteCurtidasOverlay");
   if (!el) return;
   el.classList.add("hidden");
+});
+
+// botão premium
+document.getElementById("btnVirarPremium")?.addEventListener("click", () => {
+  window.location.href = "premium.html";
 });
 
 // ======== eventos filtros ========
