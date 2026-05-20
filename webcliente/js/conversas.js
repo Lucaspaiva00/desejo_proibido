@@ -30,6 +30,7 @@ const inputFoto = document.getElementById("inputFoto");
 const inputAudio = document.getElementById("inputAudio");
 
 const btnGift = document.getElementById("btnGift");
+const btnTransfer = document.getElementById("btnTransfer");
 const btnCall = document.getElementById("btnCall");
 const minutosPill = document.getElementById("minutosPill");
 
@@ -629,6 +630,178 @@ function garantirAcoesChat() {
 
     bindAcoesChat();
 }
+
+function openTransferModal() {
+
+    if (!giftOverlay || !giftList) return;
+
+    giftOverlay.hidden = false;
+
+    const title =
+        document.querySelector(".dp-modal-title");
+
+    if (title) {
+        title.textContent =
+            "Transferir créditos 💸";
+    }
+
+    giftList.innerHTML = `
+
+        <div class="creditTransferBox">
+
+            <div class="creditQuickGrid">
+
+                <button class="creditQuickBtn" data-value="10">
+                    10 créditos
+                </button>
+
+                <button class="creditQuickBtn" data-value="25">
+                    25 créditos
+                </button>
+
+                <button class="creditQuickBtn" data-value="50">
+                    50 créditos
+                </button>
+
+                <button class="creditQuickBtn" data-value="100">
+                    100 créditos
+                </button>
+
+            </div>
+
+            <div class="creditCustom">
+
+                <input
+                    id="creditCustomInput"
+                    type="number"
+                    min="1"
+                    placeholder="Digite a quantidade"
+                    class="creditInput"
+                />
+
+            </div>
+
+            <div class="creditCustom">
+
+                <textarea
+                    id="creditMessage"
+                    class="creditTextarea"
+                    placeholder="Mensagem opcional"
+                ></textarea>
+
+            </div>
+
+            <button
+                id="btnTransferCredits"
+                class="btn btn-primary creditSendBtn"
+            >
+                💸 Transferir créditos
+            </button>
+
+        </div>
+    `;
+
+    let valorSelecionado = 0;
+
+    giftList
+        .querySelectorAll(".creditQuickBtn")
+        .forEach((btn) => {
+
+            btn.onclick = () => {
+
+                valorSelecionado =
+                    Number(btn.dataset.value);
+
+                const input =
+                    document.getElementById(
+                        "creditCustomInput"
+                    );
+
+                if (input) {
+                    input.value =
+                        valorSelecionado;
+                }
+            };
+        });
+
+    const btnEnviar =
+        document.getElementById(
+            "btnTransferCredits"
+        );
+
+    btnEnviar.onclick = async () => {
+
+        const valor =
+            Number(
+                document.getElementById(
+                    "creditCustomInput"
+                )?.value || valorSelecionado
+            );
+
+        const mensagem =
+            document.getElementById(
+                "creditMessage"
+            )?.value || "";
+
+        if (!valor || valor <= 0) {
+            alert("Digite um valor válido");
+            return;
+        }
+
+        try {
+
+            btnEnviar.disabled = true;
+
+            const r = await apiFetch(
+                "/carteira/presentear",
+                {
+                    method: "POST",
+                    body: {
+                        destinatarioId:
+                            state.outroUsuarioId,
+                        valor,
+                        mensagem,
+                    }
+                }
+            );
+
+            state.saldoCreditos =
+                r?.saldoCreditos || 0;
+
+            if (saldoCreditosEl) {
+                saldoCreditosEl.textContent =
+                    state.saldoCreditos;
+            }
+
+            if (minutosPill) {
+                minutosPill.textContent =
+                    `💰 Créditos: ${state.saldoCreditos}`;
+            }
+
+            giftOverlay.hidden = true;
+
+            alert(
+                `💸 ${valor} créditos enviados`
+            );
+
+        } catch (e) {
+
+            alert(
+                e?.message ||
+                "Erro ao transferir créditos"
+            );
+
+        } finally {
+
+            btnEnviar.disabled = false;
+        }
+    };
+}
+
+btnTransfer?.addEventListener(
+    "click",
+    openTransferModal
+);
 
 function splitEmojiAndText(nome) {
     const chars = Array.from(String(nome || "").trim());
