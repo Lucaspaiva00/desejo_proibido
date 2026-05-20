@@ -883,7 +883,9 @@ function applyChatLockUI() {
         if (btnAudio) btnAudio.disabled = true;
 
         if (btnGift) btnGift.disabled = true;
+        if (btnTransfer) btnTransfer.disabled = true;
         if (btnCall) btnCall.disabled = true;
+
 
         btnGift?.classList.remove("lockedAction");
         btnCall?.classList.remove("lockedAction");
@@ -909,6 +911,7 @@ function applyChatLockUI() {
     }
 
     if (btnGift) btnGift.disabled = false;
+    if (btnTransfer) btnTransfer.disabled = false;
     if (btnCall) btnCall.disabled = false;
 
     btnGift?.classList.toggle("lockedAction", !state.premiumAtivo);
