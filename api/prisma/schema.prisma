@@ -125,6 +125,7 @@ model Usuario {
   // ✅ NOVO: mídia desbloqueada (foto/áudio se quiser)
   midiasDesbloqueadas MidiaDesbloqueada[]
   passkeys            Passkey[]
+  giftCreditos        GiftCredito[]
 
   @@index([ativo])
   @@index([role])
@@ -700,4 +701,19 @@ model Passkey {
   usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
   @@index([usuarioId])
+}
+
+model GiftCredito {
+  id String @id @default(cuid())
+
+  remetenteId    String
+  destinatarioId String
+
+  valor    Int
+  mensagem String?
+
+  criadoEm DateTime @default(now())
+
+  remetente    Usuario @relation("GiftRemetente", fields: [remetenteId], references: [id])
+  destinatario Usuario @relation("GiftDestinatario", fields: [destinatarioId], references: [id])
 }
