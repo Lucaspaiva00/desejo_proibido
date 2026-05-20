@@ -106,6 +106,11 @@ v1.use("/pagamentos", pagamentosRoutes);
 app.use("/api", v1);
 app.use("/api/v1", v1);
 
+// CARTEIRA
+app.use("/api/carteira", carteiraRoutes);
+
 // health com /api
 app.get("/api/health", (req, res) => res.json({ ok: true }));
 app.get("/api/v1/health", (req, res) => res.json({ ok: true }));
+
+
