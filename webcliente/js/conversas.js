@@ -219,21 +219,22 @@ function bindAcoesChat() {
 
             fecharMenu();
 
-            const ok = confirm("Deseja apagar esta conversa?");
+            const ok = confirm(
+                "Deseja apagar esta conversa da sua lista?"
+            );
 
             if (!ok) return;
 
             try {
 
                 await apiFetch(`/conversas/${conversaId}/ocultar`, {
-                    method: "POST"
+                    method: "DELETE"
                 });
 
-                alert("Conversa apagada");
-
-                state.conversas = state.conversas.filter(
-                    x => x.id !== conversaId
-                );
+                state.conversas =
+                    state.conversas.filter(
+                        c => c.id !== conversaId
+                    );
 
                 state.conversaId = null;
                 state.outroUsuarioId = null;
@@ -241,24 +242,26 @@ function bindAcoesChat() {
                 renderLista();
 
                 if (msgs) {
+
                     msgs.innerHTML = `
                     <div class="empty">
-                        Escolha uma conversa à esquerda para iniciar uma interação privada.
+                        Escolha uma conversa à esquerda
+                        para iniciar uma interação privada.
                     </div>
                 `;
                 }
 
-                if (chatNome) {
-                    chatNome.textContent = "Selecione uma conversa";
-                }
+                if (chatNome)
+                    chatNome.textContent =
+                        "Selecione uma conversa";
 
-                if (chatSub) {
+                if (chatSub)
                     chatSub.textContent = "";
-                }
 
-                if (chatStatus) {
+                if (chatStatus)
                     chatStatus.textContent = "";
-                }
+
+                alert("Conversa removida");
 
             } catch (e) {
 
@@ -269,12 +272,6 @@ function bindAcoesChat() {
         };
     }
 }
-// function abrirChatMobile() {
-//     if (window.innerWidth <= 980) {
-//         document.querySelector(".panel.left").style.display = "none";
-//         document.querySelector(".panel.right.chat").style.display = "flex";
-//     }
-// }
 
 // ==============================
 // Scroll helpers
