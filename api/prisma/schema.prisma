@@ -125,7 +125,9 @@ model Usuario {
   // ✅ NOVO: mídia desbloqueada (foto/áudio se quiser)
   midiasDesbloqueadas MidiaDesbloqueada[]
   passkeys            Passkey[]
-  giftCreditos        GiftCredito[]
+
+  giftsEnviados  GiftCredito[] @relation("GiftRemetente")
+  giftsRecebidos GiftCredito[] @relation("GiftDestinatario")
 
   @@index([ativo])
   @@index([role])
@@ -714,6 +716,7 @@ model GiftCredito {
 
   criadoEm DateTime @default(now())
 
-  remetente    Usuario @relation("GiftRemetente", fields: [remetenteId], references: [id])
+  remetente Usuario @relation("GiftRemetente", fields: [remetenteId], references: [id])
+
   destinatario Usuario @relation("GiftDestinatario", fields: [destinatarioId], references: [id])
 }
