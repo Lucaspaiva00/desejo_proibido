@@ -679,7 +679,7 @@ function garantirAcoesChat() {
             <button id="btnVerPerfil" type="button" class="chatMenuItem">👤 Ver perfil</button>
             <button id="btnBloquear" type="button" class="chatMenuItem">🚫 Bloquear</button>
             <button id="btnDenunciar" type="button" class="chatMenuItem">⚠️ Denunciar</button>
-            <button id="btnApagarConversa" type="button" class="chatMenuItem">Apagar conversa</button>
+            <button id="btnApagarConversa" type="button" class="chatMenuItem">🗑️ Apagar conversa</button>
         </div>
     `;
 
