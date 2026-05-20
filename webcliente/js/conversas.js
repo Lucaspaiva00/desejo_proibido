@@ -649,59 +649,117 @@ function openTransferModal() {
 
     giftList.innerHTML = `
 
-        <div class="creditTransferBox">
+<div class="creditTransferWrap">
 
-            <div class="creditQuickGrid">
+    <div class="creditHero">
 
-                <button class="creditQuickBtn" data-value="10">
-                    10 créditos
-                </button>
+        <div class="creditHeroIcon">
+            💸
+        </div>
 
-                <button class="creditQuickBtn" data-value="25">
-                    25 créditos
-                </button>
-
-                <button class="creditQuickBtn" data-value="50">
-                    50 créditos
-                </button>
-
-                <button class="creditQuickBtn" data-value="100">
-                    100 créditos
-                </button>
-
+        <div>
+            <div class="creditHeroTitle">
+                Transferir créditos
             </div>
 
-            <div class="creditCustom">
+            <div class="creditHeroSub">
+                Envie créditos diretamente para esta pessoa
+            </div>
+        </div>
 
-                <input
-                    id="creditCustomInput"
-                    type="number"
-                    min="1"
-                    placeholder="Digite a quantidade"
-                    class="creditInput"
-                />
+    </div>
 
+    <div class="creditSectionTitle">
+        Escolha um valor rápido
+    </div>
+
+    <div class="creditQuickGrid">
+
+        <button class="creditQuickBtn" data-value="10">
+            <span class="coin">💎</span>
+            <strong>10</strong>
+            <small>créditos</small>
+        </button>
+
+        <button class="creditQuickBtn" data-value="25">
+            <span class="coin">💎</span>
+            <strong>25</strong>
+            <small>créditos</small>
+        </button>
+
+        <button class="creditQuickBtn" data-value="50">
+            <span class="coin">💎</span>
+            <strong>50</strong>
+            <small>créditos</small>
+        </button>
+
+        <button class="creditQuickBtn" data-value="100">
+            <span class="coin">💎</span>
+            <strong>100</strong>
+            <small>créditos</small>
+        </button>
+
+    </div>
+
+    <div class="creditSectionTitle">
+        Ou digite a quantidade
+    </div>
+
+    <div class="creditInputWrap">
+
+        <div class="creditInputIcon">
+            💎
+        </div>
+
+        <input
+            id="creditCustomInput"
+            type="number"
+            min="1"
+            placeholder="Digite a quantidade"
+            class="creditInput"
+        />
+
+    </div>
+
+    <div class="creditHint">
+        Mínimo: 1 crédito
+    </div>
+
+    <div class="creditSectionTitle">
+        Mensagem opcional
+    </div>
+
+    <textarea
+        id="creditMessage"
+        class="creditTextarea"
+        placeholder="Escreva uma mensagem..."
+    ></textarea>
+
+    <div class="creditBottom">
+
+        <div class="creditBalanceBox">
+
+            <div class="creditBalanceLabel">
+                Seu saldo
             </div>
 
-            <div class="creditCustom">
-
-                <textarea
-                    id="creditMessage"
-                    class="creditTextarea"
-                    placeholder="Mensagem opcional"
-                ></textarea>
-
+            <div class="creditBalanceValue">
+                💎 ${state.saldoCreditos || 0}
             </div>
-
-            <button
-                id="btnTransferCredits"
-                class="btn btn-primary creditSendBtn"
-            >
-                💸 Transferir créditos
-            </button>
 
         </div>
-    `;
+
+        <button
+            id="btnTransferCredits"
+            class="creditSendBtn"
+        >
+            💸 Transferir créditos
+        </button>
+
+    </div>
+
+</div>
+`;
 
     let valorSelecionado = 0;
 

@@ -1586,3 +1586,301 @@ body.dp-no-context-menu {
 .btnMsgDelete:hover {
     opacity: 1;
 }
+
+/* =========================================================
+   TRANSFERÊNCIA DE CRÉDITOS
+========================================================= */
+
+.creditTransferWrap {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding-top: 6px;
+}
+
+.creditHero {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+
+.creditHeroIcon {
+    width: 58px;
+    height: 58px;
+    border-radius: 18px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 26px;
+
+    background:
+        radial-gradient(circle at top,
+            rgba(255, 255, 255, .18),
+            transparent 60%),
+        linear-gradient(180deg,
+            #4a000c,
+            #1a0004);
+
+    border: 1px solid rgba(255, 0, 60, .28);
+
+    box-shadow:
+        0 10px 30px rgba(0, 0, 0, .45),
+        0 0 25px rgba(193, 18, 31, .18);
+}
+
+.creditHeroTitle {
+    font-size: 24px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.creditHeroSub {
+    margin-top: 6px;
+    color: rgba(255, 255, 255, .72);
+    font-size: 14px;
+}
+
+.creditSectionTitle {
+    font-size: 15px;
+    font-weight: 800;
+    color: #fff;
+}
+
+.creditQuickGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.creditQuickBtn {
+    position: relative;
+
+    border: 1px solid rgba(255, 0, 50, .25);
+
+    background:
+        radial-gradient(circle at top,
+            rgba(255, 255, 255, .08),
+            transparent 60%),
+        linear-gradient(180deg,
+            #3a0008,
+            #170003);
+
+    border-radius: 18px;
+
+    min-height: 95px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    gap: 4px;
+
+    color: white;
+
+    cursor: pointer;
+
+    transition: .18s ease;
+}
+
+.creditQuickBtn:hover {
+    transform: translateY(-2px);
+
+    border-color: rgba(255, 0, 60, .55);
+
+    box-shadow:
+        0 16px 35px rgba(0, 0, 0, .45),
+        0 0 30px rgba(193, 18, 31, .18);
+}
+
+.creditQuickBtn .coin {
+    font-size: 20px;
+}
+
+.creditQuickBtn strong {
+    font-size: 28px;
+    line-height: 1;
+}
+
+.creditQuickBtn small {
+    opacity: .7;
+    font-size: 12px;
+}
+
+.creditInputWrap {
+    height: 62px;
+
+    border-radius: 18px;
+
+    border: 1px solid rgba(255, 0, 50, .22);
+
+    background:
+        linear-gradient(180deg,
+            rgba(35, 0, 10, .88),
+            rgba(0, 0, 0, .92));
+
+    display: flex;
+    align-items: center;
+
+    overflow: hidden;
+}
+
+.creditInputIcon {
+    width: 64px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 24px;
+
+    opacity: .9;
+}
+
+.creditInput {
+    flex: 1;
+
+    height: 100%;
+
+    background: transparent;
+    border: 0;
+    outline: none;
+
+    color: white;
+
+    font-size: 18px;
+    font-weight: 700;
+
+    padding-right: 18px;
+}
+
+.creditInput::placeholder {
+    color: rgba(255, 255, 255, .38);
+}
+
+.creditHint {
+    margin-top: -8px;
+    font-size: 12px;
+    opacity: .55;
+}
+
+.creditTextarea {
+    min-height: 130px;
+
+    border-radius: 18px;
+
+    border: 1px solid rgba(255, 0, 50, .22);
+
+    background:
+        linear-gradient(180deg,
+            rgba(35, 0, 10, .88),
+            rgba(0, 0, 0, .92));
+
+    color: white;
+
+    padding: 16px;
+
+    resize: none;
+
+    outline: none;
+
+    font-size: 15px;
+}
+
+.creditTextarea:focus,
+.creditInput:focus {
+    box-shadow: none;
+}
+
+.creditBottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+}
+
+.creditBalanceBox {
+    min-width: 200px;
+
+    padding: 16px 18px;
+
+    border-radius: 18px;
+
+    border: 1px solid rgba(255, 255, 255, .08);
+
+    background:
+        linear-gradient(180deg,
+            rgba(35, 0, 10, .88),
+            rgba(0, 0, 0, .92));
+}
+
+.creditBalanceLabel {
+    font-size: 13px;
+    opacity: .7;
+}
+
+.creditBalanceValue {
+    margin-top: 4px;
+
+    font-size: 30px;
+    font-weight: 900;
+}
+
+.creditSendBtn {
+    flex: 1;
+
+    height: 64px;
+
+    border: 0;
+
+    border-radius: 18px;
+
+    background:
+        linear-gradient(180deg,
+            #ff2238,
+            #9e0014);
+
+    color: white;
+
+    font-size: 20px;
+    font-weight: 900;
+
+    cursor: pointer;
+
+    transition: .18s ease;
+
+    box-shadow:
+        0 16px 40px rgba(193, 18, 31, .28);
+}
+
+.creditSendBtn:hover {
+    transform: translateY(-2px);
+
+    box-shadow:
+        0 18px 50px rgba(193, 18, 31, .42);
+}
+
+@media (max-width: 700px) {
+
+    .creditQuickGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .creditBottom {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .creditBalanceBox {
+        min-width: 100%;
+    }
+
+    .creditSendBtn {
+        width: 100%;
+    }
+
+}
