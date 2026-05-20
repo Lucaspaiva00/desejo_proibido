@@ -635,7 +635,9 @@ function openTransferModal() {
 
     if (!giftOverlay || !giftList) return;
 
-    giftOverlay.hidden = false;
+    giftOverlay?.classList.add("show");
+    giftOverlay?.setAttribute("aria-hidden", "false");
+    document.body.classList.add("no-scroll");
 
     const title =
         document.querySelector(".dp-modal-title");
@@ -778,7 +780,7 @@ function openTransferModal() {
                     `💰 Créditos: ${state.saldoCreditos}`;
             }
 
-            giftOverlay.hidden = true;
+            closeGiftModal();
 
             alert(
                 `💸 ${valor} créditos enviados`
