@@ -7,6 +7,7 @@ import {
     abrirConversaPorMatch,
     statusConversa,
     liberarChat,
+    ocultarConversa,
 } from "../controllers/conversa.controller.js";
 
 const router = Router();
@@ -16,7 +17,7 @@ router.get("/", listarConversas);
 router.get("/minhas", listarConversas);
 
 router.post("/abrir", abrirConversaPorMatch);
-
+router.delete("/:id/ocultar", ocultarConversa);
 router.get("/:id/status", statusConversa);
 router.post("/:id/liberar", liberarChat);
 

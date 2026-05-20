@@ -181,9 +181,28 @@ export async function listarConversas(req, res) {
     const idiomaDestino = req.query?.lang || req.usuario?.idioma || req.lang || "pt";
 
     const conversas = await prisma.conversa.findMany({
-        where: { match: { OR: [{ usuarioAId: userId }, { usuarioBId: userId }] } },
-        orderBy: { atualizadoEm: "desc" },
-        include: { match: true },
+        where: {
+            match: {
+                OR: [
+                    { usuarioAId: userId },
+                    { usuarioBId: userId }
+                ]
+            },
+
+            conversaOcultas: {
+                none: {
+                    usuarioId: userId
+                }
+            }
+        },
+
+        orderBy: {
+            atualizadoEm: "desc"
+        },
+
+        include: {
+            match: true
+        }
     });
 
     const conversaIds = conversas.map((c) => c.id);
@@ -463,5 +482,52 @@ export async function liberarChat(req, res) {
         chatLiberado: true,
         custoCreditos: CHAT_UNLOCK_CREDITS,
         saldoCreditos: novoSaldo,
+    });
+}
+
+// ==============================
+// OCULTAR CONVERSA
+// ==============================
+export async function ocultarConversa(req, res) {
+
+    const userId = req.usuario.id;
+    const { id: conversaId } = req.params;
+
+    const conversa = await prisma.conversa.findUnique({
+        where: { id: conversaId },
+        include: { match: true }
+    });
+
+    if (!conversa) {
+        return res.status(404).json({
+            erro: "Conversa não encontrada"
+        });
+    }
+
+    if (!assertParteDaConversa(conversa, userId)) {
+        return res.status(403).json({
+            erro: "Sem acesso"
+        });
+    }
+
+    await prisma.conversaOculta.upsert({
+
+        where: {
+            usuarioId_conversaId: {
+                usuarioId: userId,
+                conversaId
+            }
+        },
+
+        update: {},
+
+        create: {
+            usuarioId: userId,
+            conversaId
+        }
+    });
+
+    return res.json({
+        ok: true
     });
 }

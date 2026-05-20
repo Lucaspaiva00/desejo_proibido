@@ -89,7 +89,7 @@ function bindAcoesChat() {
     const btnVerPerfil = document.getElementById("btnVerPerfil");
     const btnBloquear = document.getElementById("btnBloquear");
     const btnDenunciar = document.getElementById("btnDenunciar");
-
+    const btnApagarConversa = document.getElementById("btnApagarConversa");
     function fecharMenu() {
         if (dropdown) dropdown.setAttribute("hidden", "hidden");
     }
@@ -206,6 +206,65 @@ function bindAcoesChat() {
             } catch (e) {
                 console.error(e);
                 alert("Erro ao denunciar");
+            }
+        };
+    }
+    if (btnApagarConversa) {
+
+        btnApagarConversa.onclick = async () => {
+
+            const conversaId = state.conversaId;
+
+            if (!conversaId) return;
+
+            fecharMenu();
+
+            const ok = confirm("Deseja apagar esta conversa?");
+
+            if (!ok) return;
+
+            try {
+
+                await apiFetch(`/conversas/${conversaId}/ocultar`, {
+                    method: "POST"
+                });
+
+                alert("Conversa apagada");
+
+                state.conversas = state.conversas.filter(
+                    x => x.id !== conversaId
+                );
+
+                state.conversaId = null;
+                state.outroUsuarioId = null;
+
+                renderLista();
+
+                if (msgs) {
+                    msgs.innerHTML = `
+                    <div class="empty">
+                        Escolha uma conversa à esquerda para iniciar uma interação privada.
+                    </div>
+                `;
+                }
+
+                if (chatNome) {
+                    chatNome.textContent = "Selecione uma conversa";
+                }
+
+                if (chatSub) {
+                    chatSub.textContent = "";
+                }
+
+                if (chatStatus) {
+                    chatStatus.textContent = "";
+                }
+
+            } catch (e) {
+
+                console.error(e);
+
+                alert("Erro ao apagar conversa");
             }
         };
     }
@@ -2747,6 +2806,56 @@ async function editarMensagem(mensagemId, novoTexto) {
         console.log("ERRO EDITAR DATA:", e?.data);
         console.log("ERRO EDITAR MESSAGE:", e?.message);
         throw e;
+    }
+}
+
+async function apagarConversa(conversaId) {
+
+    const confirmar = confirm(
+        "Deseja apagar esta conversa?"
+    );
+
+    if (!confirmar) return;
+
+    try {
+
+        const token = localStorage.getItem("token");
+
+        const r = await fetch(
+            `${API_URL}/conversas/${conversaId}/ocultar`,
+            {
+                method: "DELETE",
+
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            }
+        );
+
+        if (!r.ok) {
+            throw new Error("Erro ao apagar conversa");
+        }
+
+        // remove da tela instantaneamente
+        const el = document.querySelector(
+            `[data-conversa-id="${conversaId}"]`
+        );
+
+        if (el) {
+
+            el.style.opacity = "0";
+            el.style.transform = "translateX(20px)";
+
+            setTimeout(() => {
+                el.remove();
+            }, 250);
+        }
+
+    } catch (e) {
+
+        console.error(e);
+
+        alert("Erro ao apagar conversa");
     }
 }
 
