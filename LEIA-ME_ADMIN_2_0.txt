@@ -1,0 +1,38 @@
+DESEJO PROIBIDO — ADMIN 2.0
+Data: 26/08/2026
+
+ENTREGA
+- Dashboard executivo com KPIs de usuários, criadoras, lives, audiência, moderação, pagamentos, presentes, receita e saques.
+- Séries de 30 dias para receita da plataforma e novos usuários.
+- Gestão de usuários com busca, filtros e ficha 360°.
+- Ajustes administrativos auditados: ativar/desativar, verificar/desverificar, plano, premium, créditos e minutos.
+- Ficha do usuário com perfil, carteira, pagamentos, transações, lives, denúncias e auditoria.
+- Central financeira com vendas, receita DP, presentes e obrigações com criadoras.
+- Consulta paginada de transações de carteira e pagamentos.
+- Central de criadoras reformulada.
+- Central de lives reformulada e monitorada.
+- Fila de saques PIX reformulada.
+- Catálogo de presentes gerenciável pelo admin: criar, editar, ativar e pausar.
+- Central de moderação com visual novo.
+- Tela de configurações operacionais em modo seguro (leitura das variáveis de produção, sem expor segredos).
+- Novo layout responsivo, navegação por áreas, busca global de usuário e login Admin 2.0.
+
+BANCO DE DADOS
+- NÃO altera schema.prisma.
+- NÃO requer prisma db push para esta entrega.
+- NÃO adiciona dependências npm.
+
+ARQUIVOS DE BACKEND
+api/src/controllers/admin.v2.controller.js
+api/src/routes/admin.routes.js
+
+PRIMEIRO TESTE LOCAL
+cd api
+node --check src/controllers/admin.v2.controller.js
+node --check src/routes/admin.routes.js
+cd ..
+find webadmin/assets/js -name "*.js" -print0 | xargs -0 -n1 node --check
+
+DEPLOY
+Depois de git pull na VPS, não há migração de banco para este pacote.
+Reinicie apenas a API Node/PM2 para que as novas rotas sejam carregadas.

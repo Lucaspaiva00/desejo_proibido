@@ -2,6 +2,19 @@ import { Router } from "express";
 import { auth } from "../middlewares/auth.middleware.js";
 import { adminOnly } from "../middlewares/admin.middleware.js";
 import {
+    dashboardV2,
+    listarUsuariosV2,
+    detalheUsuarioV2,
+    acaoUsuarioV2,
+    financeiroV2,
+    listarTransacoesV2,
+    listarPagamentosV2,
+    listarPresentesV2,
+    criarPresenteV2,
+    atualizarPresenteV2,
+    configuracoesV2,
+} from "../controllers/admin.v2.controller.js";
+import {
     atualizarCriadora,
     dashboardOperacional,
     encerrarLiveAdmin,
@@ -26,6 +39,19 @@ const router = Router();
 
 // tudo aqui exige auth + admin
 router.use(auth, adminOnly);
+// Admin 2.0
+router.get("/v2/dashboard", dashboardV2);
+router.get("/v2/usuarios", listarUsuariosV2);
+router.get("/v2/usuarios/:id", detalheUsuarioV2);
+router.post("/v2/usuarios/:id/acao", acaoUsuarioV2);
+router.get("/v2/financeiro", financeiroV2);
+router.get("/v2/transacoes", listarTransacoesV2);
+router.get("/v2/pagamentos", listarPagamentosV2);
+router.get("/v2/presentes", listarPresentesV2);
+router.post("/v2/presentes", criarPresenteV2);
+router.put("/v2/presentes/:id", atualizarPresenteV2);
+router.get("/v2/configuracoes", configuracoesV2);
+
 router.get("/dashboard-operacional", dashboardOperacional);
 router.get("/criadoras", listarCriadoras);
 router.put("/criadoras/:id/status", atualizarCriadora);
