@@ -513,3 +513,6 @@
   .hostSummary { grid-template-columns: 1fr; }
   .giftGrid { grid-template-columns: repeat(2, 1fr); }
 }
+
+.liveInsights{margin-top:14px;padding:16px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:rgba(255,255,255,.025)}
+.goalHead,.rankingHead{display:flex;align-items:center;justify-content:space-between;gap:12px}.goalTrack{height:10px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;margin:10px 0 18px}.goalFill{height:100%;width:0%;background:linear-gradient(90deg,#ff315d,#ff8c52);transition:width .25s ease}.rankingList{display:grid;gap:7px;margin-top:10px}.rankingRow{display:flex;justify-content:space-between;gap:10px;padding:9px 10px;border-radius:10px;background:rgba(255,255,255,.035)}.startRow{flex-wrap:wrap}.startRow .search{min-width:210px;flex:1}

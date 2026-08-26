@@ -22,6 +22,15 @@ export function mountLayout(active = "") {
         }" href="index.html">
           <i class="fa-solid fa-chart-line"></i><span>Dashboard</span>
         </a>
+        <a class="nav-link ${active === "lives" ? "active" : ""}" href="lives.html">
+          <i class="fa-solid fa-video"></i><span>Lives</span>
+        </a>
+        <a class="nav-link ${active === "criadoras" ? "active" : ""}" href="criadoras.html">
+          <i class="fa-solid fa-circle-check"></i><span>Criadoras</span>
+        </a>
+        <a class="nav-link ${active === "saques" ? "active" : ""}" href="saques.html">
+          <i class="fa-solid fa-money-bill-transfer"></i><span>Saques PIX</span>
+        </a>
         <a class="nav-link ${
           active === "denuncias" ? "active" : ""
         }" href="denuncias.html">

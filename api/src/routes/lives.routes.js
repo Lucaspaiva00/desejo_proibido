@@ -10,10 +10,13 @@ router.post("/iniciar", auth, livesController.iniciarLive);
 
 router.get("/:id", auth, livesController.detalharLive);
 router.get("/:id/resumo", auth, livesController.resumoLive);
+router.get("/:id/ranking", auth, livesController.rankingLive);
 router.post("/:id/entrar", auth, livesController.entrarLive);
 router.post("/:id/sair", auth, livesController.sairLive);
 router.post("/:id/tick", auth, livesController.tickLive);
 router.post("/:id/presentear", auth, livesController.presentearLive);
+router.put("/:id/meta", auth, livesController.atualizarMetaLive);
+router.post("/:id/denunciar", auth, livesController.denunciarLive);
 router.post("/:id/encerrar", auth, livesController.encerrarLive);
 
 export default router;

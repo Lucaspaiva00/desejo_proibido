@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Área da Criadora – Desejo Proibido</title>
+  <link rel="stylesheet" href="css/dating.css" />
+  <link rel="stylesheet" href="css/criadora.css" />
+</head>
+<body>
+  <nav class="topnav">
+    <div class="brand"><div class="brand-badge">DP</div><span class="brand-name">Desejo Proibido</span></div>
+    <div class="navlinks navlinks-desktop">
+      <a href="home.html">Feed</a><a href="lives.html">Lives</a><a href="criadora.html" class="active">Criadora</a><a href="perfil.html">Perfil</a>
+    </div>
+    <div class="spacer"></div>
+    <button id="btnSair" class="btn btn-ghost">Sair</button>
+  </nav>
+
+  <main class="creatorWrap">
+    <header class="creatorHero">
+      <div>
+        <span class="eyebrow">CENTRAL DA CRIADORA</span>
+        <h1>Transmissões, ganhos e saques</h1>
+        <p>Acompanhe sua aprovação, saldo de lives e solicitações de saque.</p>
+      </div>
+      <a href="lives.html" class="btn btn-primary">Ir para Lives</a>
+    </header>
+
+    <div id="msg" class="creatorMsg"></div>
+
+    <section class="statusCard">
+      <div>
+        <div class="label">Status da conta</div>
+        <div id="creatorStatus" class="statusBadge">Carregando...</div>
+        <div id="creatorReason" class="muted"></div>
+      </div>
+      <div class="statusActions">
+        <button id="btnSolicitar" class="btn btn-primary" hidden>Solicitar aprovação</button>
+      </div>
+    </section>
+
+    <section class="metricGrid">
+      <article class="metric"><span>Saldo disponível</span><strong id="saldoDisponivel">0</strong><small>créditos</small></article>
+      <article class="metric"><span>Saldo em saque</span><strong id="saldoBloqueado">0</strong><small>créditos</small></article>
+      <article class="metric"><span>Ganhos em lives</span><strong id="ganhosLives">0</strong><small>créditos líquidos</small></article>
+      <article class="metric"><span>Estimativa financeira</span><strong id="ganhosReais">R$ 0,00</strong><small id="taxaInfo">conforme configuração</small></article>
+    </section>
+
+    <section class="twoCols">
+      <article class="creatorPanel">
+        <div class="panelHead"><div><h2>Solicitar saque</h2><p>O valor fica reservado até o admin pagar ou recusar.</p></div></div>
+        <div class="formGrid">
+          <label>Créditos<input id="saqueValor" type="number" min="1" step="1" /></label>
+          <label>Tipo da chave PIX
+            <select id="pixTipo"><option>CPF</option><option>CNPJ</option><option>EMAIL</option><option>TELEFONE</option><option>ALEATORIA</option></select>
+          </label>
+          <label class="full">Chave PIX<input id="pixChave" maxlength="180" /></label>
+          <button id="btnSaque" class="btn btn-primary full" type="button">Solicitar saque</button>
+        </div>
+        <div id="saqueRegra" class="muted footNote"></div>
+      </article>
+
+      <article class="creatorPanel">
+        <div class="panelHead"><div><h2>Top apoiadores</h2><p>Quem mais enviou presentes nas suas lives.</p></div></div>
+        <div id="topApoiadores" class="listBox">Carregando...</div>
+      </article>
+    </section>
+
+    <section class="creatorPanel">
+      <div class="panelHead"><div><h2>Últimas lives</h2><p>Visualizações e metas recentes.</p></div></div>
+      <div class="tableWrap"><table><thead><tr><th>Data</th><th>Título</th><th>Status</th><th>Viewers</th><th>Meta</th></tr></thead><tbody id="livesBody"></tbody></table></div>
+    </section>
+
+    <section class="creatorPanel">
+      <div class="panelHead"><div><h2>Histórico de saques</h2><p>Acompanhe aprovação, pagamento ou devolução.</p></div></div>
+      <div class="tableWrap"><table><thead><tr><th>Data</th><th>Créditos</th><th>Valor</th><th>PIX</th><th>Status</th><th>Observação</th></tr></thead><tbody id="saquesBody"></tbody></table></div>
+    </section>
+  </main>
+  <script type="module" src="js/criadora.js"></script>
+</body>
+</html>

@@ -65,6 +65,13 @@ model Usuario {
 
   minutosDisponiveis Int @default(0)
 
+  // Conta de criadora: controlada pelo admin, não pelo perfil público.
+  creatorStatus       String    @default("NAO_SOLICITADO")
+  creatorSolicitadoEm DateTime?
+  creatorAprovadoEm   DateTime?
+  creatorBloqueadoEm  DateTime?
+  creatorMotivo       String?
+
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
@@ -128,12 +135,14 @@ model Usuario {
 
   giftsEnviados   GiftCredito[]    @relation("GiftRemetente")
   giftsRecebidos  GiftCredito[]    @relation("GiftDestinatario")
+  saquesCriadora  CreatorPayoutRequest[] @relation("CreatorPayoutUser")
   conversaOcultas ConversaOculta[]
 
   @@index([ativo])
   @@index([role])
   @@index([isPremium])
   @@index([boostAte])
+  @@index([creatorStatus])
 }
 
 model EmailVerificacaoToken {
@@ -368,6 +377,8 @@ model Denuncia {
   denunciadoId  String
   motivo        String
   descricao     String?
+  contextoTipo  String?
+  contextoId    String?
   status        DenunciaStatus @default(ABERTA)
   criadoEm      DateTime       @default(now())
   atualizadoEm  DateTime       @updatedAt
@@ -379,6 +390,7 @@ model Denuncia {
   @@index([denunciadoId])
   @@index([denuncianteId])
   @@index([status])
+  @@index([contextoTipo, contextoId])
   @@index([criadoEm])
 }
 
@@ -639,6 +651,7 @@ model Live {
   id          String    @id @default(cuid())
   hostId      String
   titulo      String?
+  metaCreditos Int?
   status      String    @default("ATIVA")
   criadaEm    DateTime  @default(now())
   encerradaEm DateTime?
@@ -667,9 +680,10 @@ model LiveViewer {
 }
 
 model Wallet {
-  userId        String   @id
-  saldoCreditos Int      @default(0)
-  updatedAt     DateTime @updatedAt
+  userId          String   @id
+  saldoCreditos   Int      @default(0)
+  saldoBloqueado  Int      @default(0)
+  updatedAt       DateTime @updatedAt
 
   user Usuario @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -715,12 +729,53 @@ model GiftCredito {
 
   valor    Int
   mensagem String?
+  refTipo  String?
+  refId    String?
 
   criadoEm DateTime @default(now())
 
   remetente Usuario @relation("GiftRemetente", fields: [remetenteId], references: [id])
 
   destinatario Usuario @relation("GiftDestinatario", fields: [destinatarioId], references: [id])
+
+  @@index([refTipo, refId])
+  @@index([destinatarioId, criadoEm])
+}
+
+model CreatorPayoutRequest {
+  id               String   @id @default(cuid())
+  userId           String
+  valorCreditos    Int
+  valorCentavos    Int
+  chavePix         String
+  tipoChavePix     String
+  status           String   @default("PENDENTE")
+  observacao       String?
+  solicitadoEm     DateTime @default(now())
+  processadoEm     DateTime?
+  processadoPorId  String?
+
+  user Usuario @relation("CreatorPayoutUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, solicitadoEm])
+  @@index([status, solicitadoEm])
+}
+
+model PlatformRevenue {
+  id               String   @id @default(cuid())
+  origem           String
+  refId            String?
+  liveId           String?
+  payerId          String?
+  creatorId        String?
+  valorCreditos    Int
+  percentual       Int
+  detalhes         String?
+  criadoEm         DateTime @default(now())
+
+  @@index([origem, criadoEm])
+  @@index([liveId, criadoEm])
+  @@index([creatorId, criadoEm])
 }
 
 model ConversaOculta {

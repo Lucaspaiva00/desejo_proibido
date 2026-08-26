@@ -78,6 +78,7 @@ async function load() {
               <th>Denunciante</th>
               <th>Denunciado</th>
               <th>Status</th>
+              <th>Contexto</th>
               <th>Criado em</th>
               <th></th>
             </tr>
@@ -89,6 +90,7 @@ async function load() {
                 <td>${d.denunciante?.email || "-"}</td>
                 <td>${d.denunciado?.email || "-"}</td>
                 <td><span class="badge text-bg-dark">${d.status}</span></td>
+                <td>${d.contextoTipo ? `<span class="badge text-bg-danger">${d.contextoTipo}</span><div class="small text-secondary text-truncate" style="max-width:150px">${d.contextoId || ""}</div>` : "-"}</td>
                 <td>${new Date(d.criadoEm).toLocaleString()}</td>
                 <td class="text-end">
                   <a class="btn btn-danger btn-sm" href="denuncia-detalhe.html?id=${encodeURIComponent(d.id)}">

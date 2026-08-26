@@ -22,6 +22,7 @@
       <a href="matches.html">Matches</a>
       <a href="conversas.html">Chat</a>
       <a href="lives.html" class="active">Lives</a>
+      <a href="criadora.html">Criadora</a>
     </div>
 
     <div class="spacer"></div>
@@ -48,6 +49,7 @@
       <a href="matches.html">Matches</a>
       <a href="conversas.html">Chat</a>
       <a href="lives.html" class="active">Lives</a>
+      <a href="criadora.html">Criadora</a>
       <a href="bloqueados.html">Bloqueados</a>
     </div>
     <div class="nav-drawer-foot">
@@ -120,6 +122,8 @@
           <div class="roomBottomActions">
             <button class="btn btn-ghost" id="btnChat" type="button" disabled>💬 Chat</button>
             <button class="btn btn-ghost" id="btnPresentes" type="button" disabled>🎁 Presentes / gorjeta</button>
+            <button class="btn btn-ghost" id="btnRanking" type="button" disabled>🏆 Ranking</button>
+            <button class="btn btn-ghost" id="btnDenunciarLive" type="button" disabled>🚩 Denunciar</button>
           </div>
         </div>
 
@@ -130,6 +134,7 @@
           </div>
           <div class="startRow">
             <input id="liveTitulo" class="search" maxlength="80" placeholder="Título da live (opcional)" />
+            <input id="liveMeta" class="search" type="number" min="100" step="100" placeholder="Meta em créditos (opcional)" />
             <button id="btnStart" class="btn btn-primary" type="button">Iniciar live</button>
           </div>
         </div>
@@ -138,6 +143,13 @@
           <div class="summaryCard"><span class="muted">Online</span><strong id="hostViewers">0</strong></div>
           <div class="summaryCard"><span class="muted">Visualizadores</span><strong id="hostTotalViewers">0</strong></div>
           <div class="summaryCard"><span class="muted">Ganhos na live</span><strong id="hostGanhos">0 créditos</strong></div>
+        </div>
+
+        <div class="liveInsights" id="liveInsights" hidden>
+          <div class="goalHead"><div><strong>🔥 Meta da live</strong><div class="muted" id="goalText">Sem meta definida</div></div><strong id="goalPercent">0%</strong></div>
+          <div class="goalTrack"><div class="goalFill" id="goalFill"></div></div>
+          <div class="rankingHead"><strong>🏆 Maiores apoiadores</strong><span class="muted" id="giftCount">0 presentes</span></div>
+          <div id="rankingList" class="rankingList"><div class="empty">Entre em uma live para ver o ranking.</div></div>
         </div>
       </section>
     </div>
@@ -162,7 +174,7 @@
     <div class="drawerHead">
       <div>
         <div class="panelTitle">Presentes e gorjetas</div>
-        <div class="muted">A host recebe os créditos diretamente na carteira.</div>
+        <div class="muted">A host recebe os créditos líquidos na carteira, conforme a comissão configurada da plataforma.</div>
       </div>
       <button class="iconbtn" id="btnGiftClose" aria-label="Fechar presentes"><span class="xicon"></span></button>
     </div>

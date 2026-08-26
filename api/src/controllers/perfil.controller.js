@@ -1,5 +1,6 @@
 // src/controllers/perfil.controller.js
 import { prisma } from "../prisma.js";
+import { idadeEmAnos, isFemaleGender, isMaleGender, normalizeGender } from "../utils/creator.js";
 
 function parseDateOnlyToUTC(dateStr) {
     // dateStr esperado: "YYYY-MM-DD"
@@ -64,7 +65,7 @@ export async function salvarPerfil(req, res) {
 
         const nomeS = str(nome).trim();
         const estadoS = str(estado).trim().toUpperCase();
-        const generoS = str(genero).trim();
+        const generoS = normalizeGender(genero);
         const nascStr = str(nascimento).trim();
 
         // ✅ Agora: obrigatório (para aparecer no feed)
@@ -81,6 +82,28 @@ export async function salvarPerfil(req, res) {
         const nasc = parseDateOnlyToUTC(nascStr);
         if (!nasc) {
             return res.status(400).json({ erro: "nascimento é obrigatório e deve ser YYYY-MM-DD" });
+        }
+        const idade = idadeEmAnos(nasc);
+        if (!Number.isInteger(idade) || idade < 18) {
+            return res.status(403).json({ erro: "O Desejo Proibido é exclusivo para maiores de 18 anos" });
+        }
+
+        // Depois que uma conta solicita/aprova modo criadora, o gênero não pode ser alterado
+        // pelo perfil comum. Isso evita transformar uma conta em criadora por edição do front.
+        const conta = await prisma.usuario.findUnique({
+            where: { id: usuarioId },
+            select: { creatorStatus: true, perfil: { select: { genero: true } } },
+        });
+        const creatorStatus = String(conta?.creatorStatus || "NAO_SOLICITADO").toUpperCase();
+        if (["PENDENTE", "APROVADA", "BLOQUEADA"].includes(creatorStatus)) {
+            const atual = normalizeGender(conta?.perfil?.genero);
+            const mesmaCategoria =
+                (isFemaleGender(atual) && isFemaleGender(generoS)) ||
+                (isMaleGender(atual) && isMaleGender(generoS)) ||
+                atual === generoS;
+            if (atual && generoS && !mesmaCategoria) {
+                return res.status(403).json({ erro: "Gênero bloqueado enquanto a conta de criadora estiver em análise/aprovada" });
+            }
         }
 
         const perfil = await prisma.perfil.upsert({

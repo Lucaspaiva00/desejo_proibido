@@ -138,6 +138,8 @@ async function load() {
       <div class="mt-1">${(denuncia.motivo || denuncia.descricao || "-")}</div>
     </div>
 
+    ${denuncia.contextoTipo ? `<div class="mt-3 p-3 rounded" style="border:1px solid rgba(255,255,255,.08);"><div class="small text-secondary">Contexto</div><div class="fw-semibold">${denuncia.contextoTipo}</div><div class="small text-secondary">${denuncia.contextoId || "-"}</div>${denuncia.contextoTipo === "LIVE" ? `<a href="lives.html" class="btn btn-danger btn-sm mt-2">Abrir moderação de lives</a>` : ""}</div>` : ""}
+
     <div class="mt-3 text-secondary small">
       Criado em: ${new Date(denuncia.criadoEm).toLocaleString()}
     </div>

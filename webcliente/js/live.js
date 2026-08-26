@@ -10,8 +10,9 @@ const els = {
   btnJoin: $("btnJoin"), btnLeave: $("btnLeave"), btnEndLive: $("btnEndLive"),
   player: $("player"), liveVideo: $("liveVideo"), videoPlaceholder: $("videoPlaceholder"),
   playerTitle: $("playerTitle"), playerText: $("playerText"), giftBurstLayer: $("giftBurstLayer"),
-  roomHint: $("roomHint"), btnChat: $("btnChat"), btnPresentes: $("btnPresentes"),
-  startBox: $("startBox"), liveTitulo: $("liveTitulo"), btnStart: $("btnStart"), startHint: $("startHint"),
+  roomHint: $("roomHint"), btnChat: $("btnChat"), btnPresentes: $("btnPresentes"), btnRanking: $("btnRanking"), btnDenunciarLive: $("btnDenunciarLive"),
+  startBox: $("startBox"), liveTitulo: $("liveTitulo"), liveMeta: $("liveMeta"), btnStart: $("btnStart"), startHint: $("startHint"),
+  liveInsights: $("liveInsights"), goalText: $("goalText"), goalPercent: $("goalPercent"), goalFill: $("goalFill"), rankingList: $("rankingList"), giftCount: $("giftCount"),
   hostSummary: $("hostSummary"), hostViewers: $("hostViewers"), hostTotalViewers: $("hostTotalViewers"), hostGanhos: $("hostGanhos"),
   chatDrawer: $("chatDrawer"), btnChatClose: $("btnChatClose"), chatInfo: $("chatInfo"), msgs: $("msgs"), texto: $("texto"), btnEnviar: $("btnEnviar"),
   giftDrawer: $("giftDrawer"), btnGiftClose: $("btnGiftClose"), giftGrid: $("giftGrid"), tipValor: $("tipValor"), tipMensagem: $("tipMensagem"), btnEnviarGorjeta: $("btnEnviarGorjeta"),
@@ -22,6 +23,8 @@ const state = {
   status: null,
   genero: "",
   isHost: false,
+  isMale: false,
+  canBroadcast: false,
   lives: [],
   selected: null,
   liveId: null,
@@ -131,6 +134,9 @@ function showSelectedLive(live) {
     setAvatar(null);
     if (!state.broadcasting && !state.joined) setVideo(null);
     els.btnJoin.disabled = true;
+    els.btnRanking.disabled = true;
+    els.btnDenunciarLive.disabled = true;
+    els.liveInsights.hidden = true;
     return;
   }
 
@@ -140,6 +146,10 @@ function showSelectedLive(live) {
   els.roomStatus.textContent = "● AO VIVO";
   els.viewersPill.textContent = `👁 ${Number(live.viewersOnline || 0)}`;
   setAvatar(host);
+
+  els.btnRanking.disabled = false;
+  els.btnDenunciarLive.disabled = state.isHost;
+  loadRanking(live.id, { silent: true });
 
   if (!state.isHost && !state.joined) {
     els.btnJoin.disabled = false;
@@ -223,7 +233,9 @@ async function loadStatus() {
   const data = await apiFetch("/lives/status");
   state.status = data;
   state.genero = String(data?.genero || "").toUpperCase();
-  state.isHost = state.genero === "F";
+  state.isHost = !!data?.perfilFeminino;
+  state.isMale = !!data?.perfilMasculino;
+  state.canBroadcast = !!data?.podeTransmitir;
   updateWalletUi(data);
 
   els.startBox.hidden = !state.isHost;
@@ -234,13 +246,23 @@ async function loadStatus() {
     els.btnJoin.hidden = true;
     els.btnLeave.hidden = true;
     els.btnPresentes.disabled = true;
-    els.startHint.textContent = "Você pode abrir uma live e receber presentes ou gorjetas em créditos diretamente na carteira.";
+    els.btnDenunciarLive.disabled = true;
+    els.btnStart.disabled = !state.canBroadcast;
+
+    if (state.canBroadcast) {
+      els.startHint.textContent = "Conta de criadora aprovada. Você pode abrir live e receber créditos líquidos na carteira.";
+    } else {
+      const status = data?.creatorStatus || "NAO_SOLICITADO";
+      els.startHint.innerHTML = `Conta de criadora: <strong>${escapeHtml(status)}</strong>. <a href="criadora.html">Acesse a Área da Criadora</a> para solicitar/acompanhar aprovação.`;
+    }
 
     if (data.liveAtiva) {
       state.liveId = data.liveAtiva.id;
       showSelectedLive(data.liveAtiva);
       els.btnStart.textContent = "Retomar câmera";
+      els.btnStart.disabled = !state.canBroadcast;
       els.liveTitulo.value = data.liveAtiva.titulo || "";
+      els.liveMeta.value = data.liveAtiva.metaCreditos || "";
       els.roomHint.textContent = "Sua live já está ativa. Retome a câmera ou encerre a transmissão.";
       els.btnEndLive.hidden = false;
     } else {
@@ -248,9 +270,9 @@ async function loadStatus() {
       state.selected = null;
       showSelectedLive(null);
       els.btnStart.textContent = "Iniciar live";
-      els.roomHint.textContent = "Defina um título e inicie sua transmissão.";
+      els.roomHint.textContent = state.canBroadcast ? "Defina um título/meta e inicie sua transmissão." : "Sua conta precisa ser aprovada antes de transmitir.";
     }
-  } else if (state.genero === "M") {
+  } else if (state.isMale && data?.maiorDe18) {
     els.startBox.hidden = true;
     els.hostSummary.hidden = true;
     els.btnJoin.hidden = false;
@@ -261,7 +283,7 @@ async function loadStatus() {
     els.startBox.hidden = true;
     els.btnJoin.hidden = false;
     els.btnJoin.disabled = true;
-    setMsg("Complete o perfil e informe o gênero antes de usar as lives.", "error");
+    setMsg(data?.maiorDe18 === false ? "O Desejo Proibido é exclusivo para maiores de 18 anos." : "Complete o perfil antes de usar as lives.", "error");
   }
 }
 
@@ -421,6 +443,12 @@ function bindSocketEvents() {
       if (evento?.hostSaldoCreditos != null) updateWalletUi({ saldoCreditos: evento.hostSaldoCreditos });
       loadSummary({ silent: true });
     }
+    loadRanking(evento.liveId, { silent: true });
+  });
+
+  socket.on("live:meta:update", ({ liveId, metaCreditos }) => {
+    if (state.selected?.id === liveId) state.selected.metaCreditos = metaCreditos;
+    if (state.liveId === liveId || state.selected?.id === liveId) loadRanking(liveId, { silent: true });
   });
 
   socket.on("live:earning", (evento) => {
@@ -431,15 +459,33 @@ function bindSocketEvents() {
 
   socket.on("wallet:update", ({ saldoCreditos }) => updateWalletUi({ saldoCreditos }));
 
-  socket.on("live:ended", async ({ liveId }) => {
+  socket.on("live:ended", async ({ liveId, motivo, mensagem }) => {
     if (liveId !== state.liveId) return;
     if (!state.isHost) {
       await cleanupViewer({ callApi: false });
-      setMsg("A host encerrou a live.", "muted");
+      setMsg(mensagem || (motivo === "MODERACAO" ? "A moderação encerrou esta live." : "A host encerrou a live."), "muted");
       els.roomStatus.textContent = "● Encerrada";
       els.roomHint.textContent = "Escolha outra live para continuar.";
       scheduleLivesReload();
+      return;
     }
+    stopSummaryPolling();
+    closeAllHostPeers();
+    stopLocalMedia();
+    state.broadcasting = false;
+    state.liveId = null;
+    state.selected = null;
+    setVideo(null);
+    setMsg(mensagem || "Sua live foi encerrada pela moderação.", "error");
+    await loadStatus().catch(() => {});
+    scheduleLivesReload();
+  });
+
+  socket.on("creator:status", async ({ status }) => {
+    if (!state.isHost) return;
+    if (state.status) state.status.creatorStatus = status;
+    if (["BLOQUEADA", "REPROVADA", "PENDENTE"].includes(String(status || "").toUpperCase())) state.canBroadcast = false;
+    await loadStatus().catch(() => {});
   });
 
   socket.on("live:host:offline", ({ liveId }) => {
@@ -573,6 +619,10 @@ function closeViewerPeer() {
 
 async function startHostBroadcast() {
   if (!state.isHost) return;
+  if (!state.canBroadcast) {
+    setMsg("Sua conta de criadora precisa ser aprovada antes de transmitir.", "error");
+    return;
+  }
   els.btnStart.disabled = true;
   setMsg("Preparando câmera e microfone...");
 
@@ -587,7 +637,7 @@ async function startHostBroadcast() {
     if (!liveId) {
       const started = await apiFetch("/lives/iniciar", {
         method: "POST",
-        body: { titulo: els.liveTitulo.value.trim() || null },
+        body: { titulo: els.liveTitulo.value.trim() || null, metaCreditos: els.liveMeta.value ? Number(els.liveMeta.value) : null },
       });
       liveId = started.liveId;
       createdNow = true;
@@ -595,6 +645,7 @@ async function startHostBroadcast() {
       liveData = state.status?.liveAtiva || {
         id: liveId,
         titulo: els.liveTitulo.value.trim() || null,
+        metaCreditos: els.liveMeta.value ? Number(els.liveMeta.value) : null,
         host: { id: state.status?.userId, nome: state.status?.nome || "Você" },
         viewersOnline: 0,
       };
@@ -696,6 +747,8 @@ async function joinSelectedLive() {
     els.btnLeave.disabled = false;
     els.btnChat.disabled = false;
     els.btnPresentes.disabled = false;
+    els.btnRanking.disabled = false;
+    els.btnDenunciarLive.disabled = false;
     els.texto.disabled = false;
     els.btnEnviar.disabled = false;
     els.chatInfo.textContent = `Chat com ${live.host?.nome || "a host"}`;
@@ -744,6 +797,8 @@ async function cleanupViewer({ callApi }) {
   els.btnJoin.disabled = !state.selected;
   els.btnLeave.hidden = true;
   els.btnPresentes.disabled = true;
+  els.btnRanking.disabled = !state.selected;
+  els.btnDenunciarLive.disabled = !state.selected;
   els.btnChat.disabled = true;
   els.texto.disabled = true;
   els.btnEnviar.disabled = true;
@@ -796,6 +851,37 @@ function startSummaryPolling() {
 function stopSummaryPolling() {
   if (state.summaryTimer) clearInterval(state.summaryTimer);
   state.summaryTimer = null;
+}
+
+async function loadRanking(liveId = state.liveId || state.selected?.id, { silent = false } = {}) {
+  if (!liveId) { els.liveInsights.hidden = true; return; }
+  try {
+    const data = await apiFetch(`/lives/${liveId}/ranking`);
+    els.liveInsights.hidden = false;
+    const total = Number(data?.arrecadadoBrutoCreditos || 0);
+    const meta = Number(data?.metaCreditos || 0);
+    const pct = meta > 0 ? Math.min(100, Math.round((total / meta) * 100)) : 0;
+    els.goalText.textContent = meta > 0 ? `${total.toLocaleString("pt-BR")} / ${meta.toLocaleString("pt-BR")} créditos` : `${total.toLocaleString("pt-BR")} créditos arrecadados • sem meta definida`;
+    els.goalPercent.textContent = meta > 0 ? `${pct}%` : "—";
+    els.goalFill.style.width = `${pct}%`;
+    els.giftCount.textContent = `${Number(data?.presentesQuantidade || 0)} presente(s)`;
+    const ranking = Array.isArray(data?.ranking) ? data.ranking : [];
+    els.rankingList.innerHTML = ranking.length ? ranking.map(r => `<div class="rankingRow"><span>${Number(r.posicao)}. ${escapeHtml(r.nome)}</span><strong>${Number(r.creditos || 0).toLocaleString("pt-BR")}</strong></div>`).join("") : `<div class="empty">Ainda não há apoiadores nesta live.</div>`;
+  } catch (e) {
+    if (!silent) setMsg(e.message || "Erro ao carregar ranking", "error");
+  }
+}
+
+async function reportSelectedLive() {
+  const liveId = state.liveId || state.selected?.id;
+  if (!liveId || state.isHost) return;
+  const motivo = prompt("Motivo da denúncia (ex.: conteúdo proibido, fraude, abuso):");
+  if (!motivo) return;
+  const descricao = prompt("Detalhes adicionais (opcional):") || null;
+  try {
+    await apiFetch(`/lives/${liveId}/denunciar`, { method: "POST", body: { motivo, descricao } });
+    setMsg("Denúncia enviada para a moderação.", "success");
+  } catch (e) { setMsg(e.message || "Erro ao denunciar live", "error"); }
 }
 
 async function loadGifts() {
@@ -951,6 +1037,8 @@ els.btnJoin?.addEventListener("click", joinSelectedLive);
 els.btnLeave?.addEventListener("click", leaveViewerLive);
 els.btnChat?.addEventListener("click", () => openDrawer(els.chatDrawer));
 els.btnPresentes?.addEventListener("click", async () => { await loadGifts(); renderGifts(); openDrawer(els.giftDrawer); });
+els.btnRanking?.addEventListener("click", () => loadRanking());
+els.btnDenunciarLive?.addEventListener("click", reportSelectedLive);
 els.btnChatClose?.addEventListener("click", closeDrawers);
 els.btnGiftClose?.addEventListener("click", closeDrawers);
 els.drawerOverlay?.addEventListener("click", closeDrawers);

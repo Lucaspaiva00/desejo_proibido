@@ -31,6 +31,7 @@ import pagamentosRoutes from "./routes/pagamentos.routes.js";
 import carteiraRoutes from "./routes/carteira.routes.js";
 import creditosRoutes from "./routes/creditos.routes.js";
 import uploadRoutes from "./routes/upload.routes.js";
+import criadoraRoutes from "./routes/criadora.routes.js";
 
 import { langMiddleware } from "./middlewares/lang.middleware.js";
 
@@ -98,6 +99,7 @@ v1.use("/ligacoes/video", ligacaoVideoRoutes);
 v1.use("/lives", livesRoutes);
 v1.use("/carteira", carteiraRoutes);
 v1.use("/creditos", creditosRoutes);
+v1.use("/criadora", criadoraRoutes);
 
 // pagamentos
 v1.use("/pagamentos", pagamentosRoutes);

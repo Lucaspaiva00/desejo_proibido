@@ -1,0 +1,42 @@
+PACOTE 2 — DESEJO PROIBIDO — MONETIZAÇÃO, CRIADORAS, MODERAÇÃO E DEPLOY
+Data: 26/08/2026
+
+ENTREGUE NESTE PACOTE
+- Conta de criadora controlada pelo admin: NAO_SOLICITADO / PENDENTE / APROVADA / BLOQUEADA / REPROVADA.
+- Regra 18+ no perfil e também nas rotas de live.
+- Compatibilidade de gênero com F/FEMININO e M/MASCULINO.
+- Mulher não vira criadora apenas editando o perfil: transmissão exige aprovação/verificação.
+- Área web da criadora: status, saldo, ganhos, top apoiadores, últimas lives e saques.
+- Solicitação de saque PIX com saldo reservado/bloqueado até processamento.
+- Admin para aprovar/reprovar/bloquear criadoras.
+- Admin para aprovar/pagar/recusar saques, devolvendo saldo automaticamente quando recusado.
+- Comissão configurável da plataforma em presentes/gorjetas e crédito de minuto.
+- Registro separado da receita da plataforma em PlatformRevenue.
+- Meta de créditos por live.
+- Ranking de apoiadores por live.
+- Denúncia contextual de live.
+- Painel admin de lives com viewers, presentes, receita e encerramento remoto.
+- Dashboard admin com lives ativas, criadoras pendentes, saques pendentes e receita do dia.
+- Cobrança por minuto protegida contra concorrência/dupla cobrança do mesmo minuto.
+- Base de deploy automático por GitHub Actions -> VPS -> Prisma -> PM2.
+- Backfill opcional para criadoras 18+ que já tinham histórico de live antes do fluxo de aprovação.
+
+VARIÁVEIS NOVAS (defaults existentes)
+LIVE_PLATFORM_FEE_PERCENT=30
+CREATOR_CREDITO_VALOR_CENTAVOS=1
+CREATOR_MIN_SAQUE_CREDITOS=5000
+CREATOR_MAX_SAQUE_CREDITOS=10000000
+LIVE_MAX_META_CREDITOS=100000000
+
+ATENÇÃO AO PRIMEIRO DEPLOY
+O projeto não possuía migrations Prisma versionadas. Por isso, depois de atualizar o código na VPS, execute:
+  npx prisma generate
+  npx prisma db push
+
+Não use --accept-data-loss.
+
+Depois, uma única vez:
+  node scripts/backfill-existing-creators.js
+
+DEPLOY AUTOMÁTICO
+Leia DEPLOY_VPS.md. O workflow só executa quando a variável de repositório VPS_DEPLOY_ENABLED estiver como true, evitando falha antes de cadastrar os secrets SSH.

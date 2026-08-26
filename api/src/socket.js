@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { prisma } from "./prisma.js";
 import { getSaldoCreditos } from "./utils/creditos.js";
 import { debitWallet } from "./utils/wallet.js"; // se existir ok, senão fallback abaixo.
+import { creatorCanBroadcast } from "./utils/creator.js";
 
 const CUSTO_POR_MINUTO = 10;
 
@@ -411,13 +412,23 @@ export function registerSockets(io) {
 
           const live = await prisma.live.findUnique({
             where: { id: String(liveId) },
-            select: { hostId: true, status: true, host: { select: { perfil: { select: { genero: true } } } } },
+            select: {
+              hostId: true,
+              status: true,
+              host: {
+                select: {
+                  ativo: true,
+                  creatorStatus: true,
+                  perfil: { select: { genero: true, nascimento: true, verificado: true } },
+                },
+              },
+            },
           });
           if (!live || live.status !== "ATIVA" || live.hostId !== String(uid)) {
             return ack({ ok: false, error: "Live inválida para esta host" });
           }
-          if (String(live.host?.perfil?.genero || "").toUpperCase() !== "F") {
-            return ack({ ok: false, error: "Apenas host feminina pode transmitir" });
+          if (!creatorCanBroadcast(live.host)) {
+            return ack({ ok: false, error: "Conta de criadora não está autorizada a transmitir" });
           }
 
           mapAdd(liveHosts, liveId, socket.id);

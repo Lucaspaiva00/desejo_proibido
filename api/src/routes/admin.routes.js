@@ -2,6 +2,15 @@ import { Router } from "express";
 import { auth } from "../middlewares/auth.middleware.js";
 import { adminOnly } from "../middlewares/admin.middleware.js";
 import {
+    atualizarCriadora,
+    dashboardOperacional,
+    encerrarLiveAdmin,
+    listarCriadoras,
+    listarLivesAdmin,
+    listarSaques,
+    processarSaque,
+} from "../controllers/admin.creator.controller.js";
+import {
     listarDenuncias,
     detalheDenuncia,
     atualizarStatusDenuncia,
@@ -17,6 +26,14 @@ const router = Router();
 
 // tudo aqui exige auth + admin
 router.use(auth, adminOnly);
+router.get("/dashboard-operacional", dashboardOperacional);
+router.get("/criadoras", listarCriadoras);
+router.put("/criadoras/:id/status", atualizarCriadora);
+router.get("/saques", listarSaques);
+router.put("/saques/:id", processarSaque);
+router.get("/lives", listarLivesAdmin);
+router.post("/lives/:id/encerrar", encerrarLiveAdmin);
+
 router.get("/logs/acessos", listarLogsAcesso);
 router.get("/logs/denuncias", listarLogsDenuncia);
 router.get("/denuncias", listarDenuncias);

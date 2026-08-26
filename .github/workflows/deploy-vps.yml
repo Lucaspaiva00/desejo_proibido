@@ -1,0 +1,68 @@
+name: Deploy VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desejo-proibido-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ vars.VPS_DEPLOY_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure SSH
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts
+
+      - name: Deploy main on VPS
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_APP_PATH: ${{ secrets.VPS_APP_PATH }}
+          PM2_APP_NAME: ${{ secrets.PM2_APP_NAME }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/id_ed25519 "$VPS_USER@$VPS_HOST" \
+            "VPS_APP_PATH='$VPS_APP_PATH' PM2_APP_NAME='$PM2_APP_NAME' bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd "$VPS_APP_PATH"
+          git fetch origin main
+          git reset --hard origin/main
+
+          cd api
+          npm ci
+          npx prisma generate
+          # Sem --accept-data-loss: se uma alteração futura for destrutiva, o deploy falha em segurança.
+          npx prisma db push --skip-generate
+
+          if command -v pm2 >/dev/null 2>&1; then
+            pm2 restart "$PM2_APP_NAME" --update-env
+            pm2 save
+          else
+            echo "PM2 não encontrado na VPS. Código atualizado, mas a API precisa ser reiniciada manualmente."
+            exit 1
+          fi
+
+          curl -fsS http://127.0.0.1:${PORT:-3333}/health >/dev/null || true
+          echo "Deploy concluído em $(date -Is)"
+          REMOTE
