@@ -26,6 +26,8 @@ export function registerSockets(io) {
   // ============================
   const userSockets = new Map();   // userId -> Set(socketId)
   const billingTimers = new Map(); // sessaoId -> intervalId
+  const liveHosts = new Map();      // liveId -> Set(socketId)
+  const liveViewers = new Map();    // liveId -> Set(socketId)
 
   // ✅ PRESENÇA (online/offline real)
   const onlineUsers = new Map();   // userId -> { online: true, lastSeen: Date, updatedAt: ms }
@@ -245,6 +247,42 @@ export function registerSockets(io) {
     billingTimers.set(id, intervalId);
   }
 
+
+  // ============================
+  // Live rooms / WebRTC 1:N
+  // ============================
+  function liveRoom(liveId) {
+    return `live:${liveId}`;
+  }
+
+  function mapAdd(map, liveId, socketId) {
+    const key = String(liveId);
+    if (!map.has(key)) map.set(key, new Set());
+    map.get(key).add(socketId);
+  }
+
+  function mapDelete(map, liveId, socketId) {
+    const key = String(liveId);
+    const set = map.get(key);
+    if (!set) return;
+    set.delete(socketId);
+    if (set.size === 0) map.delete(key);
+  }
+
+  function inMap(map, liveId, socketId) {
+    return !!map.get(String(liveId))?.has(socketId);
+  }
+
+  function livePeersCanSignal(liveId, fromSocketId, toSocketId) {
+    const hostToViewer = inMap(liveHosts, liveId, fromSocketId) && inMap(liveViewers, liveId, toSocketId);
+    const viewerToHost = inMap(liveViewers, liveId, fromSocketId) && inMap(liveHosts, liveId, toSocketId);
+    return hostToViewer || viewerToHost;
+  }
+
+  async function viewerCount(liveId) {
+    return prisma.liveViewer.count({ where: { liveId: String(liveId), saiuEm: null } });
+  }
+
   // expõe helpers pro controller usar
   io._dp = {
     emitToUser,
@@ -290,7 +328,9 @@ export function registerSockets(io) {
         socket.handshake.query?.token ||
         "";
 
-      let userId = getUserIdFromToken(token);
+      const tokenUserId = getUserIdFromToken(token);
+      let userId = tokenUserId;
+      socket.data.authenticated = !!tokenUserId;
 
       if (!userId) {
         userId = socket.handshake.auth?.userId || socket.handshake.query?.userId || null;
@@ -304,9 +344,31 @@ export function registerSockets(io) {
         socket.emit("presence:me", { userId: String(userId), online: true, at: nowISO() });
       }
 
-      socket.on("disconnect", () => {
+      socket.on("disconnect", async () => {
         const uid = socket.data.userId;
         if (uid) removeUserSocket(uid, socket.id);
+
+        for (const [liveId, set] of [...liveViewers.entries()]) {
+          if (!set.has(socket.id)) continue;
+          mapDelete(liveViewers, liveId, socket.id);
+          if (uid) {
+            await prisma.liveViewer.updateMany({
+              where: { liveId, viewerId: String(uid), saiuEm: null },
+              data: { saiuEm: new Date() },
+            }).catch(() => {});
+          }
+          const viewersOnline = await viewerCount(liveId).catch(() => 0);
+          io.to(liveRoom(liveId)).emit("live:viewers:update", { liveId, viewersOnline });
+          for (const hostSid of liveHosts.get(String(liveId)) || []) {
+            io.to(hostSid).emit("live:viewer:left", { liveId, viewerSocketId: socket.id, viewerId: uid || null });
+          }
+        }
+
+        for (const [liveId, set] of [...liveHosts.entries()]) {
+          if (!set.has(socket.id)) continue;
+          mapDelete(liveHosts, liveId, socket.id);
+          socket.to(liveRoom(liveId)).emit("live:host:offline", { liveId });
+        }
       });
 
       // ============================
@@ -337,6 +399,151 @@ export function registerSockets(io) {
       socket.on("joinRoom", ({ roomId }) => {
         if (!roomId) return;
         socket.join(roomId);
+      });
+
+      // ============================
+      // LIVE: host/viewer + signaling + chat
+      // ============================
+      socket.on("live:host:join", async ({ liveId } = {}, ack = () => {}) => {
+        try {
+          const uid = socket.data.userId;
+          if (!socket.data.authenticated || !uid || !liveId) return ack({ ok: false, error: "Não autenticado" });
+
+          const live = await prisma.live.findUnique({
+            where: { id: String(liveId) },
+            select: { hostId: true, status: true, host: { select: { perfil: { select: { genero: true } } } } },
+          });
+          if (!live || live.status !== "ATIVA" || live.hostId !== String(uid)) {
+            return ack({ ok: false, error: "Live inválida para esta host" });
+          }
+          if (String(live.host?.perfil?.genero || "").toUpperCase() !== "F") {
+            return ack({ ok: false, error: "Apenas host feminina pode transmitir" });
+          }
+
+          mapAdd(liveHosts, liveId, socket.id);
+          socket.data.liveHostId = String(liveId);
+          socket.join(liveRoom(liveId));
+
+          const existingViewers = [...(liveViewers.get(String(liveId)) || [])];
+          ack({ ok: true, liveId: String(liveId), viewersSockets: existingViewers });
+          for (const viewerSocketId of existingViewers) {
+            socket.emit("live:viewer:joined", { liveId: String(liveId), viewerSocketId });
+          }
+        } catch (e) {
+          ack({ ok: false, error: e?.message || "Erro ao conectar host" });
+        }
+      });
+
+      socket.on("live:viewer:join", async ({ liveId } = {}, ack = () => {}) => {
+        try {
+          const uid = socket.data.userId;
+          if (!socket.data.authenticated || !uid || !liveId) return ack({ ok: false, error: "Não autenticado" });
+
+          const [live, viewer] = await Promise.all([
+            prisma.live.findUnique({ where: { id: String(liveId) }, select: { status: true, hostId: true } }),
+            prisma.liveViewer.findUnique({
+              where: { liveId_viewerId: { liveId: String(liveId), viewerId: String(uid) } },
+              select: { saiuEm: true },
+            }),
+          ]);
+          if (!live || live.status !== "ATIVA" || !viewer || viewer.saiuEm) {
+            return ack({ ok: false, error: "Entre na live pela API antes de conectar o vídeo" });
+          }
+
+          mapAdd(liveViewers, liveId, socket.id);
+          socket.data.liveViewerId = String(liveId);
+          socket.join(liveRoom(liveId));
+
+          for (const hostSocketId of liveHosts.get(String(liveId)) || []) {
+            io.to(hostSocketId).emit("live:viewer:joined", {
+              liveId: String(liveId),
+              viewerSocketId: socket.id,
+              viewerId: String(uid),
+            });
+          }
+
+          ack({ ok: true, liveId: String(liveId), hostOnline: (liveHosts.get(String(liveId))?.size || 0) > 0 });
+        } catch (e) {
+          ack({ ok: false, error: e?.message || "Erro ao conectar espectador" });
+        }
+      });
+
+      socket.on("live:offer", ({ liveId, viewerSocketId, sdp } = {}) => {
+        if (!liveId || !viewerSocketId || !sdp) return;
+        if (!inMap(liveHosts, liveId, socket.id) || !inMap(liveViewers, liveId, viewerSocketId)) return;
+        io.to(viewerSocketId).emit("live:offer", { liveId: String(liveId), hostSocketId: socket.id, sdp });
+      });
+
+      socket.on("live:answer", ({ liveId, hostSocketId, sdp } = {}) => {
+        if (!liveId || !hostSocketId || !sdp) return;
+        if (!inMap(liveViewers, liveId, socket.id) || !inMap(liveHosts, liveId, hostSocketId)) return;
+        io.to(hostSocketId).emit("live:answer", { liveId: String(liveId), viewerSocketId: socket.id, sdp });
+      });
+
+      socket.on("live:ice", ({ liveId, targetSocketId, candidate } = {}) => {
+        if (!liveId || !targetSocketId || !candidate) return;
+        if (!livePeersCanSignal(liveId, socket.id, targetSocketId)) return;
+        io.to(targetSocketId).emit("live:ice", {
+          liveId: String(liveId),
+          fromSocketId: socket.id,
+          candidate,
+        });
+      });
+
+      socket.on("live:chat", async ({ liveId, texto } = {}, ack = () => {}) => {
+        try {
+          const uid = socket.data.userId;
+          const msg = String(texto || "").trim().slice(0, 500);
+          if (!socket.data.authenticated || !uid || !liveId || !msg) return ack({ ok: false });
+          const permitido = inMap(liveHosts, liveId, socket.id) || inMap(liveViewers, liveId, socket.id);
+          if (!permitido) return ack({ ok: false, error: "Fora da live" });
+
+          const u = await prisma.usuario.findUnique({
+            where: { id: String(uid) },
+            select: { perfil: { select: { nome: true } } },
+          });
+          const payload = {
+            liveId: String(liveId),
+            userId: String(uid),
+            nome: u?.perfil?.nome || "Usuário",
+            texto: msg,
+            criadoEm: new Date().toISOString(),
+          };
+          io.to(liveRoom(liveId)).emit("live:chat", payload);
+          ack({ ok: true });
+        } catch (e) {
+          ack({ ok: false, error: e?.message || "Erro no chat" });
+        }
+      });
+
+      socket.on("live:leave", async ({ liveId } = {}, ack = () => {}) => {
+        try {
+          const uid = socket.data.userId;
+          const id = String(liveId || "");
+          if (!id) return ack({ ok: false });
+
+          const wasViewer = inMap(liveViewers, id, socket.id);
+          const wasHost = inMap(liveHosts, id, socket.id);
+          mapDelete(liveViewers, id, socket.id);
+          mapDelete(liveHosts, id, socket.id);
+          socket.leave(liveRoom(id));
+
+          if (wasViewer && uid) {
+            await prisma.liveViewer.updateMany({
+              where: { liveId: id, viewerId: String(uid), saiuEm: null },
+              data: { saiuEm: new Date() },
+            });
+            const viewersOnline = await viewerCount(id);
+            io.to(liveRoom(id)).emit("live:viewers:update", { liveId: id, viewersOnline });
+            for (const hostSid of liveHosts.get(id) || []) {
+              io.to(hostSid).emit("live:viewer:left", { liveId: id, viewerSocketId: socket.id, viewerId: String(uid) });
+            }
+          }
+          if (wasHost) socket.to(liveRoom(id)).emit("live:host:offline", { liveId: id });
+          ack({ ok: true });
+        } catch (e) {
+          ack({ ok: false, error: e?.message || "Erro ao sair da live" });
+        }
       });
 
       // ============================

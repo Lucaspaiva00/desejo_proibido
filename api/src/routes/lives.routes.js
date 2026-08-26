@@ -5,12 +5,15 @@ import * as livesController from "../controllers/lives.controller.js";
 const router = Router();
 
 router.get("/", auth, livesController.listarLives);
+router.get("/status", auth, livesController.statusLive);
 router.post("/iniciar", auth, livesController.iniciarLive);
+
+router.get("/:id", auth, livesController.detalharLive);
+router.get("/:id/resumo", auth, livesController.resumoLive);
 router.post("/:id/entrar", auth, livesController.entrarLive);
 router.post("/:id/sair", auth, livesController.sairLive);
 router.post("/:id/tick", auth, livesController.tickLive);
-
-// opcional (recomendado)
+router.post("/:id/presentear", auth, livesController.presentearLive);
 router.post("/:id/encerrar", auth, livesController.encerrarLive);
 
 export default router;
