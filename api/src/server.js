@@ -15,7 +15,14 @@ const io = new IOServer(server, {
   path: "/api/socket.io",
   cors: {
     origin(origin, callback) {
-      if (isCorsOriginAllowed(origin)) return callback(null, true);
+      if (!origin || isCorsOriginAllowed(origin)) return callback(null, true);
+
+      try {
+        const url = new URL(origin);
+        const local = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+        if (local) return callback(null, true);
+      } catch {}
+
       return callback(new Error(`Origin não permitida no Socket.IO: ${origin}`));
     },
     methods: ["GET", "POST", "OPTIONS"],

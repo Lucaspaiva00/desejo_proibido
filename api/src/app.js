@@ -40,6 +40,39 @@ export const app = express();
 // proxies / nginx (recomendado)
 app.set("trust proxy", 1);
 
+// CORS de emergência/compatibilidade para web local e produção.
+// Mantido antes de helmet/cors para garantir os headers inclusive em erros e preflight.
+app.use((req, res, next) => {
+    const origin = req.headers.origin;
+
+    if (isCorsOriginAllowed(origin)) {
+        if (origin) {
+            res.setHeader("Access-Control-Allow-Origin", origin);
+            res.setHeader("Vary", "Origin");
+        }
+
+        res.setHeader("Access-Control-Allow-Credentials", "true");
+        res.setHeader(
+            "Access-Control-Allow-Methods",
+            "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS"
+        );
+        res.setHeader(
+            "Access-Control-Allow-Headers",
+            "Content-Type, Authorization, Accept, Origin, X-Requested-With"
+        );
+        res.setHeader(
+            "Access-Control-Expose-Headers",
+            "Content-Length"
+        );
+    }
+
+    if (req.method === "OPTIONS") {
+        return res.sendStatus(204);
+    }
+
+    next();
+});
+
 // middlewares base
 app.use(helmet());
 
