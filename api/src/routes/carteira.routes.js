@@ -6,6 +6,8 @@ import { prisma } from "../prisma.js";
 
 const router = Router();
 
+const CUSTO_RETORNO_FEED = 10;
+
 router.get("/", auth, async (req, res) => {
     try {
         const userId = req.usuario?.id;
@@ -30,6 +32,92 @@ router.post(
     auth,
     presentearCreditos
 );
+
+router.post("/feed-retorno", auth, async (req, res) => {
+    try {
+        const userId = req.usuario?.id;
+        const perfilId = req.body?.perfilId ? String(req.body.perfilId) : null;
+
+        if (!userId) {
+            return res.status(401).json({ erro: "Não autenticado" });
+        }
+
+        const result = await prisma.$transaction(async (tx) => {
+            await tx.wallet.upsert({
+                where: { userId },
+                update: {},
+                create: { userId, saldoCreditos: 0 },
+            });
+
+            const wallet = await tx.wallet.findUnique({
+                where: { userId },
+                select: { saldoCreditos: true },
+            });
+
+            const saldoAtual = Number(wallet?.saldoCreditos || 0);
+
+            if (saldoAtual < CUSTO_RETORNO_FEED) {
+                return {
+                    saldoInsuficiente: true,
+                    saldoCreditos: saldoAtual,
+                };
+            }
+
+            const atualizado = await tx.wallet.update({
+                where: { userId },
+                data: {
+                    saldoCreditos: {
+                        decrement: CUSTO_RETORNO_FEED,
+                    },
+                },
+                select: { saldoCreditos: true },
+            });
+
+            await tx.walletTx.create({
+                data: {
+                    userId,
+                    tipo: "DEBIT",
+                    origem: "FEED_RETORNO",
+                    valor: CUSTO_RETORNO_FEED,
+                    refId: perfilId,
+                },
+            });
+
+            return {
+                saldoInsuficiente: false,
+                saldoCreditos: atualizado.saldoCreditos,
+            };
+        });
+
+        if (result.saldoInsuficiente) {
+            return res.status(402).json({
+                erro: "Saldo insuficiente",
+                codigo: "SALDO_INSUFICIENTE",
+                custo: CUSTO_RETORNO_FEED,
+                saldoCreditos: result.saldoCreditos,
+            });
+        }
+
+        const io = req.app.get("io");
+        if (io?._dp) {
+            io._dp.emitToUser(userId, "wallet:update", {
+                saldoCreditos: result.saldoCreditos,
+            });
+        }
+
+        return res.json({
+            ok: true,
+            custo: CUSTO_RETORNO_FEED,
+            saldoCreditos: result.saldoCreditos,
+        });
+    } catch (e) {
+        console.error("Erro ao cobrar retorno do feed:", e);
+        return res.status(500).json({
+            erro: "Erro ao processar retorno do feed",
+            detalhe: e.message,
+        });
+    }
+});
 
 
 export default router;
