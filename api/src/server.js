@@ -2,7 +2,7 @@
 import "dotenv/config";
 import http from "http";
 import { Server as IOServer } from "socket.io";
-import { app } from "./app.js";
+import { app, isCorsOriginAllowed } from "./app.js";
 import { registerSockets } from "./socket.js";
 
 const PORT = Number(process.env.PORT || 3333);
@@ -10,12 +10,17 @@ const PORT = Number(process.env.PORT || 3333);
 // cria servidor HTTP
 const server = http.createServer(app);
 
-// socket.io  ✅ CORREÇÃO AQUI
+// socket.io
 const io = new IOServer(server, {
-  path: "/api/socket.io", // 🔥 ISSO RESOLVE O ERRO
+  path: "/api/socket.io",
   cors: {
-    origin: "*",
-    methods: ["GET", "POST"],
+    origin(origin, callback) {
+      if (isCorsOriginAllowed(origin)) return callback(null, true);
+      return callback(new Error(`Origin não permitida no Socket.IO: ${origin}`));
+    },
+    methods: ["GET", "POST", "OPTIONS"],
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"],
   },
 });
 

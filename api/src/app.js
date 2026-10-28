@@ -42,12 +42,48 @@ app.set("trust proxy", 1);
 
 // middlewares base
 app.use(helmet());
-app.use(
-    cors({
-        origin: true, // ou ["https://desejoproibido.app"] se quiser travar
-        credentials: true,
-    })
-);
+
+const corsAllowedOrigins = new Set([
+    "https://desejoproibido.app",
+    "https://www.desejoproibido.app",
+    "http://localhost:8081",
+    "http://127.0.0.1:8081",
+    "http://localhost:8082",
+    "http://127.0.0.1:8082",
+    "http://localhost:19006",
+    "http://127.0.0.1:19006",
+]);
+
+export function isCorsOriginAllowed(origin) {
+    // Apps nativos, curl e chamadas server-to-server normalmente não enviam Origin.
+    if (!origin) return true;
+    if (corsAllowedOrigins.has(origin)) return true;
+
+    // Expo/web local pode mudar de porta durante desenvolvimento.
+    try {
+        const url = new URL(origin);
+        const localHost = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+        return localHost && (url.protocol === "http:" || url.protocol === "https:");
+    } catch {
+        return false;
+    }
+}
+
+export const corsOptions = {
+    origin(origin, callback) {
+        if (isCorsOriginAllowed(origin)) return callback(null, true);
+        return callback(new Error(`Origin não permitida por CORS: ${origin}`));
+    },
+    credentials: true,
+    methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"],
+    exposedHeaders: ["Content-Length"],
+    optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
+
 app.use(express.json({ limit: "2mb" }));
 app.use(morgan("dev"));
 
