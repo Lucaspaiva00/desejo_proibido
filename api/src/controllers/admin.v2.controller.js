@@ -394,7 +394,7 @@ export async function configuracoesV2(req, res) {
     return res.json({
       monetizacao: publicFinanceConfig(),
       live: {
-        creditosPorMinuto: clamp(process.env.LIVE_CREDITOS_POR_MINUTO, 0, 100000, 1),
+        creditosPorMinuto: 0,
         maxGorjetaCreditos: clamp(process.env.LIVE_MAX_GORJETA_CREDITOS, 1, 2000000000, 100000),
         maxMetaCreditos: clamp(process.env.LIVE_MAX_META_CREDITOS, 1, 2000000000, 100000000),
       },

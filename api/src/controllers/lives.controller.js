@@ -9,7 +9,6 @@ import {
 } from "../utils/creator.js";
 import { splitCreatorCredits } from "../utils/creatorFinance.js";
 
-const CREDITOS_POR_MINUTO = Math.max(0, Math.trunc(Number(process.env.LIVE_CREDITOS_POR_MINUTO || 1)));
 const MAX_GORJETA_CREDITOS = Math.max(1, Math.trunc(Number(process.env.LIVE_MAX_GORJETA_CREDITOS || 100000)));
 const MAX_META_CREDITOS = Math.max(100, Math.trunc(Number(process.env.LIVE_MAX_META_CREDITOS || 100000000)));
 
@@ -292,7 +291,6 @@ export async function entrarLive(req, res) {
     if (!live || !isAtiva(live.status)) return res.status(404).json({ erro: "Live não encontrada/encerrada" });
     if (!creatorCanBroadcast(live.host)) return res.status(400).json({ erro: "Live inválida (host)" });
     if (live.hostId === userId) return res.status(400).json({ erro: "Host não entra como viewer" });
-    if (Number(me.minutosDisponiveis || 0) <= 0) return res.status(402).json({ erro: "Sem minutos disponíveis", code: "SEM_MINUTOS" });
 
     const viewer = await prisma.liveViewer.upsert({
       where: { liveId_viewerId: { liveId, viewerId: userId } },
@@ -331,7 +329,7 @@ export async function tickLive(req, res) {
     const liveId = req.params.id;
     const me = await getUsuarioResumo(userId);
     if (!me?.ativo || !isMaleGender(me.perfil?.genero) || !isAdult(me.perfil?.nascimento)) {
-      return res.status(403).json({ erro: "Espectador inválido para cobrança" });
+      return res.status(403).json({ erro: "Espectador inválido" });
     }
 
     const live = await prisma.live.findUnique({
@@ -346,71 +344,13 @@ export async function tickLive(req, res) {
       select: { id: true, saiuEm: true, entrouEm: true, minutosCobrados: true },
     });
     if (!viewer || viewer.saiuEm) return res.status(403).json({ erro: "Você não está na live" });
-    const minutosDecorridos = Math.floor((Date.now() - new Date(viewer.entrouEm).getTime()) / 60000);
-    const expected = Number(viewer.minutosCobrados || 0);
-    if (minutosDecorridos <= expected) {
-      return res.json({ ok: true, cobrado: false, saldoMinutos: Number(me.minutosDisponiveis || 0), minutosCobrados: expected });
-    }
-
-    const split = splitCreatorCredits(CREDITOS_POR_MINUTO);
-    let result;
-    try {
-      result = await prisma.$transaction(async (tx) => {
-        const claimed = await tx.liveViewer.updateMany({
-          where: { id: viewer.id, saiuEm: null, minutosCobrados: expected },
-          data: { minutosCobrados: { increment: 1 } },
-        });
-        if (claimed.count !== 1) return { jaCobrado: true };
-
-        const debited = await tx.usuario.updateMany({
-          where: { id: userId, ativo: true, minutosDisponiveis: { gt: 0 } },
-          data: { minutosDisponiveis: { decrement: 1 } },
-        });
-        if (debited.count !== 1) {
-          const err = new Error("SEM_MINUTOS");
-          err.code = "SEM_MINUTOS";
-          throw err;
-        }
-
-        await tx.creditoMinuto.create({ data: { usuarioId: userId, tipo: "DEBITO", minutos: -1, refTipo: "LIVE", refId: liveId, detalhes: "Consumo de 1 minuto em live" } });
-        if (split.criadora > 0) {
-          await tx.wallet.upsert({
-            where: { userId: live.hostId },
-            create: { userId: live.hostId, saldoCreditos: split.criadora, saldoBloqueado: 0 },
-            update: { saldoCreditos: { increment: split.criadora } },
-          });
-          await tx.walletTx.create({ data: { userId: live.hostId, tipo: "CREDIT", origem: "LIVE_MINUTO", valor: split.criadora, refId: liveId } });
-        }
-        if (split.plataforma > 0) {
-          await tx.platformRevenue.create({
-            data: { origem: "LIVE_MINUTO", refId: liveId, liveId, payerId: userId, creatorId: live.hostId, valorCreditos: split.plataforma, percentual: split.percentual },
-          });
-        }
-        const [u2, hostWallet] = await Promise.all([
-          tx.usuario.findUnique({ where: { id: userId }, select: { minutosDisponiveis: true } }),
-          tx.wallet.findUnique({ where: { userId: live.hostId }, select: { saldoCreditos: true } }),
-        ]);
-        return { jaCobrado: false, saldo: Number(u2?.minutosDisponiveis || 0), minutosCobrados: expected + 1, hostCreditos: Number(hostWallet?.saldoCreditos || 0) };
-      });
-    } catch (e) {
-      if (e?.code === "SEM_MINUTOS") {
-        await prisma.liveViewer.updateMany({ where: { id: viewer.id, saiuEm: null }, data: { saiuEm: new Date() } });
-        const viewersOnline = await prisma.liveViewer.count({ where: { liveId, saiuEm: null } });
-        req.app.get("io")?.to(liveRoom(liveId)).emit("live:viewers:update", { liveId, viewersOnline });
-        return res.status(402).json({ erro: "Sem minutos", code: "SEM_MINUTOS", saldoMinutos: 0 });
-      }
-      throw e;
-    }
-
-    if (result.jaCobrado) {
-      const fresh = await getUsuarioResumo(userId);
-      return res.json({ ok: true, cobrado: false, saldoMinutos: Number(fresh?.minutosDisponiveis || 0), minutosCobrados: expected });
-    }
-
-    const io = req.app.get("io");
-    io?.to(liveRoom(liveId)).emit("live:earning", { liveId, tipo: "MINUTO", valorCreditos: split.criadora, taxaPlataformaCreditos: split.plataforma, hostSaldoCreditos: result.hostCreditos });
-    io?._dp?.emitToUser(live.hostId, "wallet:update", { saldoCreditos: result.hostCreditos });
-    return res.json({ ok: true, cobrado: true, saldoMinutos: result.saldo, minutosCobrados: result.minutosCobrados, hostCreditos: result.hostCreditos });
+    // Compatibilidade com versões do app que ainda chamam /tick.
+    return res.json({
+      ok: true,
+      cobrado: false,
+      saldoMinutos: Number(me.minutosDisponiveis || 0),
+      minutosCobrados: Number(viewer.minutosCobrados || 0),
+    });
   } catch (e) {
     return res.status(500).json({ erro: "Erro no consumo da live", detalhe: e.message });
   }

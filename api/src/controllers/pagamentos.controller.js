@@ -139,38 +139,26 @@ export async function webhookMercadoPago(req, res) {
         const pag = await prisma.pagamento.findUnique({ where: { id: internalPaymentId } });
         if (!pag) return res.status(200).json({ ok: true });
 
-        // idempotência
-        if (pag.status === "PAID") {
-            if (!pag.mpPaymentId) {
-                await prisma.pagamento.update({
-                    where: { id: pag.id },
-                    data: { mpPaymentId: String(mpPaymentId) },
-                });
-            }
-            return res.status(200).json({ ok: true });
-        }
+        if (pag.status === "PAID") return res.status(200).json({ ok: true });
 
         if (mpStatus === "approved") {
             const pack = findPackById(pag.pacoteId);
-            const creditos = pack?.creditos || 0;
+            const valorRecebido = Math.round(Number(mpPay.transaction_amount) * 100);
+            if (!pack || mpPay.currency_id !== pag.moeda || valorRecebido !== pag.valorCentavos) {
+                return res.status(422).json({ error: "Valor ou moeda do pagamento inválidos" });
+            }
 
             await prisma.$transaction(async (tx) => {
-                const current = await tx.pagamento.findUnique({ where: { id: pag.id } });
-                if (!current || current.status === "PAID") return;
-
-                await tx.pagamento.update({
-                    where: { id: pag.id },
-                    data: {
-                        status: "PAID",
-                        mpPaymentId: String(mpPaymentId),
-                    },
+                const claimed = await tx.pagamento.updateMany({
+                    where: { id: pag.id, status: { not: "PAID" } },
+                    data: { status: "PAID", mpPaymentId: String(mpPaymentId) },
                 });
+                if (!claimed.count) return;
 
-                // ✅ SOMENTE credita wallet
                 await tx.wallet.upsert({
                     where: { userId: pag.usuarioId },
-                    update: { saldoCreditos: { increment: creditos } },
-                    create: { userId: pag.usuarioId, saldoCreditos: creditos },
+                    update: { saldoCreditos: { increment: pack.creditos } },
+                    create: { userId: pag.usuarioId, saldoCreditos: pack.creditos },
                 });
 
                 await tx.walletTx.create({
@@ -178,7 +166,7 @@ export async function webhookMercadoPago(req, res) {
                         userId: pag.usuarioId,
                         tipo: "CREDIT",
                         origem: "MERCADO_PAGO",
-                        valor: creditos,
+                        valor: pack.creditos,
                         refId: pag.id,
                     },
                 });
@@ -190,8 +178,8 @@ export async function webhookMercadoPago(req, res) {
         const nextStatus =
             mpStatus === "rejected" || mpStatus === "cancelled" ? "CANCELED" : "PENDING";
 
-        await prisma.pagamento.update({
-            where: { id: pag.id },
+        await prisma.pagamento.updateMany({
+            where: { id: pag.id, status: { not: "PAID" } },
             data: {
                 status: nextStatus,
                 mpPaymentId: String(mpPaymentId),

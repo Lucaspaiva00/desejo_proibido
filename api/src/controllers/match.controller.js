@@ -41,8 +41,10 @@ export async function listarMatches(req, res) {
             let conversaId = m.conversa?.id;
 
             if (!conversaId) {
-                const conv = await prisma.conversa.create({
-                    data: { matchId: m.id },
+                const conv = await prisma.conversa.upsert({
+                    where: { matchId: m.id },
+                    update: {},
+                    create: { matchId: m.id },
                 });
                 conversaId = conv.id;
             }

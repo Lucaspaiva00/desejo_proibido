@@ -5,7 +5,7 @@ function clampInt(value, min, max, fallback) {
 }
 
 export function creatorCommissionPercent() {
-  return clampInt(process.env.LIVE_PLATFORM_FEE_PERCENT, 0, 90, 30);
+  return clampInt(process.env.LIVE_PLATFORM_FEE_PERCENT, 0, 90, 40);
 }
 
 export function creditValueCentavos() {
