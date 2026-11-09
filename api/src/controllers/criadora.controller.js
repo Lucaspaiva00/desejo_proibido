@@ -40,6 +40,9 @@ export async function statusCriadora(req, res) {
   try {
     const u = await getCreatorUser(req.usuario.id);
     if (!u) return res.status(404).json({ erro: "Usuário não encontrado" });
+    if (!u.ativo || !isFemaleGender(u.perfil?.genero) || !isAdult(u.perfil?.nascimento)) {
+      return res.status(403).json({ erro: "Área da Criadora disponível para perfis femininos maiores de 18 anos." });
+    }
     const idade = idadeEmAnos(u.perfil?.nascimento);
     return res.json({
       id: u.id,
@@ -107,6 +110,9 @@ export async function financeiroCriadora(req, res) {
     const userId = req.usuario.id;
     const u = await getCreatorUser(userId);
     if (!u) return res.status(404).json({ erro: "Usuário não encontrado" });
+    if (!u.ativo || !isFemaleGender(u.perfil?.genero) || !isAdult(u.perfil?.nascimento)) {
+      return res.status(403).json({ erro: "Área da Criadora disponível para perfis femininos maiores de 18 anos." });
+    }
 
     const liveOrigins = ["LIVE_MINUTO", "LIVE_PRESENTE_RECEBIDO", "LIVE_GORJETA_RECEBIDA", "LIVE"];
     const [ganhos, saques, lives, topRaw] = await Promise.all([
@@ -231,6 +237,11 @@ export async function solicitarSaque(req, res) {
 
 export async function listarMeusSaques(req, res) {
   try {
+    const u = await getCreatorUser(req.usuario.id);
+    if (!u) return res.status(404).json({ erro: "Usuário não encontrado" });
+    if (!u.ativo || !isFemaleGender(u.perfil?.genero) || !isAdult(u.perfil?.nascimento)) {
+      return res.status(403).json({ erro: "Área da Criadora disponível para perfis femininos maiores de 18 anos." });
+    }
     const data = await prisma.creatorPayoutRequest.findMany({
       where: { userId: req.usuario.id },
       orderBy: { solicitadoEm: "desc" },

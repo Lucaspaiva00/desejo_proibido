@@ -4,7 +4,7 @@ const $ = (id) => document.getElementById(id);
 
 const els = {
   msg: $("msg"), q: $("q"), btnReload: $("btnReload"), liveList: $("liveList"), listSub: $("listSub"),
-  saldoPill: $("saldoPill"), minutosPill: $("minutosPill"), btnComprarTopo: $("btnComprarTopo"),
+  saldoPill: $("saldoPill"), btnComprarTopo: $("btnComprarTopo"),
   roomTitle: $("roomTitle"), roomSub: $("roomSub"), roomStatus: $("roomStatus"), viewersPill: $("viewersPill"),
   hostAvatar: $("hostAvatar"), hostFallback: $("hostFallback"),
   btnJoin: $("btnJoin"), btnLeave: $("btnLeave"), btnEndLive: $("btnEndLive"),
@@ -38,7 +38,6 @@ const state = {
   viewerPeer: null,
   viewerPendingIce: [],
   hostSocketId: null,
-  tickTimer: null,
   summaryTimer: null,
   listReloadTimer: null,
   presentes: [],
@@ -113,15 +112,12 @@ function setAvatar(host) {
   }
 }
 
-function updateWalletUi({ saldoCreditos, minutosDisponiveis } = {}) {
+function updateWalletUi({ saldoCreditos } = {}) {
   if (saldoCreditos != null) {
     if (state.status) state.status.saldoCreditos = Number(saldoCreditos || 0);
     els.saldoPill.textContent = `💳 Créditos: ${Number(saldoCreditos || 0)}`;
   }
-  if (minutosDisponiveis != null) {
-    if (state.status) state.status.minutosDisponiveis = Number(minutosDisponiveis || 0);
-    els.minutosPill.textContent = `⏱ Minutos: ${Number(minutosDisponiveis || 0)}`;
-  }
+
 }
 
 function showSelectedLive(live) {
@@ -360,8 +356,7 @@ function bindSocketEvents() {
         if (state.broadcasting) {
           await socketEmitAck("live:host:join", { liveId: state.liveId });
         } else if (state.joined) {
-          const reentered = await apiFetch(`/lives/${state.liveId}/entrar`, { method: "POST" });
-          updateWalletUi({ minutosDisponiveis: reentered?.saldoMinutos });
+          await apiFetch(`/lives/${state.liveId}/entrar`, { method: "POST" });
           await socketEmitAck("live:viewer:join", { liveId: state.liveId });
         }
       } catch (e) {
@@ -734,10 +729,9 @@ async function joinSelectedLive() {
   setMsg("Entrando na live...");
 
   try {
-    const joined = await apiFetch(`/lives/${live.id}/entrar`, { method: "POST" });
+    await apiFetch(`/lives/${live.id}/entrar`, { method: "POST" });
     state.liveId = live.id;
     state.joined = true;
-    updateWalletUi({ minutosDisponiveis: joined?.saldoMinutos });
 
     await connectSocket();
     const ack = await socketEmitAck("live:viewer:join", { liveId: live.id });
@@ -758,17 +752,12 @@ async function joinSelectedLive() {
     els.playerText.textContent = "A transmissão aparecerá assim que a conexão WebRTC for estabelecida.";
     setMsg("Você entrou na live.", "success");
 
-    startTicking();
     await loadGifts();
   } catch (e) {
     state.joined = false;
     state.liveId = null;
     els.btnJoin.disabled = false;
-    if (e?.status === 402 || /minuto/i.test(e.message || "")) {
-      setMsg("Você está sem minutos disponíveis para assistir.", "error");
-    } else {
-      setMsg(e.message || "Não foi possível entrar na live.", "error");
-    }
+    setMsg(e.message || "Não foi possível entrar na live.", "error");
   }
 }
 
@@ -781,7 +770,6 @@ async function leaveViewerLive() {
 
 async function cleanupViewer({ callApi }) {
   const liveId = state.liveId;
-  stopTicking();
   closeViewerPeer();
 
   if (liveId && callApi) {
@@ -804,30 +792,6 @@ async function cleanupViewer({ callApi }) {
   els.btnEnviar.disabled = true;
   els.roomHint.textContent = "Entre na live para assistir e interagir.";
   closeDrawers();
-}
-
-function startTicking() {
-  stopTicking();
-  state.tickTimer = setInterval(tickLive, 60000);
-}
-
-function stopTicking() {
-  if (state.tickTimer) clearInterval(state.tickTimer);
-  state.tickTimer = null;
-}
-
-async function tickLive() {
-  if (!state.joined || !state.liveId) return;
-  try {
-    const data = await apiFetch(`/lives/${state.liveId}/tick`, { method: "POST" });
-    updateWalletUi({ minutosDisponiveis: data?.saldoMinutos });
-  } catch (e) {
-    if (e?.status === 402) {
-      updateWalletUi({ minutosDisponiveis: 0 });
-      setMsg("Seus minutos acabaram. A live foi encerrada para você.", "error");
-      await cleanupViewer({ callApi: false });
-    }
-  }
 }
 
 async function loadSummary({ silent = false } = {}) {
@@ -1053,7 +1017,6 @@ els.texto?.addEventListener("keydown", (e) => {
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawers(); });
 
 window.addEventListener("beforeunload", () => {
-  stopTicking();
   stopSummaryPolling();
   if (state.joined && state.liveId && state.socket?.connected) {
     state.socket.emit("live:leave", { liveId: state.liveId });

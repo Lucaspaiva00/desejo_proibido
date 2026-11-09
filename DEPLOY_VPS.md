@@ -29,7 +29,7 @@ Antes do primeiro `db push` em produção, faça backup do PostgreSQL com a ferr
 Todas têm defaults, mas podem ser definidas no `.env` da VPS:
 
 ```env
-LIVE_PLATFORM_FEE_PERCENT=30
+LIVE_PLATFORM_FEE_PERCENT=40
 CREATOR_CREDITO_VALOR_CENTAVOS=1
 CREATOR_MIN_SAQUE_CREDITOS=5000
 CREATOR_MAX_SAQUE_CREDITOS=10000000
@@ -41,6 +41,11 @@ LIVE_MAX_META_CREDITOS=100000000
 - `CREATOR_MIN_SAQUE_CREDITOS`: mínimo de créditos para solicitar saque.
 - `CREATOR_MAX_SAQUE_CREDITOS`: teto por solicitação.
 - `LIVE_MAX_META_CREDITOS`: maior meta permitida em uma live.
+
+## Mercado Pago e presentes de live
+
+- Configure `MP_ACCESS_TOKEN` com a credencial de produção da conta Mercado Pago vinculada ao CNPJ e confira `APP_URL`, `WEB_URL` e `MP_WEBHOOK_SECRET` no ambiente da API.
+- Se `LIVE_PLATFORM_FEE_PERCENT` já estiver definido no ambiente, atualize para `40` para aplicar o repasse de 60% para a criadora.
 
 ## Segurança
 

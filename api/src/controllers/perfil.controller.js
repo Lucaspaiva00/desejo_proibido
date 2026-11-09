@@ -9,7 +9,8 @@ function parseDateOnlyToUTC(dateStr) {
 
     const [y, m, d] = dateStr.split("-").map(Number);
     // cria em UTC (meia-noite), evita bug de fuso
-    return new Date(Date.UTC(y, m - 1, d));
+    const date = new Date(Date.UTC(y, m - 1, d));
+    return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d ? date : null;
 }
 
 function str(v) {
@@ -192,4 +193,49 @@ export async function verPerfilPublico(req, res) {
         fotoPrincipal,
         fotos: usuario.fotos.map((f) => ({ id: f.id, url: f.url, principal: f.principal })),
     });
+}
+
+export async function consultarLocalizacao(req, res, next) {
+    try {
+        const location = await prisma.localizacaoAproximada.findUnique({
+            where: { usuarioId: req.usuario.id },
+            select: { usuarioId: true },
+        });
+        return res.json({ ativa: !!location });
+    } catch (error) {
+        return next(error);
+    }
+}
+
+export async function salvarLocalizacao(req, res, next) {
+    const { latitude, longitude } = req.body || {};
+    if (!Number.isFinite(latitude) || Math.abs(latitude) > 90 ||
+        !Number.isFinite(longitude) || Math.abs(longitude) > 180) {
+        return res.status(400).json({ erro: "Localização inválida" });
+    }
+
+    const coordenadas = {
+        latitude: Math.round(latitude * 10) / 10,
+        longitude: Math.round(longitude * 10) / 10,
+    };
+    const usuarioId = req.usuario.id;
+    try {
+        await prisma.localizacaoAproximada.upsert({
+            where: { usuarioId },
+            create: { usuarioId, ...coordenadas },
+            update: coordenadas,
+        });
+        return res.json({ ativa: true });
+    } catch (error) {
+        return next(error);
+    }
+}
+
+export async function removerLocalizacao(req, res, next) {
+    try {
+        await prisma.localizacaoAproximada.deleteMany({ where: { usuarioId: req.usuario.id } });
+        return res.json({ ativa: false });
+    } catch (error) {
+        return next(error);
+    }
 }

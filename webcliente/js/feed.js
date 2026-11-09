@@ -204,7 +204,7 @@ function render(u) {
   const bio = safe(u.perfil?.bio).trim();
   const cidade = safe(u.perfil?.cidade).trim();
   const estado = safe(u.perfil?.estado).trim();
-  const loc = `${cidade} ${estado}`.trim();
+  const loc = [`${cidade} ${estado}`.trim(), u.distanciaKm != null ? `~${u.distanciaKm} km` : ""].filter(Boolean).join(" · ");
   const boostAtivo = isBoostAtivo(u.boostAte);
 
   // monta lista de fotos (principal + extras), sem duplicar

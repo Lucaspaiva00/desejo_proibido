@@ -43,6 +43,17 @@ function orderByFrom(ordenarPor) {
     return [{ criadoEm: "desc" }];
 }
 
+function distanciaAproximadaKm(origem, destino) {
+    if (!origem || !destino) return null;
+    const rad = (value) => value * Math.PI / 180;
+    const dLat = rad(destino.latitude - origem.latitude);
+    const dLon = rad(destino.longitude - origem.longitude);
+    const a = Math.sin(dLat / 2) ** 2 +
+        Math.cos(rad(origem.latitude)) * Math.cos(rad(destino.latitude)) * Math.sin(dLon / 2) ** 2;
+    const km = 6371 * 2 * Math.asin(Math.sqrt(Math.min(1, a)));
+    return Math.max(10, Math.round(km / 10) * 10);
+}
+
 export async function buscar(req, res) {
     try {
         const userId = req.usuario.id;
@@ -212,9 +223,15 @@ export async function buscar(req, res) {
                 .map((o) => o.x);
         }
 
+        const localizacoes = await prisma.localizacaoAproximada.findMany({
+            where: { usuarioId: { in: [userId, ...rows.map((u) => u.id)] } },
+        });
+        const porUsuario = new Map(localizacoes.map((local) => [local.usuarioId, local]));
+        const origem = porUsuario.get(userId);
         const out = rows.map((u) => ({
             id: u.id,
             boostAte: u.boostAte,
+            distanciaKm: distanciaAproximadaKm(origem, porUsuario.get(u.id)),
             perfil: u.perfil || null,
             fotoPrincipal: u.fotos?.[0]?.url || null,
         }));

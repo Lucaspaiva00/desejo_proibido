@@ -32,6 +32,47 @@ const btnExcluirConta = document.getElementById("btnExcluirConta");
 const btnIrFotos = document.getElementById("btnIrFotos");
 if (btnIrFotos) btnIrFotos.onclick = () => (location.href = "fotos.html");
 
+const btnAtivarLocalizacao = document.getElementById("btnAtivarLocalizacao");
+const btnRemoverLocalizacao = document.getElementById("btnRemoverLocalizacao");
+const msgLocalizacao = document.getElementById("msgLocalizacao");
+
+function atualizarBotoesLocalizacao(ativa) {
+    btnAtivarLocalizacao.textContent = ativa ? "Atualizar localização aproximada" : "Ativar distância aproximada";
+    btnRemoverLocalizacao.hidden = !ativa;
+}
+
+async function alterarLocalizacao(ativa) {
+    btnAtivarLocalizacao.disabled = true;
+    btnRemoverLocalizacao.disabled = true;
+    try {
+        if (ativa) {
+            if (!navigator.geolocation) throw new Error("Este navegador não oferece acesso à localização.");
+            const { coords } = await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
+            });
+            await apiFetch("/perfil/localizacao", {
+                method: "PUT",
+                body: {
+                    latitude: Math.round(coords.latitude * 10) / 10,
+                    longitude: Math.round(coords.longitude * 10) / 10,
+                },
+            });
+        } else {
+            await apiFetch("/perfil/localizacao", { method: "DELETE" });
+        }
+        atualizarBotoesLocalizacao(ativa);
+        msgLocalizacao.textContent = ativa ? "Localização aproximada atualizada." : "Distância desativada.";
+    } catch {
+        msgLocalizacao.textContent = "Não foi possível atualizar a localização. Confira a permissão do navegador.";
+    } finally {
+        btnAtivarLocalizacao.disabled = false;
+        btnRemoverLocalizacao.disabled = false;
+    }
+}
+
+btnAtivarLocalizacao.onclick = () => alterarLocalizacao(true);
+btnRemoverLocalizacao.onclick = () => alterarLocalizacao(false);
+
 // ==============================
 // Auth robusto (mesmo padrão do conversas.js)
 // ==============================
@@ -486,6 +527,7 @@ if (btnExcluirConta) {
 
 async function init() {
     await carregarPerfil();
+    apiFetch("/perfil/localizacao").then(({ ativa }) => atualizarBotoesLocalizacao(ativa)).catch(() => {});
     await carregarInvisivelEBoost();
 }
 
