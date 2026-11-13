@@ -6,6 +6,7 @@ const groups = [
     ["usuarios","usuarios.html","fa-users","Usuários"],
   ]],
   ["OPERAÇÃO", [
+    ["suporte","suporte.html","fa-headset","Suporte"],
     ["criadoras","criadoras.html","fa-certificate","Criadoras"],
     ["lives","lives.html","fa-tower-broadcast","Lives"],
     ["denuncias","denuncias.html","fa-flag","Moderação"],

@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { auth } from "../middlewares/auth.middleware.js";
+import { listarChamadosAdmin, responderChamado } from "./suporte.routes.js";
 import { adminOnly } from "../middlewares/admin.middleware.js";
 import {
     dashboardV2,
@@ -39,6 +40,8 @@ const router = Router();
 
 // tudo aqui exige auth + admin
 router.use(auth, adminOnly);
+router.get("/suporte", listarChamadosAdmin);
+router.patch("/suporte/:id", responderChamado);
 // Admin 2.0
 router.get("/v2/dashboard", dashboardV2);
 router.get("/v2/usuarios", listarUsuariosV2);

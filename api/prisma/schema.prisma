@@ -42,6 +42,7 @@ enum MensagemTipo {
 }
 
 model Usuario {
+  chamadosSuporte ChamadoSuporte[]
   id           String            @id @default(cuid())
   email        String            @unique
   senhaHash    String
@@ -800,4 +801,17 @@ model LocalizacaoAproximada {
   usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   latitude Float
   longitude Float
+}
+
+model ChamadoSuporte {
+  id         String   @id @default(cuid())
+  usuarioId  String
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  assunto    String
+  mensagem   String
+  resposta   String?
+  criadoEm   DateTime @default(now())
+
+  @@index([usuarioId, criadoEm])
+  @@index([criadoEm])
 }

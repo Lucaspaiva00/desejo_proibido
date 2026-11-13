@@ -22,6 +22,7 @@ import denunciaRoutes from "./routes/denuncia.routes.js";
 import usuarioRoutes from "./routes/usuario.routes.js";
 import termosRoutes from "./routes/termos.routes.js";
 import premiumRoutes from "./routes/premium.routes.js";
+import suporteRoutes from "./routes/suporte.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import presenteRoutes from "./routes/presente.routes.js";
 import buscaRoutes from "./routes/busca.routes.js";
@@ -155,6 +156,7 @@ v1.use("/termos", termosRoutes);
 
 v1.use("/premium", premiumRoutes);
 v1.use("/admin", adminRoutes);
+v1.use("/suporte", suporteRoutes);
 
 v1.use("/presentes", presenteRoutes);
 v1.use("/busca", buscaRoutes);
