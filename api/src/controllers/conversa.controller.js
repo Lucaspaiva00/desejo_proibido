@@ -533,18 +533,22 @@ export async function ocultarConversa(req, res) {
     });
 }
 export async function marcarMensagensLidas(req, res) {
-    const userId = req.usuario.id;
-    const conversaId = req.params.id;
-    const ids = req.body?.ids;
-    if (!Array.isArray(ids) || ids.length > 200 || ids.some((id) => typeof id !== "string" || !id)) {
-        return res.status(400).json({ erro: "Informe até 200 mensagens." });
+    try {
+        const userId = req.usuario.id;
+        const conversaId = req.params.id;
+        const ids = req.body?.ids;
+        if (!Array.isArray(ids) || ids.length > 200 || ids.some((id) => typeof id !== "string" || !id)) {
+            return res.status(400).json({ erro: "Informe até 200 mensagens." });
+        }
+        const conversa = await prisma.conversa.findUnique({ where: { id: conversaId }, include: { match: true } });
+        if (!conversa) return res.status(404).json({ erro: "Conversa não encontrada" });
+        if (!assertParteDaConversa(conversa, userId)) return res.status(403).json({ erro: "Sem acesso" });
+        await prisma.mensagem.updateMany({
+            where: { conversaId, id: { in: ids }, autorId: { not: userId }, lidaEm: null },
+            data: { lidaEm: new Date() },
+        });
+        return res.json({ ok: true });
+    } catch {
+        return res.status(500).json({ erro: "Erro ao confirmar leitura" });
     }
-    const conversa = await prisma.conversa.findUnique({ where: { id: conversaId }, include: { match: true } });
-    if (!conversa) return res.status(404).json({ erro: "Conversa não encontrada" });
-    if (!assertParteDaConversa(conversa, userId)) return res.status(403).json({ erro: "Sem acesso" });
-    await prisma.mensagem.updateMany({
-        where: { conversaId, id: { in: ids }, autorId: { not: userId }, lidaEm: null },
-        data: { lidaEm: new Date() },
-    });
-    return res.json({ ok: true });
 }

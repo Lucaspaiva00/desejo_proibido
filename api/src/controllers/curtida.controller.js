@@ -114,24 +114,28 @@ export async function curtir(req, res) {
 }
 
 export async function listarCurtidos(req, res) {
-    const userId = req.usuario.id;
-    const bloqueios = await prisma.bloqueio.findMany({
-        where: { OR: [{ deUsuarioId: userId }, { paraUsuarioId: userId }] },
-        select: { deUsuarioId: true, paraUsuarioId: true },
-    });
-    const bloqueados = bloqueios.map((b) => b.deUsuarioId === userId ? b.paraUsuarioId : b.deUsuarioId);
-    const curtidas = await prisma.curtida.findMany({
-        where: { deUsuarioId: userId, paraUsuario: { ativo: true, id: { notIn: bloqueados } } },
-        orderBy: { criadoEm: "desc" },
-        take: 200,
-        select: {
-            id: true,
-            paraUsuario: { select: {
+    try {
+        const userId = req.usuario.id;
+        const bloqueios = await prisma.bloqueio.findMany({
+            where: { OR: [{ deUsuarioId: userId }, { paraUsuarioId: userId }] },
+            select: { deUsuarioId: true, paraUsuarioId: true },
+        });
+        const bloqueados = bloqueios.map((b) => b.deUsuarioId === userId ? b.paraUsuarioId : b.deUsuarioId);
+        const curtidas = await prisma.curtida.findMany({
+            where: { deUsuarioId: userId, paraUsuario: { ativo: true, id: { notIn: bloqueados } } },
+            orderBy: { criadoEm: "desc" },
+            take: 200,
+            select: {
                 id: true,
-                perfil: { select: { nome: true, cidade: true, estado: true, nascimento: true, verificado: true } },
-                fotos: { select: { id: true, url: true, principal: true }, take: 5 },
-            } },
-        },
-    });
-    return res.json(curtidas.map((c) => ({ id: c.id, outro: c.paraUsuario })));
+                paraUsuario: { select: {
+                    id: true,
+                    perfil: { select: { nome: true, cidade: true, estado: true, nascimento: true, verificado: true } },
+                    fotos: { select: { id: true, url: true, principal: true }, take: 5 },
+                } },
+            },
+        });
+        return res.json(curtidas.map((c) => ({ id: c.id, outro: c.paraUsuario })));
+    } catch {
+        return res.status(500).json({ erro: "Erro ao carregar curtidos" });
+    }
 }

@@ -78,3 +78,13 @@ test('distância para busca por destino lida com 2 km e cruzamento de longitude'
   assert.ok(distanciaKm({ latitude: 0, longitude: 0 }, { latitude: 0.03, longitude: 0 }) > 2);
   assert.ok(distanciaKm({ latitude: 0, longitude: 179.99 }, { latitude: 0, longitude: -179.99 }) < 3);
 });
+
+test('falhas de banco retornam erro controlado nas novas rotas', async () => {
+  const prisma = { conversa: { findUnique: async () => { throw Error('offline'); } }, bloqueio: { findMany: async () => { throw Error('offline'); } } };
+  const read = response();
+  await controller('conversa', prisma).marcarMensagensLidas({ usuario: { id: 'me' }, params: { id: 'chat' }, body: { ids: ['message'] } }, read);
+  assert.equal(read.code, 500);
+  const likes = response();
+  await controller('curtida', prisma).listarCurtidos({ usuario: { id: 'me' } }, likes);
+  assert.equal(likes.code, 500);
+});
