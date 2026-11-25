@@ -114,7 +114,7 @@ export async function financeiroCriadora(req, res) {
       return res.status(403).json({ erro: "Área da Criadora disponível para perfis femininos maiores de 18 anos." });
     }
 
-    const liveOrigins = ["LIVE_MINUTO", "LIVE_PRESENTE_RECEBIDO", "LIVE_GORJETA_RECEBIDA", "LIVE"];
+    const liveOrigins = ["LIVE_MINUTO", "LIVE_PRESENTE_RECEBIDO", "LIVE_GORJETA_RECEBIDA", "LIVE", "CHAT_PRESENTE_RECEBIDO"];
     const [ganhos, saques, lives, topRaw] = await Promise.all([
       prisma.walletTx.aggregate({
         where: { userId, tipo: { in: ["CREDIT", "CREDITO"] }, origem: { in: liveOrigins } },
@@ -142,7 +142,7 @@ export async function financeiroCriadora(req, res) {
       }),
       prisma.giftCredito.groupBy({
         by: ["remetenteId"],
-        where: { destinatarioId: userId, refTipo: "LIVE" },
+        where: { destinatarioId: userId, refTipo: { in: ["LIVE", "CHAT"] } },
         _sum: { valor: true },
         orderBy: { _sum: { valor: "desc" } },
         take: 5,

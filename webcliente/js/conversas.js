@@ -948,6 +948,7 @@ function buildMessagesHash(items) {
         lastTexto: last?.texto || last?.textoExibido || "",
         lastCriadoEm: last?.criadoEm || "",
         prevId: prev?.id || "",
+        leituras: items.map((m) => [m.id, m.lidaEm || null]),
     });
 }
 
@@ -1320,7 +1321,9 @@ async function carregarMensagens({ silent = false, forceRender = false } = {}) {
         if (!silent) chatStatus.textContent = "";
 
         const shouldStick = isNearBottom(msgs);
-        const data = await apiFetch(API.mensagensDaConversa(state.conversaId));
+        const conversaLida = state.conversaId;
+        const data = await apiFetch(API.mensagensDaConversa(conversaLida));
+        if (state.conversaId !== conversaLida) return;
 
         let items = [];
         if (Array.isArray(data)) {
@@ -1339,6 +1342,12 @@ async function carregarMensagens({ silent = false, forceRender = false } = {}) {
             renderMensagens(items, { stickToBottom: shouldStick });
             state.lastMessagesHash = newHash;
         }
+
+        const recebidas = items.filter((m) => String(m.autorId) !== String(state.usuario?.id) && !m.lidaEm).map((m) => m.id);
+        if (document.visibilityState === "visible" && recebidas.length) {
+            await apiFetch(`/conversas/${conversaLida}/lidas`, { method: "POST", body: JSON.stringify({ ids: recebidas }) }).catch((error) => console.warn("Falha ao confirmar leitura", error?.status));
+        }
+
 
         if (!silent) chatStatus.textContent = "";
         await atualizarStatusChat();
@@ -1387,7 +1396,7 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
     const html = items.map((m) => {
         const isMe = (String(m.autorId) === String(me));
         const tipo = m.tipo || "TEXTO";
-        const dt = m.criadoEm ? new Date(m.criadoEm).toLocaleString() : "";
+        const dt = m.criadoEm ? new Date(m.criadoEm).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
         const meta = m.metaJson || {};
         const foiApagada = !!m.foiApagada;
 
@@ -1475,7 +1484,7 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
         const podeEditar = isMe && !foiApagada && tipo === "TEXTO";
 
         const actions = isMe && !foiApagada ? `
-    <div class="msgActions">
+    <details class="msgActions"><summary aria-label="Opções da mensagem">•••</summary><div class="msgActionsMenu">
         ${podeEditar ? `
             <button 
                 class="btnMsgEdit" 
@@ -1487,14 +1496,14 @@ function renderMensagens(items, { stickToBottom = true } = {}) {
             </button>
         ` : ""}
         <button class="btnMsgDelete" onclick="apagarMensagem('${m.id}')" type="button">Apagar</button>
-    </div>
+    </div></details>
 ` : "";
 
         return `
             <div class="msgRow ${isMe ? "me" : "other"} ${foiApagada ? "deleted" : ""}">
                 <div class="bubble ${extraClass} ${foiApagada ? "deletedBubble" : ""}">
                     ${conteudo}
-                    <div class="meta muted">${escapeHtml(dt)}</div>
+                    <div class="meta muted">${escapeHtml(dt)} ${isMe ? `<span class="messageChecks ${m.lidaEm ? "read" : ""}" aria-label="${m.lidaEm ? "Lida" : "Enviada"}">✓✓</span>` : ""}</div>
                     ${actions}
                 </div>
             </div>

@@ -43,7 +43,7 @@ function orderByFrom(ordenarPor) {
     return [{ criadoEm: "desc" }];
 }
 
-function distanciaAproximadaKm(origem, destino) {
+function distanciaKm(origem, destino) {
     if (!origem || !destino) return null;
     const rad = (value) => value * Math.PI / 180;
     const dLat = rad(destino.latitude - origem.latitude);
@@ -51,7 +51,7 @@ function distanciaAproximadaKm(origem, destino) {
     const a = Math.sin(dLat / 2) ** 2 +
         Math.cos(rad(origem.latitude)) * Math.cos(rad(destino.latitude)) * Math.sin(dLon / 2) ** 2;
     const km = 6371 * 2 * Math.asin(Math.sqrt(Math.min(1, a)));
-    return Math.max(10, Math.round(km / 10) * 10);
+    return km;
 }
 
 export async function buscar(req, res) {
@@ -71,6 +71,19 @@ export async function buscar(req, res) {
             where: { boostAte: { not: null, lte: new Date() } },
             data: { boostAte: null },
         });
+
+        const usaDestino = req.query.latitude != null || req.query.longitude != null || req.query.raioKm != null;
+        const latitude = Number(req.query.latitude);
+        const longitude = Number(req.query.longitude);
+        const raioKm = Number(req.query.raioKm);
+        if (usaDestino && (!Number.isFinite(latitude) || Math.abs(latitude) > 90 || !Number.isFinite(longitude) || Math.abs(longitude) > 180 || !Number.isFinite(raioKm) || raioKm < 1 || raioKm > 500)) {
+            return res.status(400).json({ erro: "Destino ou raio de busca inválido." });
+        }
+        let idsDestino;
+        if (usaDestino) {
+            const locais = await prisma.localizacaoAproximada.findMany({});
+            idsDestino = locais.filter((local) => distanciaKm({ latitude, longitude }, local) <= raioKm).map((local) => local.usuarioId);
+        }
 
         // params
         const q = toStr(req.query.q).trim();
@@ -190,7 +203,7 @@ export async function buscar(req, res) {
         const where = {
             ativo: true,
             isInvisivel: false,
-            id: { notIn: [...excluir] },
+            id: { notIn: [...excluir], ...(idsDestino ? { in: idsDestino } : {}) },
 
             // ✅ AGORA PERFIL É OBRIGATÓRIO SEMPRE (pra aparecer no feed)
             perfil: { is: perfilFinal },
@@ -227,11 +240,11 @@ export async function buscar(req, res) {
             where: { usuarioId: { in: [userId, ...rows.map((u) => u.id)] } },
         });
         const porUsuario = new Map(localizacoes.map((local) => [local.usuarioId, local]));
-        const origem = porUsuario.get(userId);
+        const origem = usaDestino ? { latitude, longitude } : porUsuario.get(userId);
         const out = rows.map((u) => ({
             id: u.id,
             boostAte: u.boostAte,
-            distanciaKm: distanciaAproximadaKm(origem, porUsuario.get(u.id)),
+            distanciaKm: porUsuario.has(u.id) && origem ? Math.max(10, Math.round(distanciaKm(origem, porUsuario.get(u.id)) / 10) * 10) : null,
             perfil: u.perfil || null,
             fotoPrincipal: u.fotos?.[0]?.url || null,
         }));

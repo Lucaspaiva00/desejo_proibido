@@ -3,6 +3,7 @@ import { Router } from "express";
 import { auth } from "../middlewares/auth.middleware.js";
 import {
     listarConversas,
+    marcarMensagensLidas,
     mensagensDaConversa,
     abrirConversaPorMatch,
     statusConversa,
@@ -27,5 +28,6 @@ router.post("/:id", liberarChat);
 
 // mensagens
 router.get("/:id/mensagens", mensagensDaConversa);
+router.post("/:id/lidas", marcarMensagensLidas);
 
 export default router;

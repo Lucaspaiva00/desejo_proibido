@@ -55,7 +55,9 @@ jobs:
           # Sem --accept-data-loss: se uma alteração futura for destrutiva, o deploy falha em segurança.
           npx prisma db push --skip-generate
 
-          if command -v pm2 >/dev/null 2>&1; then
+          if systemctl is-active --quiet desejo-api.service; then
+            systemctl restart desejo-api.service
+          elif command -v pm2 >/dev/null 2>&1 && [ -n "$PM2_APP_NAME" ]; then
             pm2 restart "$PM2_APP_NAME" --update-env
             pm2 save
           else
@@ -63,6 +65,6 @@ jobs:
             exit 1
           fi
 
-          curl -fsS http://127.0.0.1:${PORT:-3333}/health >/dev/null || true
+          curl --retry 10 --retry-delay 2 --retry-connrefused -fsS http://127.0.0.1:${PORT:-3333}/health >/dev/null
           echo "Deploy concluído em $(date -Is)"
           REMOTE

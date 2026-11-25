@@ -253,6 +253,7 @@ model Conversa {
 model Mensagem {
   id         String       @id @default(cuid())
   conversaId String
+  lidaEm     DateTime?
   autorId    String
   tipo       MensagemTipo @default(TEXTO)
 

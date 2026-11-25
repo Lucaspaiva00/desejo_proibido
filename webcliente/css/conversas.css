@@ -1884,3 +1884,11 @@ body.dp-no-context-menu {
     }
 
 }
+.panel.right.chat { background: #050505 !important; }
+.quickGiftsBar[hidden] { display: none !important; }
+.messageChecks { color: #A7A0A0; margin-left: 4px; }
+.messageChecks.read { color: #53C5F5; }
+
+.msgActions { display: block; text-align: right; position: relative; }
+.msgActions summary { cursor: pointer; color: #B8ADB0; list-style: none; }
+.msgActionsMenu { display: flex; gap: 10px; justify-content: flex-end; padding-top: 6px; }

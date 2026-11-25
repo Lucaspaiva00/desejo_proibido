@@ -1,8 +1,8 @@
 import { apiFetch, logout } from "./api.js";
 
 const grid = document.getElementById("grid");
-const q = document.getElementById("q");
-const btnReload = document.getElementById("btnReload");
+const q = document.getElementById("busca");
+const btnReload = document.getElementById("btnRecarregar");
 const msg = document.getElementById("msg");
 
 document.getElementById("btnSair")?.addEventListener("click", logout);
@@ -35,11 +35,17 @@ function escapeHtml(s) {
 }
 
 let matches = [];
+let aba = "matches";
+document.querySelectorAll("[data-aba]").forEach((button) => button.addEventListener("click", () => {
+  aba = button.dataset.aba;
+  document.querySelectorAll("[data-aba]").forEach((tab) => tab.setAttribute("aria-selected", String(tab === button)));
+  loadMatches();
+}));
 
 async function loadMatches() {
   try {
     setMsg("Carregando matches...");
-    const data = await apiFetch("/matches");
+    const data = await apiFetch(aba === "curtidos" ? "/curtidas/minhas" : "/matches");
     matches = Array.isArray(data) ? data : (data.data || []);
     render();
     setMsg("");
@@ -60,7 +66,7 @@ function render() {
   });
 
   if (!items.length) {
-    grid.innerHTML = `<div class="muted">Nenhum match.</div>`;
+    grid.innerHTML = `<div class="muted">${aba === "curtidos" ? "Nenhum perfil curtido." : "Nenhum match."}</div>`;
     return;
   }
 
@@ -86,7 +92,7 @@ function render() {
           <div class="match-sub">${escapeHtml(cidade)}${cidade && estado ? " - " : ""}${escapeHtml(estado)}</div>
 
           <div class="match-actions">
-            <button class="btn btn-primary" data-chat="${m.conversaId}">Abrir Chat</button>
+            ${m.conversaId ? `<button class="btn btn-primary" data-chat="${m.conversaId}">Abrir Chat</button>` : ""}
             <button class="btn" data-perfil="${outro.id}">Ver perfil</button>
           </div>
         </div>

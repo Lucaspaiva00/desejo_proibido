@@ -1,6 +1,7 @@
 // src/controllers/presente.controller.js
 import { prisma } from "../prisma.js";
-import { ensureWallet, debitWallet } from "../utils/wallet.js";
+import { ensureWallet } from "../utils/wallet.js";
+import { splitCreatorCredits } from "../utils/creatorFinance.js";
 
 export async function listarPresentes(req, res) {
   try {
@@ -48,52 +49,53 @@ export async function enviarPresente(req, res) {
 
     // debita créditos (se custoCreditos > 0)
     const custo = Number(presente.custoCreditos || 0);
+    if (!Number.isInteger(custo) || custo < 0) return res.status(400).json({ erro: "Custo do presente inválido" });
+    const split = splitCreatorCredits(custo);
 
-    let saldoDepois = null;
-    if (custo > 0) {
-      const r = await debitWallet(userId, custo, { origem: "PRESENTE", refId: presenteId });
-      // seu wallet.js retorna { ok, saldoAntes, saldoDepois }
-      saldoDepois = r?.saldoDepois ?? null;
-    }
-
-    const enviado = await prisma.presenteEnviado.create({
-      data: {
-        presenteId,
-        conversaId,
-        deUsuarioId: userId,
-        paraUsuarioId,
-        minutos: presente.minutos || 0,
-        custoCreditos: custo,
-      },
-    });
-
-    // cria mensagem do tipo PRESENTE
-    await prisma.mensagem.create({
-      data: {
-        conversaId,
-        autorId: userId,
-        tipo: "PRESENTE",
-        texto: null,
-        metaJson: {
-          presenteId,
-          nome: presente.nome,
-          imagemUrl: presente.imagemUrl || null,
-          custoCreditos: custo,
-          minutos: presente.minutos || 0,
+    const { enviado, saldoDepois } = await prisma.$transaction(async (tx) => {
+      if (custo > 0) {
+        const debitado = await tx.wallet.updateMany({
+          where: { userId, saldoCreditos: { gte: custo } },
+          data: { saldoCreditos: { decrement: custo } },
+        });
+        if (debitado.count !== 1) {
+          const error = new Error("Saldo insuficiente");
+          error.code = "SALDO_INSUFICIENTE";
+          throw error;
+        }
+        await tx.walletTx.create({ data: { userId, tipo: "DEBIT", origem: "PRESENTE", valor: custo, refId: presenteId } });
+      }
+      const enviado = await tx.presenteEnviado.create({
+        data: { presenteId, conversaId, deUsuarioId: userId, paraUsuarioId, minutos: presente.minutos || 0, custoCreditos: custo },
+      });
+      if (custo > 0) {
+        await tx.wallet.upsert({ where: { userId: paraUsuarioId }, update: {}, create: { userId: paraUsuarioId, saldoCreditos: 0 } });
+        if (split.criadora > 0) {
+          await tx.wallet.update({ where: { userId: paraUsuarioId }, data: { saldoCreditos: { increment: split.criadora } } });
+          await tx.walletTx.create({ data: { userId: paraUsuarioId, tipo: "CREDIT", origem: "CHAT_PRESENTE_RECEBIDO", valor: split.criadora, refId: enviado.id } });
+        }
+        if (split.plataforma > 0) {
+          await tx.platformRevenue.create({ data: { origem: "CHAT_PRESENTE_RECEBIDO", refId: enviado.id, payerId: userId, creatorId: paraUsuarioId, valorCreditos: split.plataforma, percentual: split.percentual, detalhes: `Presente ${presente.nome}, bruto ${custo}` } });
+        }
+        await tx.giftCredito.create({ data: { remetenteId: userId, destinatarioId: paraUsuarioId, valor: custo, refTipo: "CHAT", refId: enviado.id } });
+      }
+      await tx.mensagem.create({
+        data: {
+          conversaId, autorId: userId, tipo: "PRESENTE", texto: null,
+          metaJson: { presenteId, nome: presente.nome, imagemUrl: presente.imagemUrl || null, custoCreditos: custo, minutos: presente.minutos || 0, valorRecebidoCreditos: split.criadora },
         },
-      },
-    });
-
-    // opcional mas recomendado: atualiza o "atualizadoEm" da conversa
-    await prisma.conversa.update({
-      where: { id: conversaId },
-      data: { atualizadoEm: new Date() },
+      });
+      await tx.conversa.update({ where: { id: conversaId }, data: { atualizadoEm: new Date() } });
+      const wallet = await tx.wallet.findUnique({ where: { userId }, select: { saldoCreditos: true } });
+      return { enviado, saldoDepois: wallet?.saldoCreditos ?? 0 };
     });
 
     // ✅ devolve saldo pro front (se teve débito)
     return res.json({
       ok: true,
       enviado,
+      valorRecebidoCreditos: split.criadora,
+      taxaPlataformaCreditos: split.plataforma,
       saldoCreditos: saldoDepois, // pode vir null se custo=0
     });
   } catch (e) {
